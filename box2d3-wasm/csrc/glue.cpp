@@ -3,6 +3,7 @@
 #include <emscripten.h>
 #include <emscripten/bind.h>
 #include "CanvasDebugDraw.h"
+#include "b2TaskManager.h"
 
 using namespace emscripten;
 using namespace b2;
@@ -32,16 +33,48 @@ static void b2Filter_setMaskBits(b2Filter &f, double val) {
 }
 
 template<typename T>
-emscripten::val getArrayWrapper(const Body& body, int (Body::*getCount)() const, int (Body::*getData)(T*, int) const) {
-    int capacity = (body.*getCount)();
+struct GetInterfaceType;  // Forward declaration
+
+template<>
+struct GetInterfaceType<Body> {
+    using type = BasicBodyInterface<Body, false>;
+};
+
+template<>
+struct GetInterfaceType<Shape> {
+    using type = BasicShapeInterface<Shape, false>;
+};
+
+template<>
+struct GetInterfaceType<Joint> {
+    using type = BasicJointInterface<Joint, false>;
+};
+
+template<typename T, typename ObjectType>
+emscripten::val getArrayWrapper(const ObjectType& object,
+    int (GetInterfaceType<ObjectType>::type::*getCount)() const,
+    int (GetInterfaceType<ObjectType>::type::*getData)(T*, int) const) {
+
+    int capacity = (object.*getCount)();
     if (capacity == 0) return emscripten::val::array();
 
     std::vector<T> items(capacity);
-    int count = (body.*getData)(items.data(), capacity);
+    int count = (object.*getData)(items.data(), capacity);
 
     auto result = emscripten::val::array();
     for (int i = 0; i < count; i++) {
         result.set(i, items[i]);
+    }
+    return result;
+}
+
+// needed to get the events array from the b2ContactListener
+template<typename T>
+emscripten::val getEventsArray(T* events, int count) {
+    if (count == 0) return emscripten::val::array();
+    auto result = emscripten::val::array();
+    for (int i = 0; i < count; i++) {
+        result.set(i, events[i]);
     }
     return result;
 }
@@ -146,10 +179,14 @@ EMSCRIPTEN_BINDINGS(box2d) {
         .property("enableSleep", &b2WorldDef::enableSleep)
         .property("enableContinuous", &b2WorldDef::enableContinuous)
         .property("workerCount", &b2WorldDef::workerCount)
-        // .property("enqueueTask", &b2WorldDef::enqueueTask, allow_raw_pointers())
-        // .property("finishTask", &b2WorldDef::finishTask, allow_raw_pointers())
+        // context not needed, since we're using closures to handle the callbacks
         // .property("userTaskContext", &b2WorldDef::userTaskContext, allow_raw_pointers())
-        // .property("userData", &b2WorldDef::userData, allow_raw_pointers())
+        .function("SetUserData", +[](b2WorldDef& self, const emscripten::val& value) {
+            self.userData = reinterpret_cast<void*>(value.as<std::uintptr_t>());
+        })
+        .function("SetUserData", +[](const b2WorldDef& self) {
+            return emscripten::val(reinterpret_cast<std::uintptr_t>(self.userData));
+        })
         .property("internalValue", &b2WorldDef::internalValue)
         ;
 
@@ -198,12 +235,18 @@ EMSCRIPTEN_BINDINGS(box2d) {
 
     class_<b2ContactEvents>("b2ContactEvents")
         .constructor()
-        .property("beginEvents", &b2ContactEvents::beginEvents, allow_raw_pointers())
-        .property("endEvents", &b2ContactEvents::endEvents, allow_raw_pointers())
-        .property("hitEvents", &b2ContactEvents::hitEvents, allow_raw_pointers())
         .property("beginCount", &b2ContactEvents::beginCount)
         .property("endCount", &b2ContactEvents::endCount)
         .property("hitCount", &b2ContactEvents::hitCount)
+        .function("GetBeginEvents", +[](const b2ContactEvents& events) {
+            return getEventsArray(events.beginEvents, events.beginCount);
+        })
+        .function("GetEndEvents", +[](const b2ContactEvents& events) {
+            return getEventsArray(events.endEvents, events.endCount);
+        })
+        .function("GetHitEvents", +[](const b2ContactEvents& events) {
+            return getEventsArray(events.hitEvents, events.hitCount);
+        })
         ;
 
     class_<b2ContactBeginTouchEvent>("b2ContactBeginTouchEvent")
@@ -211,6 +254,13 @@ EMSCRIPTEN_BINDINGS(box2d) {
         .property("shapeIdA", &b2ContactBeginTouchEvent::shapeIdA)
         .property("shapeIdB", &b2ContactBeginTouchEvent::shapeIdB)
         .property("manifold", &b2ContactBeginTouchEvent::manifold, return_value_policy::reference())
+        ;
+
+    class_<b2ContactData>("b2ContactData")
+        .constructor()
+        .property("shapeIdA", &b2ContactData::shapeIdA)
+        .property("shapeIdB", &b2ContactData::shapeIdB)
+        .property("manifold", &b2ContactData::manifold, return_value_policy::reference())
         ;
 
     class_<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
@@ -226,6 +276,22 @@ EMSCRIPTEN_BINDINGS(box2d) {
         .property("point", &b2ContactHitEvent::point, return_value_policy::reference())
         .property("normal", &b2ContactHitEvent::normal, return_value_policy::reference())
         .property("approachSpeed", &b2ContactHitEvent::approachSpeed)
+        ;
+
+    class_<b2CastOutput>("b2CastOutput")
+        .constructor()
+        .property("normal", &b2CastOutput::normal, return_value_policy::reference())
+        .property("point", &b2CastOutput::point, return_value_policy::reference())
+        .property("fraction", &b2CastOutput::fraction)
+        .property("iterations", &b2CastOutput::iterations)
+        .property("hit", &b2CastOutput::hit)
+        ;
+
+    class_<b2RayCastInput>("b2RayCastInput")
+        .constructor()
+        .property("origin", &b2RayCastInput::origin, return_value_policy::reference())
+        .property("translation", &b2RayCastInput::translation, return_value_policy::reference())
+        .property("maxFraction", &b2RayCastInput::maxFraction)
         ;
 
     class_<b2ManifoldPoint>("b2ManifoldPoint")
@@ -371,6 +437,14 @@ EMSCRIPTEN_BINDINGS(box2d) {
 
     function("b2CreateWorld", &b2CreateWorld, allow_raw_pointers());
     function("b2World_Step", &b2World_Step, allow_raw_pointers());
+    function("b2World_GetContactEvents", &b2World_GetContactEvents, allow_raw_pointers());
+
+    class_<b2TaskManager>("b2TaskManager")
+        .constructor<>()
+        .constructor<int32_t>()
+        .function("Initialize", &b2TaskManager::Initialize)
+        .function("AssignToWorld", select_overload<void(b2WorldDef*)>(&b2TaskManager::AssignToWorld), allow_raw_pointers())
+        ;
 
     // ------------------------------------------------------------------------
     // b2Shape
@@ -526,6 +600,14 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2MakeOffsetBox", &b2MakeOffsetBox);
     function("b2MakeOffsetRoundedBox", &b2MakeOffsetRoundedBox);
 
+    enum_<b2ShapeType>("b2ShapeType")
+        .value("b2_circleShape", b2_circleShape)
+        .value("b2_capsuleShape", b2_capsuleShape)
+        .value("b2_segmentShape", b2_segmentShape)
+        .value("b2_polygonShape", b2_polygonShape)
+        .value("b2_chainSegmentShape", b2_chainSegmentShape)
+        .value("b2_shapeTypeCount", b2_shapeTypeCount)
+        ;
 
     class_<BasicShapeInterface<Shape, false>>("BasicShapeInterface");
 
@@ -540,6 +622,28 @@ EMSCRIPTEN_BINDINGS(box2d) {
         .function("SetFilter", &Shape::SetFilter)
         .function("GetFriction", &Shape::GetFriction)
         .function("SetFriction", &Shape::SetFriction)
+        .function("GetContactData", +[](const Shape& shape) {
+            return getArrayWrapper<b2ContactData>(shape, &Shape::GetContactCapacity, &Shape::GetContactData);
+        })
+        .function("GetContactCapacity", &Shape::GetContactCapacity)
+        .function("EnableContactEvents", &Shape::EnableContactEvents)
+        .function("AreContactEventsEnabled", &Shape::AreContactEventsEnabled)
+        .function("EnableHitEvents", &Shape::EnableHitEvents)
+        .function("AreHitEventsEnabled", &Shape::AreHitEventsEnabled)
+        .function("IsSensor", &Shape::IsSensor)
+        .function("EnableSensorEvents", &Shape::EnableSensorEvents)
+        .function("AreSensorEventsEnabled", &Shape::AreSensorEventsEnabled)
+        .function("EnablePreSolveEvents", &Shape::EnablePreSolveEvents)
+        .function("ArePreSolveEventsEnabled", &Shape::ArePreSolveEventsEnabled)
+        .function("GetClosestPoint", &Shape::GetClosestPoint)
+        .function("RayCast", &Shape::RayCast)
+        .function("TestPoint", &Shape::TestPoint)
+        .function("GetType", &Shape::GetType)
+        .function("GetRestitution", &Shape::GetRestitution)
+        .function("SetRestitution", &Shape::SetRestitution)
+        .function("GetBody", select_overload<BodyRef()>(&Shape::GetBody))
+        .function("GetParentChain", select_overload<ChainRef()>(&Shape::GetParentChain))
+        .function("GetWorld", select_overload<WorldRef()>(&Shape::GetWorld))
         .function("GetUserData", +[](const Shape& self) {
             return emscripten::val(static_cast<double>(reinterpret_cast<std::uintptr_t>(self.GetUserData())));
         })
@@ -671,7 +775,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
         .function("EnableHitEvents", &Body::EnableHitEvents)
         .function("GetJointCount", &Body::GetJointCount)
         .function("GetJoints", +[](const Body& body) {
-        return getArrayWrapper<b2JointId>(body, &Body::GetJointCount, &Body::GetJoints);
+            return getArrayWrapper<b2JointId>(body, &Body::GetJointCount, &Body::GetJoints);
         })
         .function("SetLinearDamping", &Body::SetLinearDamping)
         .function("GetLinearDamping", &Body::GetLinearDamping)
@@ -724,6 +828,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
 
     class_<b2::MaybeConstBodyRef<false>>("BodyRef");
     class_<b2::MaybeConstBodyRef<true>>("BodyConstRef");
+    class_<b2::MaybeConstChainRef<false>>("ChainRef");
+    class_<b2::MaybeConstChainRef<true>>("ChainConstRef");
     class_<BasicJointInterface<Joint, false>>("BasicJointInterface");
 
     class_<Joint, base<BasicJointInterface<Joint, false>>>("Joint")

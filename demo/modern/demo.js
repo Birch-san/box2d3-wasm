@@ -1,5 +1,5 @@
 
-import Box2DDebugDraw from './debugDraw.js';
+import Box2DDebugDraw from '../utils/debugDraw.js';
 import Box2DFactory from '/box2d3-wasm/build/dist/es/entry.mjs';
 
 const Box2DFactory_ = Box2DFactory;
@@ -29,32 +29,49 @@ Box2DFactory_().then(box2d => {
       b2Segment,
       b2Vec2,
       b2Rot,
+      b2TaskManager,
   } = box2d;
 
+
   const worldDef = b2DefaultWorldDef();
+  worldDef.workerCount = navigator.hardwareConcurrency - 1 || 3;
+
+  const taskManager = new b2TaskManager(worldDef.workerCount * 4);
+  taskManager.AssignToWorld(worldDef);
+
   worldDef.gravity.Set(0, -10);
+
+
   const world = new World(new b2WorldDef(worldDef));
+
+
 
   const bd_ground = new b2DefaultBodyDef();
   const ground = world.CreateBody(bd_ground);
 
-  const shapeDef = b2DefaultShapeDef();
-  shapeDef.density = 1.0;
-  shapeDef.friction = 0.3;
+  const shapeDefSegment = b2DefaultShapeDef();
+  shapeDefSegment.density = 1.0;
+  shapeDefSegment.friction = 0.3;
 
   {
     const segment = new b2Segment();
     segment.point1 = new b2Vec2(3, -4);
     segment.point2 = new b2Vec2(6, -7);
-    ground.CreateSegmentShape(shapeDef, segment);
+    ground.CreateSegmentShape(shapeDefSegment, segment);
   }
 
   {
     const segment = new b2Segment();
     segment.point1 = new b2Vec2(3, -18);
     segment.point2 = new b2Vec2(22, -18)
-    ground.CreateSegmentShape(shapeDef, segment);
+    ground.CreateSegmentShape(shapeDefSegment, segment);
   }
+
+  const shapeDefDynamic = b2DefaultShapeDef();
+  shapeDefDynamic.density = 1.0;
+  shapeDefDynamic.friction = 0.3;
+  shapeDefDynamic.enableContactEvents = true;
+  shapeDefDynamic.enableHitEvents = true;
 
   const sideLengthMetres = 1;
   const square = b2MakeBox(sideLengthMetres/2, sideLengthMetres/2);
@@ -84,7 +101,7 @@ Box2DFactory_().then(box2d => {
 
     const body = world.CreateBody(bd);
 
-    i % 2 ? body.CreateCircleShape(shapeDef, circle) : body.CreatePolygonShape(shapeDef, square);
+    i % 2 ? body.CreateCircleShape(shapeDefDynamic, circle) : body.CreatePolygonShape(shapeDefDynamic, square);
     initPosition(body, i);
   }
 
@@ -94,6 +111,22 @@ Box2DFactory_().then(box2d => {
       handle = requestAnimationFrame(loop.bind(null, nowMs));
       const deltaMs = nowMs-prevMs;
       world.Step(deltaMs / 1000, subStepCount);
+
+      window.contactData = world.GetContactEvents();
+
+      if(window.contactData.beginCount || window.contactData.endCount || window.contactData.hitCount) {
+        console.log(window.contactData.beginCount, window.contactData.endCount, window.contactData.hitCount);
+      }
+
+
+      if(window.contactData.beginCount) {
+        // we have some starting contacts
+        const arr = window.contactData.GetBeginEvents();
+        arr.forEach((contact) => {
+          console.log('contact begin', contact.shapeIdA, contact.shapeIdB, contact.manifold);
+        });
+      }
+
       debugDraw.drawWorld(world);
     }(window.performance.now()));
 

@@ -16,6 +16,21 @@
         "name": "demo",
         "path": "demo"
       }
-    ]
+    ],
+    "settings": {
+      "files.associations": {
+        "*.jslib": "javascript",
+        "__bit_reference": "cpp",
+        "__node_handle": "cpp",
+        "bitset": "cpp",
+        "deque": "cpp",
+        "limits": "cpp",
+        "locale": "cpp",
+        "optional": "cpp",
+        "ratio": "cpp",
+        "tuple": "cpp",
+        "vector": "cpp"
+      }
+    }
   }
   

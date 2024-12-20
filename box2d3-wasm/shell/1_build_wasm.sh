@@ -44,6 +44,10 @@ EMCC_OPTS=(
   # -s SUPPORT_LONGJMP=0 # this causes 'undefined symbol: _emscripten_stack_restore'
   -s EXPORTED_FUNCTIONS=_malloc,_free
   -s ALLOW_MEMORY_GROWTH=1
+  # threading
+  -pthread
+  -s USE_PTHREADS=1
+  -s PTHREAD_POOL_SIZE=16
   ${FLAVOUR_EMCC_OPTS[@]}
   )
 DEBUG_OPTS=(
@@ -97,7 +101,7 @@ BARE_WASM="$BUILD_DIR/$BASENAME.bare.wasm"
 >&2 echo -e "${Blue}Building bare WASM${NC}"
 # emcc "$DIR/glue_stub.cpp" bin/libbox2d.a -I "$DIR/../box2d/include" "${EMCC_OPTS[@]}" --oformat=bare -o "$BARE_WASM"
 # emcc "$CMAKEBUILD_DIR/src/libbox2dd.a" -I "$BOX2D_DIR/include" "${EMCC_OPTS[@]}" --oformat=bare -o "$BARE_WASM"
-emcc -lembind "$CSRC_DIR/glue.cpp" "$CSRC_DIR/CanvasDebugDraw.cpp" "$CMAKEBUILD_DIR/src/libbox2dd.a" -I "$BOX2D_DIR/include" -I "$B2CPP_DIR/include" "${EMCC_OPTS[@]}" --oformat=bare -o "$BARE_WASM"
+emcc -lembind "$CSRC_DIR/glue.cpp" "$CSRC_DIR/CanvasDebugDraw.cpp" "$CSRC_DIR/b2TaskManager.cpp" "$CSRC_DIR/extern/enkiTS/src/TaskScheduler.cpp" "$CMAKEBUILD_DIR/src/libbox2dd.a" -I "$BOX2D_DIR/include" -I "$B2CPP_DIR/include" -I "$CSRC_DIR/extern/enkiTS/src" "${EMCC_OPTS[@]}" --oformat=bare -o "$BARE_WASM"
 
 UMD_DIR="$BUILD_DIR/dist/umd"
 ES_DIR="$BUILD_DIR/dist/es"
@@ -109,13 +113,29 @@ mkdir -p "$UMD_DIR" "$ES_DIR"
 # LINK_OPTS=(--post-link "$BARE_WASM" --post-js "$DIR/build/common/box2d_glue.js" --post-js "$DIR/glue_stub.js" ${EMCC_OPTS[@]})
 LINK_OPTS=(${DEBUG_OPTS[@]} -lembind --post-link "$BARE_WASM")
 
+# ES_FILE="$ES_DIR/$BASENAME.mjs"
+# ES_TSD="$ES_DIR/$BASENAME.d.ts"
+# >&2 echo -e "${Blue}Building ES module, $ES_DIR/$BASENAME.{mjs,wasm}${NC}"
+# set -x
+# emcc "${LINK_OPTS[@]}" -s EXPORT_ES6=1 -o "$ES_FILE" --emit-tsd "$ES_TSD"
+# { set +x; } 2>&-
+# >&2 echo -e "${Green}Successfully built $ES_DIR/$BASENAME.{js,wasm}${NC}\n"
+
+# Build the ES6 Module directly
 ES_FILE="$ES_DIR/$BASENAME.mjs"
 ES_TSD="$ES_DIR/$BASENAME.d.ts"
->&2 echo -e "${Blue}Building ES module, $ES_DIR/$BASENAME.{mjs,wasm}${NC}"
-set -x
-emcc "${LINK_OPTS[@]}" -s EXPORT_ES6=1 -o "$ES_FILE" --emit-tsd "$ES_TSD"
-{ set +x; } 2>&-
->&2 echo -e "${Green}Successfully built $ES_DIR/$BASENAME.{js,wasm}${NC}\n"
+>&2 echo -e "${Blue}Building ES module: $ES_FILE and related artifacts${NC}"
+emcc -lembind \
+  "$CSRC_DIR/glue.cpp" "$CSRC_DIR/CanvasDebugDraw.cpp" "$CSRC_DIR/b2TaskManager.cpp" "$CSRC_DIR/extern/enkiTS/src/TaskScheduler.cpp" "$CMAKEBUILD_DIR/src/libbox2dd.a" \
+  -I "$BOX2D_DIR/include" -I "$B2CPP_DIR/include" -I "$CSRC_DIR/extern/enkiTS/src" \
+  "${EMCC_OPTS[@]}" \
+  -s EXPORT_ES6=1 \
+  -o "$ES_FILE" \
+  --emit-tsd "$ES_TSD"
+
+cp "$ES_DIR/$BASENAME.wasm" "$ES_DIR"
+>&2 echo -e "${Green}Successfully built ES module: $ES_FILE, $ES_TSD, and $BASENAME.wasm${NC}\n"
+
 
 UMD_FILE="$UMD_DIR/$BASENAME.js"
 UMD_TSD="$UMD_DIR/$BASENAME.d.ts"
