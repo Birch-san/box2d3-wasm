@@ -2,6 +2,8 @@
 import DebugDrawRenderer from '../utils/debugDraw.mjs';
 import Box2DFactory from 'box2d3-wasm';
 
+const params = new URLSearchParams(window.location.search);
+
 const box2d = await Box2DFactory();
 const canvas = document.getElementById("demo-canvas");
 const ctx = canvas.getContext("2d");
@@ -9,7 +11,9 @@ const ctx = canvas.getContext("2d");
 const pixelsPerMeter = 10;
 const subStepCount = 4;
 
-const debugDraw = new DebugDrawRenderer(box2d, ctx, pixelsPerMeter, true); // true for high dpi
+const hdRendering = params.get('hd') === '1';
+
+const debugDraw = new DebugDrawRenderer(box2d, ctx, pixelsPerMeter, hdRendering); // true for high dpi
 debugDraw.offset = {
   x: 40,
   y: -29
@@ -39,8 +43,6 @@ const worldDef = b2DefaultWorldDef();
 worldDef.gravity.Set(0, -10);
 
 let worldId, taskSystem;
-
-const params = new URLSearchParams(window.location.search);
 
 const statsLevel = params.get('stats') || 2;
 
@@ -117,7 +119,7 @@ const boxGap = 0.1;
 createPyramid(worldId, pyramidHeight, boxGap);
 
 function drawProfile(stepDuration, profile) {
-  const hdScale = Math.min(window.devicePixelRatio || 1, 2) || 1;
+  const hdScale = hdRendering ? (Math.min(window.devicePixelRatio || 1, 2) || 1) : 1;
   ctx.font = `${16 * hdScale}px Arial`;
   ctx.fillStyle = "black";
   if (statsLevel < 1) return;
