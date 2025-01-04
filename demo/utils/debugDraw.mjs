@@ -257,20 +257,47 @@ export default class DebugDrawRenderer {
             p: { x: cmd.data[0], y: cmd.data[1] },
             q: { s: cmd.data[2], c: cmd.data[3] }
         };
+        const radius = cmd.data[4];
 
         this.ctx.beginPath();
-        const vertCount = cmd.vertexCount - 2; // Subtract 2 for transform
-        for (let i = 0; i < vertCount; i++) {
-            const v = this.transformPoint(xf, {
-                x: cmd.data[i*2 + 4],
-                y: cmd.data[i*2 + 5]
-            });
-            if (i === 0) {
-                this.ctx.moveTo(v.x, v.y);
-            } else {
-                this.ctx.lineTo(v.x, v.y);
+        const vertCount = cmd.vertexCount;
+
+        if (radius <= 0) {
+            for (let i = 0; i < vertCount; i++) {
+                const v = this.transformPoint(xf, {
+                    x: cmd.data[i*2 + 5],
+                    y: cmd.data[i*2 + 6]
+                });
+                if (i === 0) {
+                    this.ctx.moveTo(v.x, v.y);
+                } else {
+                    this.ctx.lineTo(v.x, v.y);
+                }
+            }
+        } else {
+            let prevPoint = null;
+            let prevAngle = 0;
+
+            for (let i = 0; i < vertCount + 2; i++) {
+                const idx = i % vertCount;
+                const v = this.transformPoint(xf, {
+                    x: cmd.data[idx*2 + 5],
+                    y: cmd.data[idx*2 + 6]
+                });
+
+                if (i !== 0) {
+                    const angle = Math.atan2(v.y - prevPoint.y, v.x - prevPoint.x);
+                    if (i !== 1) {
+                        this.ctx.arc(prevPoint.x, prevPoint.y, radius,
+                            prevAngle - Math.PI / 2,
+                            angle - Math.PI / 2);
+                    }
+                    prevAngle = angle;
+                }
+                prevPoint = v;
             }
         }
+
         this.ctx.closePath();
         this.ctx.fillStyle = this.colorToHTML(cmd.color, 0.5);
         this.ctx.fill();

@@ -67,17 +67,18 @@ public:
             cmd.commandType = DebugDrawCommandType::e_solidPolygon;
             cmd.color = color;
 
-            const uint16_t maxVertices = (COMMAND_DATA_SIZE - 4) / 2; // reserve 4 floats for transform
-            cmd.vertexCount = std::min((uint16_t)vertexCount, maxVertices) + 2;
+            const uint16_t maxVertices = (COMMAND_DATA_SIZE - 5) / 2; // reserve 4 floats for transform + 1 for radius
+            cmd.vertexCount = std::min((uint16_t)vertexCount, maxVertices);
 
             cmd.data[0] = transform.p.x;
             cmd.data[1] = transform.p.y;
             cmd.data[2] = transform.q.s;
             cmd.data[3] = transform.q.c;
+            cmd.data[4] = radius;
 
-            for (int i = 0; i < cmd.vertexCount - 2; i++) {
-                cmd.data[i*2 + 4] = vertices[i].x;
-                cmd.data[i*2 + 5] = vertices[i].y;
+            for (int i = 0; i < cmd.vertexCount; i++) {
+                cmd.data[i*2 + 5] = vertices[i].x;
+                cmd.data[i*2 + 6] = vertices[i].y;
             }
 
             self->commands.push_back(cmd);

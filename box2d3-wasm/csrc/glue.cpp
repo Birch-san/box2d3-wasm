@@ -176,19 +176,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("internalValue", &b2WorldDef::internalValue)
         ;
 
-   class_<b2BodyEvents>("b2BodyEvents")
-        .constructor()
-        .property("moveEvents", &b2BodyEvents::moveEvents, allow_raw_pointers())
-        .property("moveCount", &b2BodyEvents::moveCount)
-        ;
-
-    class_<b2BodyMoveEvent>("b2BodyMoveEvent")
-        .constructor()
-        .property("transform", &b2BodyMoveEvent::transform, return_value_policy::reference())
-        .property("bodyId", &b2BodyMoveEvent::bodyId)
-        .property("fellAsleep", &b2BodyMoveEvent::fellAsleep)
-        ;
-
     class_<b2BodyId>("b2BodyId")
         .constructor()
         .property("index1", &b2BodyId::index1)
@@ -208,51 +195,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor()
         .property("index1", &b2WorldId::index1)
         .property("revision", &b2WorldId::revision)
-        ;
-
-    class_<b2ContactEvents>("b2ContactEvents")
-        .constructor()
-        .property("beginCount", &b2ContactEvents::beginCount)
-        .property("endCount", &b2ContactEvents::endCount)
-        .property("hitCount", &b2ContactEvents::hitCount)
-        .function("GetBeginEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.beginEvents, events.beginCount);
-        })
-        .function("GetEndEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.endEvents, events.endCount);
-        })
-        .function("GetHitEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.hitEvents, events.hitCount);
-        })
-        ;
-
-    class_<b2ContactBeginTouchEvent>("b2ContactBeginTouchEvent")
-        .constructor()
-        .property("shapeIdA", &b2ContactBeginTouchEvent::shapeIdA)
-        .property("shapeIdB", &b2ContactBeginTouchEvent::shapeIdB)
-        .property("manifold", &b2ContactBeginTouchEvent::manifold, return_value_policy::reference())
-        ;
-
-    class_<b2ContactData>("b2ContactData")
-        .constructor()
-        .property("shapeIdA", &b2ContactData::shapeIdA)
-        .property("shapeIdB", &b2ContactData::shapeIdB)
-        .property("manifold", &b2ContactData::manifold, return_value_policy::reference())
-        ;
-
-    class_<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
-        .constructor()
-        .property("shapeIdA", &b2ContactEndTouchEvent::shapeIdA)
-        .property("shapeIdB", &b2ContactEndTouchEvent::shapeIdB)
-        ;
-
-    class_<b2ContactHitEvent>("b2ContactHitEvent")
-        .constructor()
-        .property("shapeIdA", &b2ContactHitEvent::shapeIdA)
-        .property("shapeIdB", &b2ContactHitEvent::shapeIdB)
-        .property("point", &b2ContactHitEvent::point, return_value_policy::reference())
-        .property("normal", &b2ContactHitEvent::normal, return_value_policy::reference())
-        .property("approachSpeed", &b2ContactHitEvent::approachSpeed)
         ;
 
     class_<b2CastOutput>("b2CastOutput")
@@ -346,6 +288,66 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("endCount", &b2SensorEvents::endCount)
         ;
 
+    class_<b2BodyEvents>("b2BodyEvents")
+        .constructor()
+        .function("GetMoveEvents", +[](const b2BodyEvents& events) {
+            return getEventsArray(events.moveEvents, events.moveCount);
+        })
+        .property("moveCount", &b2BodyEvents::moveCount)
+        ;
+
+    class_<b2BodyMoveEvent>("b2BodyMoveEvent")
+        .constructor()
+        .property("transform", &b2BodyMoveEvent::transform, return_value_policy::reference())
+        .property("bodyId", &b2BodyMoveEvent::bodyId)
+        .property("fellAsleep", &b2BodyMoveEvent::fellAsleep)
+        ;
+
+     class_<b2ContactEvents>("b2ContactEvents")
+        .constructor()
+        .property("beginCount", &b2ContactEvents::beginCount)
+        .property("endCount", &b2ContactEvents::endCount)
+        .property("hitCount", &b2ContactEvents::hitCount)
+        .function("GetBeginEvents", +[](const b2ContactEvents& events) {
+            return getEventsArray(events.beginEvents, events.beginCount);
+        })
+        .function("GetEndEvents", +[](const b2ContactEvents& events) {
+            return getEventsArray(events.endEvents, events.endCount);
+        })
+        .function("GetHitEvents", +[](const b2ContactEvents& events) {
+            return getEventsArray(events.hitEvents, events.hitCount);
+        })
+        ;
+
+    class_<b2ContactBeginTouchEvent>("b2ContactBeginTouchEvent")
+        .constructor()
+        .property("shapeIdA", &b2ContactBeginTouchEvent::shapeIdA)
+        .property("shapeIdB", &b2ContactBeginTouchEvent::shapeIdB)
+        .property("manifold", &b2ContactBeginTouchEvent::manifold, return_value_policy::reference())
+        ;
+
+    class_<b2ContactData>("b2ContactData")
+        .constructor()
+        .property("shapeIdA", &b2ContactData::shapeIdA)
+        .property("shapeIdB", &b2ContactData::shapeIdB)
+        .property("manifold", &b2ContactData::manifold, return_value_policy::reference())
+        ;
+
+    class_<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
+        .constructor()
+        .property("shapeIdA", &b2ContactEndTouchEvent::shapeIdA)
+        .property("shapeIdB", &b2ContactEndTouchEvent::shapeIdB)
+        ;
+
+    class_<b2ContactHitEvent>("b2ContactHitEvent")
+        .constructor()
+        .property("shapeIdA", &b2ContactHitEvent::shapeIdA)
+        .property("shapeIdB", &b2ContactHitEvent::shapeIdB)
+        .property("point", &b2ContactHitEvent::point, return_value_policy::reference())
+        .property("normal", &b2ContactHitEvent::normal, return_value_policy::reference())
+        .property("approachSpeed", &b2ContactHitEvent::approachSpeed)
+        ;
+
     class_<b2Profile>("b2Profile")
         .constructor()
         .property("step", &b2Profile::step)
@@ -408,6 +410,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
                 return std::to_string(filter.maskBits);
             })
         ;
+
+    function("b2DefaultExplosionDef", &b2DefaultExplosionDef);
 
     class_<b2ExplosionDef>("b2ExplosionDef")
         .constructor()
@@ -1211,6 +1215,55 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     function("b2DefaultDebugDraw", &b2DefaultDebugDraw);
 }
 
+uint32_t g_seed = 12345;
+uint32_t RAND_LIMIT = 32767;
+
+// Simple random number generator. Using this instead of rand() for cross platform determinism.
+B2_INLINE int RandomInt()
+{
+	// XorShift32 algorithm
+	uint32_t x = g_seed;
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+	g_seed = x;
+
+	// Map the 32-bit value to the range 0 to RAND_LIMIT
+	return (int)( x % ( RAND_LIMIT + 1 ) );
+}
+
+// Random integer in range [lo, hi]
+B2_INLINE float RandomIntRange( int lo, int hi )
+{
+	return lo + RandomInt() % ( hi - lo + 1 );
+}
+
+// Random number in range [-1,1]
+B2_INLINE float RandomFloat()
+{
+	float r = (float)( RandomInt() & ( RAND_LIMIT ) );
+	r /= RAND_LIMIT;
+	r = 2.0f * r - 1.0f;
+	return r;
+}
+
+// Random floating point number in range [lo, hi]
+B2_INLINE float RandomFloatRange( float lo, float hi )
+{
+	float r = (float)( RandomInt() & ( RAND_LIMIT ) );
+	r /= RAND_LIMIT;
+	r = ( hi - lo ) * r + lo;
+	return r;
+}
+
+// Random vector with coordinates in range [lo, hi]
+B2_INLINE b2Vec2 RandomVec2( float lo, float hi )
+{
+	b2Vec2 v;
+	v.x = RandomFloatRange( lo, hi );
+	v.y = RandomFloatRange( lo, hi );
+	return v;
+}
 
 EMSCRIPTEN_BINDINGS(box2d) {
     // ------------------------------------------------------------------------
@@ -1672,69 +1725,23 @@ EMSCRIPTEN_BINDINGS(box2d) {
     // ------------------------------------------------------------------------
     // Random
     // ------------------------------------------------------------------------
-    static uint32_t g_seed = 12345;
-    static const uint32_t RAND_LIMIT = 32767;
+    function("RandomInt", &RandomInt);
+    function("RandomIntRange", &RandomIntRange);
+    function("RandomFloat", &RandomFloat);
+    function("RandomFloatRange", &RandomFloatRange);
+    function("RandomVec2", &RandomVec2);
+    function("RandomPolygon", optional_override([](float extent) -> b2Polygon {
+        b2Vec2 points[B2_MAX_POLYGON_VERTICES];
+        int count = 3 + RandomInt() % 6;
+        for (int i = 0; i < count; ++i) {
+            points[i] = RandomVec2(-extent, extent);
+        }
 
-    function("RandomInt", optional_override([]() -> int {
-        uint32_t x = g_seed;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        g_seed = x;
-        return (int)(x % (RAND_LIMIT + 1));
-    }));
-    function("RandomIntRange", optional_override([](int lo, int hi) -> int {
-        uint32_t x = g_seed;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        g_seed = x;
-        return lo + (int)(x % (RAND_LIMIT + 1)) % (hi - lo + 1);
-    }));
-    function("RandomFloat", optional_override([]() -> float {
-        uint32_t x = g_seed;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        g_seed = x;
-        float r = (float)(x & (RAND_LIMIT));
-        r /= RAND_LIMIT;
-        r = 2.0f * r - 1.0f;
-        return r;
-    }));
-    function("RandomFloatRange", optional_override([](float lo, float hi) -> float {
-        uint32_t x = g_seed;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        g_seed = x;
-        float r = (float)(x & (RAND_LIMIT));
-        r /= RAND_LIMIT;
-        r = (hi - lo) * r + lo;
-        return r;
-    }));
-    function("RandomVec2", optional_override([](float lo, float hi) -> b2Vec2 {
-        b2Vec2 v;
+        b2Hull hull = b2ComputeHull(points, count);
+        if (hull.count > 0) {
+            return b2MakePolygon(&hull, 0.0f);
+        }
 
-        uint32_t x = g_seed;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        g_seed = x;
-        float rx = (float)(x & (RAND_LIMIT));
-        rx /= RAND_LIMIT;
-        v.x = (hi - lo) * rx + lo;
-
-        x = g_seed;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        g_seed = x;
-        float ry = (float)(x & (RAND_LIMIT));
-        ry /= RAND_LIMIT;
-        v.y = (hi - lo) * ry + lo;
-
-        return v;
+        return b2MakeSquare(extent);
     }));
-
 }
