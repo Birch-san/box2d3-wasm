@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS = {
 	drawFrictionImpulses: false,
 	maxFrameTime: 1000 / 60,
 	hertz: 60,
+	pause: false,
 	enableWarmStarting: true,
 	enableContinuous: true,
 	subStepCount: 4,

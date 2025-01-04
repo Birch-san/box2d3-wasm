@@ -28,6 +28,8 @@ export default class Sample{
 			this.m_worldId = b2CreateWorld(this.worldDef);
 		}
 
+		this.m_stepCount = 0;
+
 		this.pane = null;
 	}
 
@@ -52,6 +54,8 @@ export default class Sample{
 		}
 
 		this.debugDraw.Draw(this.m_worldId, this.camera);
+
+		this.m_stepCount++;
 	}
 
 	QueryCallback(shapeId, context)

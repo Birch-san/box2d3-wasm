@@ -9,7 +9,6 @@ import samples from './categories/list.mjs';
 import settings from './settings.mjs';
 
 const state = {
-	pause: false,
 	singleStep: false,
 	mouseDown: false,
 	mousePos: {x: 0, y: 0},
@@ -102,7 +101,7 @@ function addUI(){
 	const main = tab.pages[0];
 
 	main.addBinding(PARAMS, 'pause').on('change', (event) => {
-		state.pause = event.value;
+		settings.pause = event.value;
 	});
 
 	main.addButton({
@@ -209,7 +208,7 @@ function update(timestamp) {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const start = performance.now();
-		if (!state.pause || state.singleStep) {
+		if (!settings.pause || state.singleStep) {
         	sample.Step()
 		}
         const end = performance.now();
