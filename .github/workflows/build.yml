@@ -125,13 +125,13 @@ jobs:
           name: box2d3-wasm-${{ steps.pack_version.outputs.version }}-${{ github.event.inputs.mode }}
           path: box2d3-wasm/*.tgz
       - name: configure git
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+        if: github.event.inputs.action == 'publish'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
       - name: version and tag
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+        if: github.event.inputs.action == 'publish'
         id: versioning
         working-directory: box2d3-wasm
         run: |
