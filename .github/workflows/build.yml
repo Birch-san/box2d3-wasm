@@ -140,7 +140,7 @@ jobs:
           NEW_VERSION=${NEW_VERSION#v}
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
       - name: wtf is going on
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+        if: github.event.inputs.action == 'publish'
         working-directory: box2d3-wasm
         run: |
           git remote -v
