@@ -21,7 +21,7 @@ on:
         options:
           - pack
           - publish
-        default: pack
+        default: publish
       version_type:
         description: '[if publish] Version bump'
         required: true
@@ -30,6 +30,7 @@ on:
           - major
           - minor
           - patch
+        default: patch
 
 env:
   EM_VERSION: 3.1.73
@@ -132,3 +133,4 @@ jobs:
           git remote -v
           git status
           git log
+          git diff -- package-lock.json
