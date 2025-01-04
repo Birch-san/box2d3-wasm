@@ -139,41 +139,58 @@ jobs:
           # Remove the 'v' prefix
           NEW_VERSION=${NEW_VERSION#v}
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-      - name: publish to npm
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
-        working-directory: box2d3-wasm
-        run: npm publish --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-      - name: push box2d3-wasm changes
+      - name: wtf is going on
         if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
         working-directory: box2d3-wasm
         run: |
-          echo "Pushing commits and tags..."
-          git push || { echo "Push failed"; exit 1; }
-          git push --tags || { echo "Push tags failed"; exit 1; }
-          echo "Done!"
-      - name: update gh-pages box2d3-wasm version
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
-        working-directory: gh-pages
-        run: npm install "box2d3-wasm@^${{ steps.versioning.outputs.version }}"
-      - name: commit updated gh-pages
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
-        working-directory: gh-pages
-        run: |
-          git add package.json package-lock.json
-          git commit -m "update gh-pages box2d3-wasm to v${{ steps.versioning.outputs.version }} [skip ci]"
-      - name: push gh-pages changes
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
-        working-directory: gh-pages
-        run: |
-          echo "Pushing commit..."
-          git push || { echo "Push failed"; exit 1; }
-          echo "Done!"
-      - name: trigger deploy workflow
-        if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          event-type: deploy-triggered
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # client-payload: '{"version": "${{ steps.versioning.outputs.version }}"}'
+          git remote -v
+          git status
+          git log
+      # - name: publish to npm
+      #   if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+      #   working-directory: box2d3-wasm
+      #   run: npm publish --provenance
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      # - name: update gh-pages box2d3-wasm version
+      # - name: push box2d3-wasm changes
+      #   if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+      #   working-directory: box2d3-wasm
+      #   run: |
+      #     echo "Pushing commits and tags..."
+      #     git push || { echo "Push failed"; exit 1; }
+      #     git push --tags || { echo "Push tags failed"; exit 1; }
+      #     echo "Done!"
+      # - name: update gh-pages box2d3-wasm version
+      # - name: push box2d3-wasm changes
+      #   if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+      #   working-directory: box2d3-wasm
+      #   run: |
+      #     echo "Pushing commits and tags..."
+      #     git push || { echo "Push failed"; exit 1; }
+      #     git push --tags || { echo "Push tags failed"; exit 1; }
+      #     echo "Done!"
+      # - name: update gh-pages box2d3-wasm version
+      #   if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+      #   working-directory: gh-pages
+      #   run: npm install "box2d3-wasm@^${{ steps.versioning.outputs.version }}"
+      # - name: commit updated gh-pages
+      #   if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+      #   working-directory: gh-pages
+      #   run: |
+      #     git add package.json package-lock.json
+      #     git commit -m "update gh-pages box2d3-wasm to v${{ steps.versioning.outputs.version }} [skip ci]"
+      # - name: push gh-pages changes
+      #   if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+      #   working-directory: gh-pages
+      #   run: |
+      #     echo "Pushing commit..."
+      #     git push || { echo "Push failed"; exit 1; }
+      #     echo "Done!"
+      # - name: trigger deploy workflow
+      #   if: github.event.inputs.action == 'publish' && github.event.inputs.mode == 'release'
+      #   uses: peter-evans/repository-dispatch@v2
+      #   with:
+      #     event-type: deploy-triggered
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     # client-payload: '{"version": "${{ steps.versioning.outputs.version }}"}'
