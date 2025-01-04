@@ -122,7 +122,7 @@ jobs:
         id: versioning
         working-directory: box2d3-wasm
         run: |
-          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} -m "release %s [skip ci]")
+          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --git-tag-version -m "release %s [skip ci]")
           # Remove the 'v' prefix
           NEW_VERSION=${NEW_VERSION#v}
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
@@ -130,6 +130,8 @@ jobs:
         if: github.event.inputs.action == 'publish'
         working-directory: box2d3-wasm
         run: |
+          npm config get git-tag-version
+          npm config get commit-hooks
           git remote -v
           git status
           git log
