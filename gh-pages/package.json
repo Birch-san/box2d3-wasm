@@ -2,7 +2,7 @@
   "name": "gh-pages",
   "version": "1.0.0",
   "scripts": {
-    "serve": "ws --https --directory static",
+    "serve": "ws --https --directory .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "license": "MIT",

@@ -13,7 +13,8 @@
                 // we comment these out, to mimic the github pages experience, where we'll have no control over the headers
                 // "--cors.embedder-policy", "require-corp",
                 // "--cors.opener-policy", "same-origin",
-                "--directory", "static",
+                // "--directory", "static",
+                "--directory", ".",
             ]
         },
     ]
