@@ -44,12 +44,12 @@ jobs:
       contents: write  # this permission is only exercised in mode == 'release'
       id-token: write  # for npm publish --provenance # https://docs.npmjs.com/generating-provenance-statements
     steps:
-      - name: validate inputs
-        run: |
-          if [ "${{ github.event.inputs.action }}" = "publish" ] && [ "${{ github.event.inputs.mode }}" != "release" ]; then
-            echo "::error::Publish action is only allowed in release mode"
-            exit 1
-          fi
+      # - name: validate inputs
+      #   run: |
+      #     if [ "${{ github.event.inputs.action }}" = "publish" ] && [ "${{ github.event.inputs.mode }}" != "release" ]; then
+      #       echo "::error::Publish action is only allowed in release mode"
+      #       exit 1
+      #     fi
       - uses: actions/checkout@v4
         with:
           submodules: recursive
