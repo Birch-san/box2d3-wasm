@@ -122,7 +122,7 @@ jobs:
         id: versioning
         working-directory: box2d3-wasm
         run: |
-          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --git-tag-version --no-commit-hooks -m "release %s [skip ci]")
+          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --git-tag-version --no-commit-hooks --verbose -m "release %s [skip ci]")
           # Remove the 'v' prefix
           NEW_VERSION=${NEW_VERSION#v}
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
@@ -136,4 +136,5 @@ jobs:
           git remote -v
           git status
           git log
+          git --version
           git diff -- package-lock.json
