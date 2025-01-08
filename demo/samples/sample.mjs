@@ -55,12 +55,6 @@ export default class Sample{
 			}
 		}
 
-		function f32(n) {
-			return new Float32Array([n])[0];
-		}
-
-		timeStep = f32(timeStep);
-
 		b2World_EnableSleeping( this.m_worldId, settings.enableSleep );
 		b2World_EnableWarmStarting( this.m_worldId, settings.enableWarmStarting );
 		b2World_EnableContinuous( this.m_worldId, settings.enableContinuous );

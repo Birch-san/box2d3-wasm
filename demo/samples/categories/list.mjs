@@ -1,4 +1,7 @@
 export default {
+  "Benchmark": {
+    "Spinner": "./categories/benchmark/spinner.mjs"
+  },
   "Determinism": {
     "Falling Hinges": "./categories/determinism/fallingHinges.mjs"
   },
