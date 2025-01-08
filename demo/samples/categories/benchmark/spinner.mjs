@@ -5,6 +5,13 @@ import Keyboard from '../../../utils/keyboard.mjs';
 
 const SPINNER_POINT_COUNT = 360;
 
+const e_shapes = {
+	e_capsule: 0,
+	e_circle: 1,
+	e_polygon: 2,
+	e_mix: 3
+};
+
 export default class Spinner extends Sample{
 	constructor(box2d, camera, debugDraw){
 		super(box2d, camera, debugDraw);
@@ -15,6 +22,7 @@ export default class Spinner extends Sample{
 		this.m_bodyCount = 3000;
 		this.m_bodies = [];
 		this.m_revoluteJoint = null;
+		this.m_shape = e_shapes.e_mix;
 
 		const {
 			b2DefaultBodyDef,
@@ -126,18 +134,33 @@ export default class Spinner extends Sample{
 
 			this.m_bodies.push( bodyId );
 
-			let remainder = i % 3;
-			if ( remainder == 0 )
-			{
-				b2CreateCapsuleShape( bodyId, shapeDef, capsule );
-			}
-			else if ( remainder == 1 )
-			{
-				b2CreateCircleShape( bodyId, shapeDef, circle );
-			}
-			else if ( remainder == 2 )
-			{
-				b2CreatePolygonShape( bodyId, shapeDef, square );
+			switch ( this.m_shape ) {
+				case e_shapes.e_capsule:
+					b2CreateCapsuleShape( bodyId, shapeDef, capsule );
+					break;
+				case e_shapes.e_circle:
+					b2CreateCircleShape( bodyId, shapeDef, circle );
+					break;
+				case e_shapes.e_polygon:
+					b2CreatePolygonShape( bodyId, shapeDef, square );
+					break
+				case e_shapes.e_mix:
+					{
+						let remainder = i % 3;
+						if ( remainder == 0 )
+						{
+							b2CreateCapsuleShape( bodyId, shapeDef, capsule );
+						}
+						else if ( remainder == 1 )
+						{
+							b2CreateCircleShape( bodyId, shapeDef, circle );
+						}
+						else if ( remainder == 2 )
+						{
+							b2CreatePolygonShape( bodyId, shapeDef, square );
+						}
+						break;
+					}
 			}
 
 			x += 1.0;
@@ -189,6 +212,7 @@ export default class Spinner extends Sample{
 
 		const PARAMS = {
 			bodyCount: this.m_bodyCount,
+			shape: e_shapes.e_mix,
 			motorTorque: 40000.0,
 		};
 
@@ -198,6 +222,19 @@ export default class Spinner extends Sample{
 			max: 10000,
 		}).on('change', event => {
 			this.m_bodyCount = event.value;
+			this.Despawn();
+			this.Spawn();
+		});
+
+		this.pane.addBinding(PARAMS, 'shape', {
+			options: {
+				Capsule: e_shapes.e_capsule,
+				Circle: e_shapes.e_circle,
+				Box: e_shapes.e_polygon,
+				Mix: e_shapes.e_mix,
+			}
+		}).on('change', event => {
+			this.m_shape = event.value;
 			this.Despawn();
 			this.Spawn();
 		});
