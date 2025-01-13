@@ -121,7 +121,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             return self;
         })
         .function("GetAngle", +[](const b2Rot& self) -> float {
-            return atan2f(self.s, self.c);
+            return b2Atan2(self.s, self.c);
         })
         ;
 
@@ -730,6 +730,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     function("b2DefaultShapeDef", &b2DefaultShapeDef);
     function("b2CreateChain", &b2CreateChain, allow_raw_pointers());
+    function("b2DestroyChain", &b2DestroyChain, allow_raw_pointers());
     function("b2CreatePolygonShape", &b2CreatePolygonShape, allow_raw_pointers());
     function("b2CreateCircleShape", &b2CreateCircleShape, allow_raw_pointers());
     function("b2CreateCapsuleShape", &b2CreateCapsuleShape, allow_raw_pointers());

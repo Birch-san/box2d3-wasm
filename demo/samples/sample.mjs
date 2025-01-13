@@ -1,10 +1,7 @@
-import settings, {DEFAULT_SETTINGS} from './settings.mjs';
+import settings from './settings.mjs';
 
 export default class Sample{
 	constructor(box2d, camera, debugDraw){
-
-		// Object.assign(settings, DEFAULT_SETTINGS);
-
 		this.box2d = box2d;
 		this.debugDraw = debugDraw;
 		this.camera = camera;
