@@ -209,6 +209,16 @@ function DrawString(x, y, text){
 	return m_textLine;
 }
 
+function drawBasicStats(stepTime, stepCount){
+	const fontHeight = 12 * Math.min(window.devicePixelRatio || 1, 2);
+	ctx.font = `${fontHeight}px sans-serif`;
+	ctx.fillStyle = 'rgba(163, 232, 163, 1)';
+	const cx = camera.center.x.toFixed(2);
+	const cy = camera.center.y.toFixed(2);
+	const cz = camera.zoom.toFixed(2);
+	ctx.fillText(`${stepTime.toFixed(2)}ms - step ${stepCount} - camera (${cx}, ${cy}, ${cz})`, 5, canvas.height - fontHeight / 2);
+}
+
 function update(timestamp) {
     const deltaTime = timestamp - lastFrameTime;
 
@@ -237,6 +247,8 @@ function update(timestamp) {
 
 			lastFrameTime = timestamp - (deltaTime % settings.maxFrameTime);
 			frame++;
+
+			drawBasicStats(frameTime, sample.m_stepCount);
 		}
 
 		Keyboard.Update();
