@@ -1,5 +1,6 @@
 export default {
   "Benchmark": {
+    "Barrel": "./categories/benchmark/barrel.mjs",
     "Spinner": "./categories/benchmark/spinner.mjs"
   },
   "Determinism": {
