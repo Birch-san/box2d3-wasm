@@ -222,7 +222,7 @@ export default class SensorBooked extends Sample{
 	}
 
 	UpdateUI(DrawString, textLine){
-		super.UpdateUI(DrawString, textLine);
+		m_textLine = super.UpdateUI(DrawString, m_textLine);
 
 		DrawString(5, textLine, 'visiting === ' + this.m_isVisiting.toString());
 	}

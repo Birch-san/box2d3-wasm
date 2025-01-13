@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS = {
 	singleStep: false,
 	enableWarmStarting: true,
 	enableContinuous: true,
+	profile: false,
 	subStepCount: 4,
 }
 

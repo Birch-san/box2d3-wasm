@@ -151,7 +151,7 @@ export default class FootSensor extends Sample{
 	}
 
 	UpdateUI(DrawString, m_textLine){
-		super.UpdateUI(DrawString, m_textLine);
+		m_textLine = super.UpdateUI(DrawString, m_textLine);
 
 		DrawString( 5, m_textLine, `count == ${this.m_overlapCount}`);
 

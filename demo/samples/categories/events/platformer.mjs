@@ -305,6 +305,8 @@ export default class Platformer extends Sample{
 	}
 
 	UpdateUI(DrawString, m_textLine){
+		m_textLine = super.UpdateUI(DrawString, m_textLine);
+
 		const contactCount = this.platformContactData?.length;
 		const pointCount = this.platformContactData?.[0]?.manifold?.pointCount || 0;
 

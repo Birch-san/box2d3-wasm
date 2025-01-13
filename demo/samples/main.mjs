@@ -85,13 +85,13 @@ function addUI(){
 		pause: false,
 		'warm starting': settings.enableWarmStarting,
 		continuous: settings.enableContinuous,
+		profile: settings.profile,
 	  };
 	pane = new Pane({
 		title: 'Main Settings',
 		expanded: true,
 		container,
 	});
-
 
 	const tab = pane.addTab({
 		pages: [
@@ -112,6 +112,10 @@ function addUI(){
 
 	main.addBinding(PARAMS, 'continuous').on('change', (event) => {
 		settings.enableContinuous = event.value;
+	});
+
+	main.addBinding(PARAMS, 'profile').on('change', (event) => {
+		settings.profile = event.value;
 	});
 
 	main.addButton({
