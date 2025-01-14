@@ -66,7 +66,7 @@ function updateDebugDrawFlags(){
 async function initialize(){
 	box2d = await Box2DFactory();
 
-	debugDraw = new DebugDrawRenderer(box2d, ctx, settings.ptm);
+	debugDraw = new DebugDrawRenderer(box2d, ctx, settings.ptm, true, settings.maxDebugDrawCommands);
 
 	requestAnimationFrame(update);
 

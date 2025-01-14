@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS = {
 	enableContinuous: true,
 	profile: false,
 	subStepCount: 4,
+	maxDebugDrawCommands: 20000
 }
 
 export default {
