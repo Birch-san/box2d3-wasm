@@ -1,5 +1,5 @@
 export default class DebugDrawRenderer {
-    constructor(Module, context, scale, autoHD = true) {
+    constructor(Module, context, scale, autoHD = true, maxCommands = 10000) {
         this.Module = Module;
         this.ctx = context;
         this.baseScale = scale;
@@ -9,7 +9,7 @@ export default class DebugDrawRenderer {
         this.dpr = autoHD ? Math.min(window.devicePixelRatio || 1, 2) : 1;
         this.finalScale = this.baseScale * this.dpr;
 
-        this.debugDrawCommandBuffer = new Module.DebugDrawCommandBuffer();
+        this.debugDrawCommandBuffer = new Module.DebugDrawCommandBuffer(maxCommands);
         this.colorCache = {};
         this.colorCache[1.0] = this.initializeColorCache();
         this.colorCache[0.5] = this.initializeColorCache(0.5);
