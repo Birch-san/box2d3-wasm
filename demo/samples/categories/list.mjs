@@ -1,7 +1,9 @@
 export default {
   "Benchmark": {
     "Barrel": "./categories/benchmark/barrel.mjs",
-    "Spinner": "./categories/benchmark/spinner.mjs"
+    "Many Tumblers": "./categories/benchmark/manyTumblers.mjs",
+    "Spinner": "./categories/benchmark/spinner.mjs",
+    "Tumbler": "./categories/benchmark/tumbler.mjs"
   },
   "Determinism": {
     "Falling Hinges": "./categories/determinism/fallingHinges.mjs"
