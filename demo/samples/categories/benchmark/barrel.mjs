@@ -294,10 +294,6 @@ export default class Barrel extends Sample{
 	}
 
 	CreateUI(){
-		const {
-			b2RevoluteJoint_SetMaxMotorTorque
-		} = this.box2d;
-
 		const container = document.getElementById('sample-settings');
 
 		if(this.pane){
