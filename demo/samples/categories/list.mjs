@@ -2,6 +2,7 @@ export default {
   "Benchmark": {
     "Barrel": "./categories/benchmark/barrel.mjs",
     "Create Destroy": "./categories/benchmark/createDestroy.mjs",
+    "Joint Grid": "./categories/benchmark/jointGrid.mjs",
     "Large Pyramid": "./categories/benchmark/largePyramid.mjs",
     "Many Pyramids": "./categories/benchmark/manyPyramids.mjs",
     "Many Tumblers": "./categories/benchmark/manyTumblers.mjs",
