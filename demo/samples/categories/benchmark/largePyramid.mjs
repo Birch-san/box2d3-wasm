@@ -1,4 +1,5 @@
 import Sample from "../../sample.mjs";
+import settings from "../../settings.mjs";
 
 
 export default class LargePyramid extends Sample{
@@ -7,6 +8,7 @@ export default class LargePyramid extends Sample{
 
 		camera.center = {x: 0.0, y: 50.0 };
 		camera.zoom = 25.0 * 2.2;
+		settings.enableSleep = false;
 
 		this.Spawn();
 	}
