@@ -54,7 +54,7 @@ export default class Camera {
         };
 
         const offset = {
-            x: this.center.x + extents.x,
+            x: -this.center.x + extents.x,
             y: -this.center.y - extents.y
         };
 
@@ -119,7 +119,7 @@ export default class Camera {
                 y: this.mousePos.y
             });
 
-			this.center.x += (currentWorldPos.x - prevWorldPos.x);
+			this.center.x -= (currentWorldPos.x - prevWorldPos.x);
             this.center.y -= (currentWorldPos.y - prevWorldPos.y);
         }
 
@@ -136,8 +136,8 @@ export default class Camera {
 		this.zoom *= dy > 0 ? scrollMul : 1 / scrollMul;
 		const worldPosAfterZoom = this.convertScreenToWorld({x:cx, y:cy});
 
-		this.center.x += (worldPosAfterZoom.x - worldPosBeforeZoom.x);
-		this.center.y -= (worldPosBeforeZoom.y - worldPosAfterZoom.y);
+		this.center.x -= (worldPosAfterZoom.x - worldPosBeforeZoom.x);
+		this.center.y += (worldPosBeforeZoom.y - worldPosAfterZoom.y);
 	}
 
 	Destroy() {

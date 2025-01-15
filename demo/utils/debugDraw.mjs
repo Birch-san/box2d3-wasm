@@ -479,7 +479,6 @@ export default class DebugDrawRenderer {
             this.offset.x = transform.offset.x;
             this.offset.y = transform.offset.y;
         } else {
-            // get bounds of the canvas
             const clientWidth = this.ctx.canvas.clientWidth;
             const clientHeight = this.ctx.canvas.clientHeight;
 

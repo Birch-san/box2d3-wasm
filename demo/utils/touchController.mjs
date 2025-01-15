@@ -81,7 +81,7 @@ export default class TouchController {
 
 				const worldPosAfterZoom = this.camera.convertScreenToWorld(center);
 
-				this.camera.center.x += (worldPosAfterZoom.x - worldPosBeforeZoom.x);
+				this.camera.center.x -= (worldPosAfterZoom.x - worldPosBeforeZoom.x);
 				this.camera.center.y -= (worldPosAfterZoom.y - worldPosBeforeZoom.y);
 
 				this.lastTouchDistance = newDistance;
@@ -99,7 +99,7 @@ export default class TouchController {
 				y: this.touches[0].clientY,
 			});
 
-			this.camera.center.x -= (prevWorldPos.x - currentWorldPos.x);
+			this.camera.center.x += (prevWorldPos.x - currentWorldPos.x);
 			this.camera.center.y += (prevWorldPos.y - currentWorldPos.y);
 		}
 
