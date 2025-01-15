@@ -5,6 +5,7 @@ export default {
     "Large Pyramid": "./categories/benchmark/largePyramid.mjs",
     "Many Pyramids": "./categories/benchmark/manyPyramids.mjs",
     "Many Tumblers": "./categories/benchmark/manyTumblers.mjs",
+    "Sleep": "./categories/benchmark/sleep.mjs",
     "Spinner": "./categories/benchmark/spinner.mjs",
     "Tumbler": "./categories/benchmark/tumbler.mjs"
   },
