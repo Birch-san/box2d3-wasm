@@ -121,7 +121,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             return self;
         })
         .function("GetAngle", +[](const b2Rot& self) -> float {
-            return atan2f(self.s, self.c);
+            return b2Atan2(self.s, self.c);
         })
         ;
 
@@ -730,6 +730,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     function("b2DefaultShapeDef", &b2DefaultShapeDef);
     function("b2CreateChain", &b2CreateChain, allow_raw_pointers());
+    function("b2DestroyChain", &b2DestroyChain, allow_raw_pointers());
     function("b2CreatePolygonShape", &b2CreatePolygonShape, allow_raw_pointers());
     function("b2CreateCircleShape", &b2CreateCircleShape, allow_raw_pointers());
     function("b2CreateCapsuleShape", &b2CreateCapsuleShape, allow_raw_pointers());
@@ -1657,6 +1658,110 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2MouseJoint_GetSpringDampingRatio", &b2MouseJoint_GetSpringDampingRatio);
     function("b2MouseJoint_SetMaxForce", &b2MouseJoint_SetMaxForce);
     function("b2MouseJoint_GetMaxForce", &b2MouseJoint_GetMaxForce);
+
+    function("b2DistanceJoint_SetLength", &b2DistanceJoint_SetLength);
+    function("b2DistanceJoint_GetLength", &b2DistanceJoint_GetLength);
+    function("b2DistanceJoint_EnableSpring", &b2DistanceJoint_EnableSpring);
+    function("b2DistanceJoint_IsSpringEnabled", &b2DistanceJoint_IsSpringEnabled);
+    function("b2DistanceJoint_SetSpringHertz", &b2DistanceJoint_SetSpringHertz);
+    function("b2DistanceJoint_SetSpringDampingRatio", &b2DistanceJoint_SetSpringDampingRatio);
+    function("b2DistanceJoint_GetSpringHertz", &b2DistanceJoint_GetSpringHertz);
+    function("b2DistanceJoint_GetSpringDampingRatio", &b2DistanceJoint_GetSpringDampingRatio);
+    function("b2DistanceJoint_EnableLimit", &b2DistanceJoint_EnableLimit);
+    function("b2DistanceJoint_IsLimitEnabled", &b2DistanceJoint_IsLimitEnabled);
+    function("b2DistanceJoint_SetLengthRange", &b2DistanceJoint_SetLengthRange);
+    function("b2DistanceJoint_GetMinLength", &b2DistanceJoint_GetMinLength);
+    function("b2DistanceJoint_GetMaxLength", &b2DistanceJoint_GetMaxLength);
+    function("b2DistanceJoint_GetCurrentLength", &b2DistanceJoint_GetCurrentLength);
+    function("b2DistanceJoint_EnableMotor", &b2DistanceJoint_EnableMotor);
+    function("b2DistanceJoint_IsMotorEnabled", &b2DistanceJoint_IsMotorEnabled);
+    function("b2DistanceJoint_SetMotorSpeed", &b2DistanceJoint_SetMotorSpeed);
+    function("b2DistanceJoint_GetMotorSpeed", &b2DistanceJoint_GetMotorSpeed);
+    function("b2DistanceJoint_SetMaxMotorForce", &b2DistanceJoint_SetMaxMotorForce);
+    function("b2DistanceJoint_GetMaxMotorForce", &b2DistanceJoint_GetMaxMotorForce);
+    function("b2DistanceJoint_GetMotorForce", &b2DistanceJoint_GetMotorForce);
+
+    function("b2MotorJoint_SetLinearOffset", &b2MotorJoint_SetLinearOffset);
+    function("b2MotorJoint_GetLinearOffset", &b2MotorJoint_GetLinearOffset);
+    function("b2MotorJoint_SetAngularOffset", &b2MotorJoint_SetAngularOffset);
+    function("b2MotorJoint_GetAngularOffset", &b2MotorJoint_GetAngularOffset);
+    function("b2MotorJoint_SetMaxForce", &b2MotorJoint_SetMaxForce);
+    function("b2MotorJoint_GetMaxForce", &b2MotorJoint_GetMaxForce);
+    function("b2MotorJoint_SetMaxTorque", &b2MotorJoint_SetMaxTorque);
+    function("b2MotorJoint_GetMaxTorque", &b2MotorJoint_GetMaxTorque);
+    function("b2MotorJoint_SetCorrectionFactor", &b2MotorJoint_SetCorrectionFactor);
+    function("b2MotorJoint_GetCorrectionFactor", &b2MotorJoint_GetCorrectionFactor);
+
+    function("b2PrismaticJoint_EnableSpring", &b2PrismaticJoint_EnableSpring);
+    function("b2PrismaticJoint_IsSpringEnabled", &b2PrismaticJoint_IsSpringEnabled);
+    function("b2PrismaticJoint_SetSpringHertz", &b2PrismaticJoint_SetSpringHertz);
+    function("b2PrismaticJoint_GetSpringHertz", &b2PrismaticJoint_GetSpringHertz);
+    function("b2PrismaticJoint_SetSpringDampingRatio", &b2PrismaticJoint_SetSpringDampingRatio);
+    function("b2PrismaticJoint_GetSpringDampingRatio", &b2PrismaticJoint_GetSpringDampingRatio);
+    function("b2PrismaticJoint_EnableLimit", &b2PrismaticJoint_EnableLimit);
+    function("b2PrismaticJoint_IsLimitEnabled", &b2PrismaticJoint_IsLimitEnabled);
+    function("b2PrismaticJoint_GetLowerLimit", &b2PrismaticJoint_GetLowerLimit);
+    function("b2PrismaticJoint_GetUpperLimit", &b2PrismaticJoint_GetUpperLimit);
+    function("b2PrismaticJoint_SetLimits", &b2PrismaticJoint_SetLimits);
+    function("b2PrismaticJoint_EnableMotor", &b2PrismaticJoint_EnableMotor);
+    function("b2PrismaticJoint_IsMotorEnabled", &b2PrismaticJoint_IsMotorEnabled);
+    function("b2PrismaticJoint_SetMotorSpeed", &b2PrismaticJoint_SetMotorSpeed);
+    function("b2PrismaticJoint_GetMotorSpeed", &b2PrismaticJoint_GetMotorSpeed);
+    function("b2PrismaticJoint_SetMaxMotorForce", &b2PrismaticJoint_SetMaxMotorForce);
+    function("b2PrismaticJoint_GetMaxMotorForce", &b2PrismaticJoint_GetMaxMotorForce);
+    function("b2PrismaticJoint_GetMotorForce", &b2PrismaticJoint_GetMotorForce);
+    function("b2PrismaticJoint_GetTranslation", &b2PrismaticJoint_GetTranslation);
+    function("b2PrismaticJoint_GetSpeed", &b2PrismaticJoint_GetSpeed);
+
+    function("b2RevoluteJoint_EnableSpring", &b2RevoluteJoint_EnableSpring);
+    function("b2RevoluteJoint_IsSpringEnabled", &b2RevoluteJoint_IsSpringEnabled);
+    function("b2RevoluteJoint_SetSpringHertz", &b2RevoluteJoint_SetSpringHertz);
+    function("b2RevoluteJoint_GetSpringHertz", &b2RevoluteJoint_GetSpringHertz);
+    function("b2RevoluteJoint_SetSpringDampingRatio", &b2RevoluteJoint_SetSpringDampingRatio);
+    function("b2RevoluteJoint_GetSpringDampingRatio", &b2RevoluteJoint_GetSpringDampingRatio);
+    function("b2RevoluteJoint_GetAngle", &b2RevoluteJoint_GetAngle);
+    function("b2RevoluteJoint_EnableLimit", &b2RevoluteJoint_EnableLimit);
+    function("b2RevoluteJoint_IsLimitEnabled", &b2RevoluteJoint_IsLimitEnabled);
+    function("b2RevoluteJoint_GetLowerLimit", &b2RevoluteJoint_GetLowerLimit);
+    function("b2RevoluteJoint_GetUpperLimit", &b2RevoluteJoint_GetUpperLimit);
+    function("b2RevoluteJoint_SetLimits", &b2RevoluteJoint_SetLimits);
+    function("b2RevoluteJoint_EnableMotor", &b2RevoluteJoint_EnableMotor);
+    function("b2RevoluteJoint_IsMotorEnabled", &b2RevoluteJoint_IsMotorEnabled);
+    function("b2RevoluteJoint_SetMotorSpeed", &b2RevoluteJoint_SetMotorSpeed);
+    function("b2RevoluteJoint_GetMotorSpeed", &b2RevoluteJoint_GetMotorSpeed);
+    function("b2RevoluteJoint_GetMotorTorque", &b2RevoluteJoint_GetMotorTorque);
+    function("b2RevoluteJoint_SetMaxMotorTorque", &b2RevoluteJoint_SetMaxMotorTorque);
+    function("b2RevoluteJoint_GetMaxMotorTorque", &b2RevoluteJoint_GetMaxMotorTorque);
+
+    function("b2WeldJoint_GetReferenceAngle", &b2WeldJoint_GetReferenceAngle);
+    function("b2WeldJoint_SetReferenceAngle", &b2WeldJoint_SetReferenceAngle);
+    function("b2WeldJoint_SetLinearHertz", &b2WeldJoint_SetLinearHertz);
+    function("b2WeldJoint_GetLinearHertz", &b2WeldJoint_GetLinearHertz);
+    function("b2WeldJoint_SetLinearDampingRatio", &b2WeldJoint_SetLinearDampingRatio);
+    function("b2WeldJoint_GetLinearDampingRatio", &b2WeldJoint_GetLinearDampingRatio);
+    function("b2WeldJoint_SetAngularHertz", &b2WeldJoint_SetAngularHertz);
+    function("b2WeldJoint_GetAngularHertz", &b2WeldJoint_GetAngularHertz);
+    function("b2WeldJoint_SetAngularDampingRatio", &b2WeldJoint_SetAngularDampingRatio);
+    function("b2WeldJoint_GetAngularDampingRatio", &b2WeldJoint_GetAngularDampingRatio);
+
+    function("b2WheelJoint_EnableSpring", &b2WheelJoint_EnableSpring);
+    function("b2WheelJoint_IsSpringEnabled", &b2WheelJoint_IsSpringEnabled);
+    function("b2WheelJoint_SetSpringHertz", &b2WheelJoint_SetSpringHertz);
+    function("b2WheelJoint_GetSpringHertz", &b2WheelJoint_GetSpringHertz);
+    function("b2WheelJoint_SetSpringDampingRatio", &b2WheelJoint_SetSpringDampingRatio);
+    function("b2WheelJoint_GetSpringDampingRatio", &b2WheelJoint_GetSpringDampingRatio);
+    function("b2WheelJoint_EnableLimit", &b2WheelJoint_EnableLimit);
+    function("b2WheelJoint_IsLimitEnabled", &b2WheelJoint_IsLimitEnabled);
+    function("b2WheelJoint_GetLowerLimit", &b2WheelJoint_GetLowerLimit);
+    function("b2WheelJoint_GetUpperLimit", &b2WheelJoint_GetUpperLimit);
+    function("b2WheelJoint_SetLimits", &b2WheelJoint_SetLimits);
+    function("b2WheelJoint_EnableMotor", &b2WheelJoint_EnableMotor);
+    function("b2WheelJoint_IsMotorEnabled", &b2WheelJoint_IsMotorEnabled);
+    function("b2WheelJoint_SetMotorSpeed", &b2WheelJoint_SetMotorSpeed);
+    function("b2WheelJoint_GetMotorSpeed", &b2WheelJoint_GetMotorSpeed);
+    function("b2WheelJoint_SetMaxMotorTorque", &b2WheelJoint_SetMaxMotorTorque);
+    function("b2WheelJoint_GetMaxMotorTorque", &b2WheelJoint_GetMaxMotorTorque);
+    function("b2WheelJoint_GetMotorTorque", &b2WheelJoint_GetMotorTorque);
 
     // ------------------------------------------------------------------------
     // Misc

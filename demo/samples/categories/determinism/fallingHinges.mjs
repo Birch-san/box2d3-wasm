@@ -155,6 +155,7 @@ export default class FallingHinges extends Sample{
 	}
 
 	UpdateUI(DrawString, m_textLine){
+		m_textLine = super.UpdateUI(DrawString, m_textLine);
 		DrawString(5, m_textLine, `sleep step = ${this.m_sleepStep}, hash = 0x${this.m_hash.toString(16)}`);
 	}
 

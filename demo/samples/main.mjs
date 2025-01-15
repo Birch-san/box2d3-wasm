@@ -51,6 +51,7 @@ function loadSample(url) {
 	import(url).then((module) => {
 		sample = new module.default(box2d, camera, debugDraw);
 		updateDebugDrawFlags();
+		addUI();
 	});
 }
 
@@ -66,7 +67,7 @@ function updateDebugDrawFlags(){
 async function initialize(){
 	box2d = await Box2DFactory();
 
-	debugDraw = new DebugDrawRenderer(box2d, ctx, settings.ptm);
+	debugDraw = new DebugDrawRenderer(box2d, ctx, settings.ptm, true, settings.maxDebugDrawCommands);
 
 	requestAnimationFrame(update);
 
@@ -79,19 +80,25 @@ async function initialize(){
 }
 
 function addUI(){
+	if(pane){
+		pane.dispose();
+	}
+
 	const container = document.getElementById('main-settings');
 
 	const PARAMS = {
 		pause: false,
+		sleep: settings.enableSleep,
 		'warm starting': settings.enableWarmStarting,
 		continuous: settings.enableContinuous,
-	  };
+		profile: settings.profile,
+	};
+
 	pane = new Pane({
 		title: 'Main Settings',
 		expanded: true,
 		container,
 	});
-
 
 	const tab = pane.addTab({
 		pages: [
@@ -106,12 +113,20 @@ function addUI(){
 		settings.pause = event.value;
 	});
 
+	main.addBinding(PARAMS, 'sleep').on('change', (event) => {
+		settings.enableSleep = event.value;
+	});
+
 	main.addBinding(PARAMS, 'warm starting').on('change', (event) => {
 		settings.enableWarmStarting = event.value;
 	});
 
 	main.addBinding(PARAMS, 'continuous').on('change', (event) => {
 		settings.enableContinuous = event.value;
+	});
+
+	main.addBinding(PARAMS, 'profile').on('change', (event) => {
+		settings.profile = event.value;
 	});
 
 	main.addButton({
@@ -205,6 +220,16 @@ function DrawString(x, y, text){
 	return m_textLine;
 }
 
+function drawBasicStats(stepTime, stepCount){
+	const fontHeight = 12 * Math.min(window.devicePixelRatio || 1, 2);
+	ctx.font = `${fontHeight}px sans-serif`;
+	ctx.fillStyle = 'rgba(163, 232, 163, 1)';
+	const cx = camera.center.x.toFixed(2);
+	const cy = camera.center.y.toFixed(2);
+	const cz = camera.zoom.toFixed(2);
+	ctx.fillText(`${stepTime.toFixed(2)}ms - step ${stepCount} - camera (${cx}, ${cy}, ${cz})`, 5, canvas.height - fontHeight / 2);
+}
+
 function update(timestamp) {
     const deltaTime = timestamp - lastFrameTime;
 
@@ -233,6 +258,8 @@ function update(timestamp) {
 
 			lastFrameTime = timestamp - (deltaTime % settings.maxFrameTime);
 			frame++;
+
+			drawBasicStats(frameTime, sample.m_stepCount);
 		}
 
 		Keyboard.Update();

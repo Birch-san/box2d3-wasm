@@ -17,7 +17,10 @@ export const DEFAULT_SETTINGS = {
 	singleStep: false,
 	enableWarmStarting: true,
 	enableContinuous: true,
+	profile: false,
 	subStepCount: 4,
+	maxDebugDrawCommands: 60000 /* 135 bytes * 60000 = 8,100,000 bytes - 7.91 MB */,
+
 }
 
 export default {

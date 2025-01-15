@@ -1,10 +1,7 @@
-import settings, {DEFAULT_SETTINGS} from './settings.mjs';
+import settings from './settings.mjs';
 
 export default class Sample{
 	constructor(box2d, camera, debugDraw){
-
-		// Object.assign(settings, DEFAULT_SETTINGS);
-
 		this.box2d = box2d;
 		this.debugDraw = debugDraw;
 		this.camera = camera;
@@ -30,6 +27,10 @@ export default class Sample{
 
 		this.m_stepCount = 0;
 
+		this.m_totalProfile = {...profileInterface};
+		this.m_maxProfile = {...profileInterface};
+		this.m_aveProfile = {...profileInterface};
+
 		this.pane = null;
 	}
 
@@ -54,12 +55,6 @@ export default class Sample{
 				timeStep = 0.0;
 			}
 		}
-
-		function f32(n) {
-			return new Float32Array([n])[0];
-		}
-
-		timeStep = f32(timeStep);
 
 		b2World_EnableSleeping( this.m_worldId, settings.enableSleep );
 		b2World_EnableWarmStarting( this.m_worldId, settings.enableWarmStarting );
@@ -176,9 +171,142 @@ export default class Sample{
 		}
 	}
 
+	HandleProfile(DrawString, m_textLine){
+		const {
+			b2World_GetProfile
+		} = this.box2d;
+		const profile = b2World_GetProfile( this.m_worldId );
+
+		this.m_totalProfile.step += profile.step;
+		this.m_totalProfile.pairs += profile.pairs;
+		this.m_totalProfile.collide += profile.collide;
+		this.m_totalProfile.solve += profile.solve;
+		this.m_totalProfile.buildIslands += profile.buildIslands;
+		this.m_totalProfile.solveConstraints += profile.solveConstraints;
+		this.m_totalProfile.prepareTasks += profile.prepareTasks;
+		this.m_totalProfile.solverTasks += profile.solverTasks;
+		this.m_totalProfile.prepareConstraints += profile.prepareConstraints;
+		this.m_totalProfile.integrateVelocities += profile.integrateVelocities;
+		this.m_totalProfile.warmStart += profile.warmStart;
+		this.m_totalProfile.solveVelocities += profile.solveVelocities;
+		this.m_totalProfile.integratePositions += profile.integratePositions;
+		this.m_totalProfile.relaxVelocities += profile.relaxVelocities;
+		this.m_totalProfile.applyRestitution += profile.applyRestitution;
+		this.m_totalProfile.storeImpulses += profile.storeImpulses;
+		this.m_totalProfile.finalizeBodies += profile.finalizeBodies;
+		this.m_totalProfile.sleepIslands += profile.sleepIslands;
+		this.m_totalProfile.splitIslands += profile.splitIslands;
+		this.m_totalProfile.hitEvents += profile.hitEvents;
+		this.m_totalProfile.broadphase += profile.broadphase;
+		this.m_totalProfile.continuous += profile.continuous;
+
+		this.m_maxProfile.step = Math.max(this.m_maxProfile.step, profile.step);
+		this.m_maxProfile.pairs = Math.max(this.m_maxProfile.pairs, profile.pairs);
+		this.m_maxProfile.collide = Math.max(this.m_maxProfile.collide, profile.collide);
+		this.m_maxProfile.solve = Math.max(this.m_maxProfile.solve, profile.solve);
+		this.m_maxProfile.buildIslands = Math.max(this.m_maxProfile.buildIslands, profile.buildIslands);
+		this.m_maxProfile.solveConstraints = Math.max(this.m_maxProfile.solveConstraints, profile.solveConstraints);
+		this.m_maxProfile.prepareTasks = Math.max(this.m_maxProfile.prepareTasks, profile.prepareTasks);
+		this.m_maxProfile.solverTasks = Math.max(this.m_maxProfile.solverTasks, profile.solverTasks);
+		this.m_maxProfile.prepareConstraints = Math.max(this.m_maxProfile.prepareConstraints, profile.prepareConstraints);
+		this.m_maxProfile.integrateVelocities = Math.max(this.m_maxProfile.integrateVelocities, profile.integrateVelocities);
+		this.m_maxProfile.warmStart = Math.max(this.m_maxProfile.warmStart, profile.warmStart);
+		this.m_maxProfile.solveVelocities = Math.max(this.m_maxProfile.solveVelocities, profile.solveVelocities);
+		this.m_maxProfile.integratePositions = Math.max(this.m_maxProfile.integratePositions, profile.integratePositions);
+		this.m_maxProfile.relaxVelocities = Math.max(this.m_maxProfile.relaxVelocities, profile.relaxVelocities);
+		this.m_maxProfile.applyRestitution = Math.max(this.m_maxProfile.applyRestitution, profile.applyRestitution);
+		this.m_maxProfile.storeImpulses = Math.max(this.m_maxProfile.storeImpulses, profile.storeImpulses);
+		this.m_maxProfile.finalizeBodies = Math.max(this.m_maxProfile.finalizeBodies, profile.finalizeBodies);
+		this.m_maxProfile.sleepIslands = Math.max(this.m_maxProfile.sleepIslands, profile.sleepIslands);
+		this.m_maxProfile.splitIslands = Math.max(this.m_maxProfile.splitIslands, profile.splitIslands);
+		this.m_maxProfile.hitEvents = Math.max(this.m_maxProfile.hitEvents, profile.hitEvents);
+		this.m_maxProfile.broadphase = Math.max(this.m_maxProfile.broadphase, profile.broadphase);
+		this.m_maxProfile.continuous = Math.max(this.m_maxProfile.continuous, profile.continuous);
+
+		if(settings.profile){
+		console.log('dafuq');
+
+			this.m_aveProfile.step = this.m_totalProfile.step / this.m_stepCount;
+			this.m_aveProfile.pairs = this.m_totalProfile.pairs / this.m_stepCount;
+			this.m_aveProfile.collide = this.m_totalProfile.collide / this.m_stepCount;
+			this.m_aveProfile.solve = this.m_totalProfile.solve / this.m_stepCount;
+			this.m_aveProfile.buildIslands = this.m_totalProfile.buildIslands / this.m_stepCount;
+			this.m_aveProfile.solveConstraints = this.m_totalProfile.solveConstraints / this.m_stepCount;
+			this.m_aveProfile.prepareTasks = this.m_totalProfile.prepareTasks / this.m_stepCount;
+			this.m_aveProfile.solverTasks = this.m_totalProfile.solverTasks / this.m_stepCount;
+			this.m_aveProfile.prepareConstraints = this.m_totalProfile.prepareConstraints / this.m_stepCount;
+			this.m_aveProfile.integrateVelocities = this.m_totalProfile.integrateVelocities / this.m_stepCount;
+			this.m_aveProfile.warmStart = this.m_totalProfile.warmStart / this.m_stepCount;
+			this.m_aveProfile.solveVelocities = this.m_totalProfile.solveVelocities / this.m_stepCount;
+			this.m_aveProfile.integratePositions = this.m_totalProfile.integratePositions / this.m_stepCount;
+			this.m_aveProfile.relaxVelocities = this.m_totalProfile.relaxVelocities / this.m_stepCount;
+			this.m_aveProfile.applyRestitution = this.m_totalProfile.applyRestitution / this.m_stepCount;
+			this.m_aveProfile.storeImpulses = this.m_totalProfile.storeImpulses / this.m_stepCount;
+			this.m_aveProfile.finalizeBodies = this.m_totalProfile.finalizeBodies / this.m_stepCount;
+			this.m_aveProfile.sleepIslands = this.m_totalProfile.sleepIslands / this.m_stepCount;
+			this.m_aveProfile.splitIslands = this.m_totalProfile.splitIslands / this.m_stepCount;
+			this.m_aveProfile.hitEvents = this.m_totalProfile.hitEvents / this.m_stepCount;
+			this.m_aveProfile.broadphase = this.m_totalProfile.broadphase / this.m_stepCount;
+			this.m_aveProfile.continuous = this.m_totalProfile.continuous / this.m_stepCount;
+
+			m_textLine = DrawString(5, m_textLine, `step [ave] (max) = ${profile.step.toFixed(2)} [${this.m_aveProfile.step.toFixed(2)}] (${this.m_maxProfile.step.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `pairs [ave] (max) = ${profile.pairs.toFixed(2)} [${this.m_aveProfile.pairs.toFixed(2)}] (${this.m_maxProfile.pairs.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `collide [ave] (max) = ${profile.collide.toFixed(2)} [${this.m_aveProfile.collide.toFixed(2)}] (${this.m_maxProfile.collide.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `solve [ave] (max) = ${profile.solve.toFixed(2)} [${this.m_aveProfile.solve.toFixed(2)}] (${this.m_maxProfile.solve.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `build islands [ave] (max) = ${profile.buildIslands.toFixed(2)} [${this.m_aveProfile.buildIslands.toFixed(2)}] (${this.m_maxProfile.buildIslands.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `solve constraints [ave] (max) = ${profile.solveConstraints.toFixed(2)} [${this.m_aveProfile.solveConstraints.toFixed(2)}] (${this.m_maxProfile.solveConstraints.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `prepare tasks [ave] (max) = ${profile.prepareTasks.toFixed(2)} [${this.m_aveProfile.prepareTasks.toFixed(2)}] (${this.m_maxProfile.prepareTasks.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `solver tasks [ave] (max) = ${profile.solverTasks.toFixed(2)} [${this.m_aveProfile.solverTasks.toFixed(2)}] (${this.m_maxProfile.solverTasks.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `prepare constraints [ave] (max) = ${profile.prepareConstraints.toFixed(2)} [${this.m_aveProfile.prepareConstraints.toFixed(2)}] (${this.m_maxProfile.prepareConstraints.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `integrate velocities [ave] (max) = ${profile.integrateVelocities.toFixed(2)} [${this.m_aveProfile.integrateVelocities.toFixed(2)}] (${this.m_maxProfile.integrateVelocities.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `warm start [ave] (max) = ${profile.warmStart.toFixed(2)} [${this.m_aveProfile.warmStart.toFixed(2)}] (${this.m_maxProfile.warmStart.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `solve velocities [ave] (max) = ${profile.solveVelocities.toFixed(2)} [${this.m_aveProfile.solveVelocities.toFixed(2)}] (${this.m_maxProfile.solveVelocities.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `integrate positions [ave] (max) = ${profile.integratePositions.toFixed(2)} [${this.m_aveProfile.integratePositions.toFixed(2)}] (${this.m_maxProfile.integratePositions.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `relax velocities [ave] (max) = ${profile.relaxVelocities.toFixed(2)} [${this.m_aveProfile.relaxVelocities.toFixed(2)}] (${this.m_maxProfile.relaxVelocities.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `apply restitution [ave] (max) = ${profile.applyRestitution.toFixed(2)} [${this.m_aveProfile.applyRestitution.toFixed(2)}] (${this.m_maxProfile.applyRestitution.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `store impulses [ave] (max) = ${profile.storeImpulses.toFixed(2)} [${this.m_aveProfile.storeImpulses.toFixed(2)}] (${this.m_maxProfile.storeImpulses.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `finalize bodies [ave] (max) = ${profile.finalizeBodies.toFixed(2)} [${this.m_aveProfile.finalizeBodies.toFixed(2)}] (${this.m_maxProfile.finalizeBodies.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `sleep islands [ave] (max) = ${profile.sleepIslands.toFixed(2)} [${this.m_aveProfile.sleepIslands.toFixed(2)}] (${this.m_maxProfile.sleepIslands.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `split islands [ave] (max) = ${profile.splitIslands.toFixed(2)} [${this.m_aveProfile.splitIslands.toFixed(2)}] (${this.m_maxProfile.splitIslands.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `hit events [ave] (max) = ${profile.hitEvents.toFixed(2)} [${this.m_aveProfile.hitEvents.toFixed(2)}] (${this.m_maxProfile.hitEvents.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `broad-phase [ave] (max) = ${profile.broadphase.toFixed(2)} [${this.m_aveProfile.broadphase.toFixed(2)}] (${this.m_maxProfile.broadphase.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `continuous collision [ave] (max) = ${profile.continuous.toFixed(2)} [${this.m_aveProfile.continuous.toFixed(2)}] (${this.m_maxProfile.continuous.toFixed(2)})`);
+		}
+
+		return m_textLine;
+	}
+
 	Spawn(){}
 	Despawn(){}
 	CreateUI(){}
-	UpdateUI(){}
+	UpdateUI(DrawString, m_textLine){
+		m_textLine = this.HandleProfile(DrawString, m_textLine);
+		return m_textLine;
+	}
 	Destroy(){}
 }
+
+const profileInterface = {
+	step: 0,
+	pairs: 0,
+	collide: 0,
+	solve: 0,
+	buildIslands: 0,
+	solveConstraints: 0,
+	prepareTasks: 0,
+	solverTasks: 0,
+	prepareConstraints: 0,
+	integrateVelocities: 0,
+	warmStart: 0,
+	solveVelocities: 0,
+	integratePositions: 0,
+	relaxVelocities: 0,
+	applyRestitution: 0,
+	storeImpulses: 0,
+	finalizeBodies: 0,
+	sleepIslands: 0,
+	splitIslands: 0,
+	hitEvents: 0,
+	broadphase: 0,
+	continuous: 0,
+};

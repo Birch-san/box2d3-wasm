@@ -259,6 +259,7 @@ export default class BodyMove extends Sample{
 	}
 
 	UpdateUI(DrawString, m_textLine){
+		m_textLine = super.UpdateUI(DrawString, m_textLine);
 		DrawString( 5, m_textLine, `sleep count: ${this.m_sleepCount}` );
 	}
 

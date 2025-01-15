@@ -517,7 +517,7 @@ export default class Contacts extends Sample{
 	}
 
 	UpdateUI(DrawString, m_textLine){
-		super.UpdateUI(DrawString, m_textLine);
+		m_textLine = super.UpdateUI(DrawString, m_textLine);
 
 		DrawString(5, m_textLine, 'move using WASD');
 
