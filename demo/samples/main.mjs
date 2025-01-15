@@ -51,6 +51,7 @@ function loadSample(url) {
 	import(url).then((module) => {
 		sample = new module.default(box2d, camera, debugDraw);
 		updateDebugDrawFlags();
+		addUI();
 	});
 }
 
@@ -79,14 +80,20 @@ async function initialize(){
 }
 
 function addUI(){
+	if(pane){
+		pane.dispose();
+	}
+
 	const container = document.getElementById('main-settings');
 
 	const PARAMS = {
 		pause: false,
+		sleep: settings.enableSleep,
 		'warm starting': settings.enableWarmStarting,
 		continuous: settings.enableContinuous,
 		profile: settings.profile,
-	  };
+	};
+
 	pane = new Pane({
 		title: 'Main Settings',
 		expanded: true,
@@ -104,6 +111,10 @@ function addUI(){
 
 	main.addBinding(PARAMS, 'pause').on('change', (event) => {
 		settings.pause = event.value;
+	});
+
+	main.addBinding(PARAMS, 'sleep').on('change', (event) => {
+		settings.enableSleep = event.value;
 	});
 
 	main.addBinding(PARAMS, 'warm starting').on('change', (event) => {
