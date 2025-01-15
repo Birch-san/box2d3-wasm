@@ -519,7 +519,25 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("maskBits",
             +[](const b2Filter& filter) { return static_cast<uint32_t>(filter.maskBits); },
             +[](b2Filter& filter, uint32_t val) { filter.maskBits = val; })
-        .property("groupIndex", &b2Filter::groupIndex);
+        .property("groupIndex", &b2Filter::groupIndex)
+        // 64-bit access via string conversion
+        .function("setCategoryBits64",
+            +[](b2Filter& filter, const std::string& val) {
+                filter.categoryBits = std::stoull(val);
+            })
+        .function("getCategoryBits64",
+            +[](const b2Filter& filter) -> std::string {
+                return std::to_string(filter.categoryBits);
+            })
+        .function("setMaskBits64",
+            +[](b2Filter& filter, const std::string& val) {
+                filter.maskBits = std::stoull(val);
+            })
+        .function("getMaskBits64",
+            +[](const b2Filter& filter) -> std::string {
+                return std::to_string(filter.maskBits);
+            })
+        ;
 
     class_<b2ShapeDef>("b2ShapeDef")
         .constructor()
