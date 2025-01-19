@@ -117,13 +117,13 @@ export default class Sample{
 		box.upperBound.Copy(p).Add(d);
 
 		const queryContext = { point: p, bodyId: null };
-		b2World_OverlapAABB( this.m_worldId, box, new b2DefaultQueryFilter(), (shapeId) => this.QueryCallback(shapeId, queryContext));
+		b2World_OverlapAABB( this.m_worldId, box, b2DefaultQueryFilter(), (shapeId) => this.QueryCallback(shapeId, queryContext));
 
 		if(queryContext.bodyId){
 			const bodyDef = b2DefaultBodyDef();
 			this.m_groundBodyId = b2CreateBody( this.m_worldId, bodyDef );
 
-			const mouseDef = new b2DefaultMouseJointDef();
+			const mouseDef = b2DefaultMouseJointDef();
 			mouseDef.bodyIdA = this.m_groundBodyId;
 			mouseDef.bodyIdB = queryContext.bodyId;
 			mouseDef.target = queryContext.point;
@@ -135,6 +135,9 @@ export default class Sample{
 			b2Body_SetAwake( queryContext.bodyId, true );
 			return true;
 		}
+
+		box.delete();
+		d.delete();
 	}
 	MouseUp(){
 		const {
@@ -170,6 +173,9 @@ export default class Sample{
 			b2Body_SetAwake( bodyIdB, true );
 		}
 	}
+
+
+	toMB = (bytes) => (bytes / 1048576).toFixed(4);
 
 	HandleProfile(DrawString, m_textLine){
 		const {
@@ -224,8 +230,6 @@ export default class Sample{
 		this.m_maxProfile.continuous = Math.max(this.m_maxProfile.continuous, profile.continuous);
 
 		if(settings.profile){
-		console.log('dafuq');
-
 			this.m_aveProfile.step = this.m_totalProfile.step / this.m_stepCount;
 			this.m_aveProfile.pairs = this.m_totalProfile.pairs / this.m_stepCount;
 			this.m_aveProfile.collide = this.m_totalProfile.collide / this.m_stepCount;
@@ -249,6 +253,7 @@ export default class Sample{
 			this.m_aveProfile.broadphase = this.m_totalProfile.broadphase / this.m_stepCount;
 			this.m_aveProfile.continuous = this.m_totalProfile.continuous / this.m_stepCount;
 
+			m_textLine = DrawString(5, m_textLine, `WASM Memory in MB {allocated} [free] (total): {${this.toMB(this.box2d.mallinfo_get_allocated_space())}} [${this.toMB(this.box2d.mallinfo_get_free_space())}] (${this.toMB(this.box2d.mallinfo_get_total_space())})`);
 			m_textLine = DrawString(5, m_textLine, `step [ave] (max) = ${profile.step.toFixed(2)} [${this.m_aveProfile.step.toFixed(2)}] (${this.m_maxProfile.step.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `pairs [ave] (max) = ${profile.pairs.toFixed(2)} [${this.m_aveProfile.pairs.toFixed(2)}] (${this.m_maxProfile.pairs.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `collide [ave] (max) = ${profile.collide.toFixed(2)} [${this.m_aveProfile.collide.toFixed(2)}] (${this.m_maxProfile.collide.toFixed(2)})`);
@@ -272,7 +277,7 @@ export default class Sample{
 			m_textLine = DrawString(5, m_textLine, `broad-phase [ave] (max) = ${profile.broadphase.toFixed(2)} [${this.m_aveProfile.broadphase.toFixed(2)}] (${this.m_maxProfile.broadphase.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `continuous collision [ave] (max) = ${profile.continuous.toFixed(2)} [${this.m_aveProfile.continuous.toFixed(2)}] (${this.m_maxProfile.continuous.toFixed(2)})`);
 		}
-
+		profile.delete();
 		return m_textLine;
 	}
 

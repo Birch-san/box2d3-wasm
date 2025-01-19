@@ -177,8 +177,8 @@ function onPointerDown(event){
 		) {
 			const p = camera.convertScreenToWorld(state.mousePos);
 			const worldPos = new box2d.b2Vec2().Set(p.x, p.y);
-
 			const interacting = sample?.MouseDown(worldPos);
+			worldPos.delete();
 			// block camera controls if interacting with the sample
 			canvas.blockTouchCameraControls = interacting;
 		}
@@ -190,6 +190,7 @@ function onPointerMove(event){
 	const p = camera.convertScreenToWorld(state.mousePos);
 	const worldPos = new box2d.b2Vec2().Set(p.x, p.y);
 	sample?.MouseMove(worldPos);
+	worldPos.delete();
 }
 
 function onPointerUp(event){
