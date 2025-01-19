@@ -136,6 +136,8 @@ export default class Sleep extends Sample{
 	}
 
 	UpdateUI(DrawString, m_textLine){
+		m_textLine = super.UpdateUI(DrawString, m_textLine);
+
 		if ( this.m_wakeCount > 0 )
 		{
 			m_textLine += DrawString( 5, m_textLine, `wake ave = ${(this.m_wakeTotal / this.m_wakeCount).toFixed(6)} ms`);
