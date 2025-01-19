@@ -45,7 +45,7 @@ emscripten::val getArrayWrapper(const ObjectType& object,
 }
 
 template<typename T>
-emscripten::val getEventsArray(T* events, int count) {
+emscripten::val getEventsArray(const T* events, int count) {
     if (count == 0) return emscripten::val::array();
     auto result = emscripten::val::array();
     for (int i = 0; i < count; i++) {
@@ -189,25 +189,22 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("internalValue", &b2WorldDef::internalValue)
         ;
 
-    class_<b2BodyId>("b2BodyId")
-        .constructor()
-        .property("index1", &b2BodyId::index1)
-        .property("world0", &b2BodyId::world0)
-        .property("revision", &b2BodyId::revision)
+    value_object<b2BodyId>("b2BodyId")
+        .field("index1", &b2BodyId::index1)
+        .field("world0", &b2BodyId::world0)
+        .field("revision", &b2BodyId::revision)
         ;
 
 
-    class_<b2ShapeId>("b2ShapeId")
-        .constructor()
-        .property("index1", &b2ShapeId::index1)
-        .property("world0", &b2ShapeId::world0)
-        .property("revision", &b2ShapeId::revision)
+    value_object<b2ShapeId>("b2ShapeId")
+        .field("index1", &b2ShapeId::index1)
+        .field("world0", &b2ShapeId::world0)
+        .field("revision", &b2ShapeId::revision)
         ;
 
-    class_<b2WorldId>("b2WorldId")
-        .constructor()
-        .property("index1", &b2WorldId::index1)
-        .property("revision", &b2WorldId::revision)
+    value_object<b2WorldId>("b2WorldId")
+        .field("index1", &b2WorldId::index1)
+        .field("revision", &b2WorldId::revision)
         ;
 
     class_<b2CastOutput>("b2CastOutput")
@@ -277,16 +274,14 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         })
         ;
 
-    class_<b2SensorBeginTouchEvent>("b2SensorBeginTouchEvent")
-        .constructor()
-        .property("sensorShapeId", &b2SensorBeginTouchEvent::sensorShapeId)
-        .property("visitorShapeId", &b2SensorBeginTouchEvent::visitorShapeId)
+    value_object<b2SensorBeginTouchEvent>("b2SensorBeginTouchEvent")
+        .field("sensorShapeId", &b2SensorBeginTouchEvent::sensorShapeId)
+        .field("visitorShapeId", &b2SensorBeginTouchEvent::visitorShapeId)
         ;
 
-    class_<b2SensorEndTouchEvent>("b2SensorEndTouchEvent")
-        .constructor()
-        .property("sensorShapeId", &b2SensorEndTouchEvent::sensorShapeId)
-        .property("visitorShapeId", &b2SensorEndTouchEvent::visitorShapeId)
+    value_object<b2SensorEndTouchEvent>("b2SensorEndTouchEvent")
+        .field("sensorShapeId", &b2SensorEndTouchEvent::sensorShapeId)
+        .field("visitorShapeId", &b2SensorEndTouchEvent::visitorShapeId)
         ;
 
     class_<b2SensorEvents>("b2SensorEvents")
@@ -309,11 +304,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("moveCount", &b2BodyEvents::moveCount)
         ;
 
-    class_<b2BodyMoveEvent>("b2BodyMoveEvent")
-        .constructor()
-        .property("transform", &b2BodyMoveEvent::transform, return_value_policy::reference())
-        .property("bodyId", &b2BodyMoveEvent::bodyId)
-        .property("fellAsleep", &b2BodyMoveEvent::fellAsleep)
+    value_object<b2BodyMoveEvent>("b2BodyMoveEvent")
+        .field("transform", &b2BodyMoveEvent::transform)
+        .field("bodyId", &b2BodyMoveEvent::bodyId)
+        .field("fellAsleep", &b2BodyMoveEvent::fellAsleep)
         ;
 
      class_<b2ContactEvents>("b2ContactEvents")
@@ -650,11 +644,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         })
         ;
 
-    class_<b2ChainId>("b2ChainId")
-        .constructor()
-        .property("index1", &b2ChainId::index1)
-        .property("world0", &b2ChainId::world0)
-        .property("revision", &b2ChainId::revision)
+    value_object<b2ChainId>("b2ChainId")
+        .field("index1", &b2ChainId::index1)
+        .field("world0", &b2ChainId::world0)
+        .field("revision", &b2ChainId::revision)
         ;
 
     class_<b2ChainSegment>("b2ChainSegment")
@@ -965,7 +958,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("world0", &b2JointId::world0)
         .property("revision", &b2JointId::revision)
         ;
-
 
     class_<b2DistanceJointDef>("b2DistanceJointDef")
         .constructor()

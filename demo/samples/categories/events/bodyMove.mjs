@@ -203,8 +203,12 @@ export default class BodyMove extends Sample{
 
 		this.debugDraw.drawCircle( drawCircleCommand );
 
-
 		this.debugDraw.restoreCanvas();
+
+		bodyEvents.delete();
+		moveEvents.forEach(moveEvent => {
+			moveEvent.transform.delete();
+		});
 	}
 
 	CreateUI(){
