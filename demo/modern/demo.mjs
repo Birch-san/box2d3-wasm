@@ -125,7 +125,8 @@ function drawProfile(stepDuration, profile) {
   if (statsLevel < 1) return;
   ctx.fillText(`fps: ${Math.floor(1000/stepDuration)}`, 10 * hdScale, 20 * hdScale);
   ctx.fillText(`threading: ${taskSystem ? 'on' : 'off'}`, 100 * hdScale, 20 * hdScale);
-  ctx.fillText(`memory: ${performance.memory?.usedJSHeapSize ?? '(Unavailable)'}`, 300 * hdScale, 20 * hdScale);
+  const toMB = (bytes) => (bytes / 1048576).toFixed(4);
+  ctx.fillText(`wasm memory: {allocated}[free](total) ${toMB(box2d.mallinfo_get_allocated_space())}} [${toMB(box2d.mallinfo_get_free_space())}] (${toMB(box2d.mallinfo_get_total_space())})`, 300 * hdScale, 20 * hdScale);
   if (statsLevel < 2) return;
   ctx.fillText(`step: ${profile.step.toFixed(2)}ms`, 10 * hdScale, 40 * hdScale);
   ctx.fillText(`pairs: ${profile.pairs.toFixed(2)}ms`, 10 * hdScale, 60 * hdScale);
@@ -168,6 +169,7 @@ function loop(prevMs) {
     const duration = end - start;
     const profile = b2World_GetProfile(worldId);
     drawProfile(duration, profile);
+    profile.delete();
 };
 
 loop(window.performance.now());
