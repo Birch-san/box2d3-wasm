@@ -67,7 +67,11 @@ function updateDebugDrawFlags(){
 async function initialize(){
 	box2d = await Box2DFactory();
 
-	debugDraw = new DebugDrawRenderer(box2d, ctx, settings.ptm, true, settings.maxDebugDrawCommands);
+	debugDraw = new DebugDrawRenderer(box2d, ctx, {
+		pixelToMeters: settings.ptm,
+		maxDebugDrawCommands: settings.maxDebugDrawCommands,
+		debugMemory: settings.debugWASMMemory,
+	});
 
 	requestAnimationFrame(update);
 
@@ -92,6 +96,7 @@ function addUI(){
 		'warm starting': settings.enableWarmStarting,
 		continuous: settings.enableContinuous,
 		profile: settings.profile,
+		'wasm memory': settings.debugWASMMemory,
 	};
 
 	pane = new Pane({
@@ -127,6 +132,11 @@ function addUI(){
 
 	main.addBinding(PARAMS, 'profile').on('change', (event) => {
 		settings.profile = event.value;
+	});
+
+	main.addBinding(PARAMS, 'wasm memory').on('change', (event) => {
+		settings.debugWASMMemory = event.value;
+		debugDraw.debugMemory = event.value;
 	});
 
 	main.addButton({
