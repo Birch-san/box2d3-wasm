@@ -174,9 +174,6 @@ export default class Sample{
 		}
 	}
 
-
-	toMB = (bytes) => (bytes / 1048576).toFixed(4);
-
 	HandleProfile(DrawString, m_textLine){
 		const {
 			b2World_GetProfile
@@ -253,7 +250,6 @@ export default class Sample{
 			this.m_aveProfile.broadphase = this.m_totalProfile.broadphase / this.m_stepCount;
 			this.m_aveProfile.continuous = this.m_totalProfile.continuous / this.m_stepCount;
 
-			m_textLine = DrawString(5, m_textLine, `WASM Memory in MB {allocated} [free] (total): {${this.toMB(this.box2d.mallinfo_get_allocated_space())}} [${this.toMB(this.box2d.mallinfo_get_free_space())}] (${this.toMB(this.box2d.mallinfo_get_total_space())})`);
 			m_textLine = DrawString(5, m_textLine, `step [ave] (max) = ${profile.step.toFixed(2)} [${this.m_aveProfile.step.toFixed(2)}] (${this.m_maxProfile.step.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `pairs [ave] (max) = ${profile.pairs.toFixed(2)} [${this.m_aveProfile.pairs.toFixed(2)}] (${this.m_maxProfile.pairs.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `collide [ave] (max) = ${profile.collide.toFixed(2)} [${this.m_aveProfile.collide.toFixed(2)}] (${this.m_maxProfile.collide.toFixed(2)})`);

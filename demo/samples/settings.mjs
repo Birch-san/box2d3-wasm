@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
 	enableWarmStarting: true,
 	enableContinuous: true,
 	profile: false,
+	debugWASMMemory: true,
 	subStepCount: 4,
 	maxDebugDrawCommands: 60000 /* 135 bytes * 60000 = 8,100,000 bytes - 7.91 MB */,
 
