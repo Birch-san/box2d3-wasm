@@ -8,12 +8,12 @@ const box2d = await Box2DFactory();
 const canvas = document.getElementById("demo-canvas");
 const ctx = canvas.getContext("2d");
 
-const pixelsPerMeter = 10;
+const pixelToMeters = 10;
 const subStepCount = 4;
 
 const hdRendering = params.get('hd') === '1';
 
-const debugDraw = new DebugDrawRenderer(box2d, ctx, pixelsPerMeter, hdRendering); // true for high dpi
+const debugDraw = new DebugDrawRenderer(box2d, ctx, {pixelToMeters, autoHD: hdRendering}); // true for high dpi
 debugDraw.offset = {
   x: 40,
   y: -29
@@ -125,8 +125,7 @@ function drawProfile(stepDuration, profile) {
   if (statsLevel < 1) return;
   ctx.fillText(`fps: ${Math.floor(1000/stepDuration)}`, 10 * hdScale, 20 * hdScale);
   ctx.fillText(`threading: ${taskSystem ? 'on' : 'off'}`, 100 * hdScale, 20 * hdScale);
-  const toMB = (bytes) => (bytes / 1048576).toFixed(4);
-  ctx.fillText(`wasm memory: {allocated}[free](total) ${toMB(box2d.mallinfo_get_allocated_space())}} [${toMB(box2d.mallinfo_get_free_space())}] (${toMB(box2d.mallinfo_get_total_space())})`, 300 * hdScale, 20 * hdScale);
+  debugDraw.debugMemory = true;
   if (statsLevel < 2) return;
   ctx.fillText(`step: ${profile.step.toFixed(2)}ms`, 10 * hdScale, 40 * hdScale);
   ctx.fillText(`pairs: ${profile.pairs.toFixed(2)}ms`, 10 * hdScale, 60 * hdScale);
