@@ -96,15 +96,17 @@ export default class FootSensor extends Sample{
 		} = this.box2d;
 
 
+		const force = new b2Vec2();
 		if ( Keyboard.IsDown(Key.A))
 		{
-			b2Body_ApplyForceToCenter( this.m_playerId, new b2Vec2(-50.0, 0.0 ), true );
+			b2Body_ApplyForceToCenter( this.m_playerId, force.Set(-50.0, 0.0 ), true );
 		}
 
 		if ( Keyboard.IsDown(Key.D) )
 		{
-			b2Body_ApplyForceToCenter( this.m_playerId, new b2Vec2(50.0, 0.0 ), true );
+			b2Body_ApplyForceToCenter( this.m_playerId, force.Set(50.0, 0.0 ), true );
 		}
+		force.delete();
 
 		super.Step();
 
@@ -139,6 +141,7 @@ export default class FootSensor extends Sample{
 		const capacity = b2Shape_GetSensorCapacity( this.m_sensorId );
 		const overlaps = b2Shape_GetSensorOverlaps( this.m_sensorId, capacity );
 
+		this.m_overlapPoints.forEach(overlap => overlap.delete());
 		this.m_overlapPoints.length = 0;
 
 		for ( let i = 0; i < overlaps.length; i++ )
@@ -146,8 +149,11 @@ export default class FootSensor extends Sample{
 			const shapeId = overlaps[i];
 			const aabb = b2Shape_GetAABB( shapeId );
 			const point = b2AABB_Center( aabb );
+			aabb.delete();
 			this.m_overlapPoints.push(point);
 		}
+
+		sensorEvents.delete();
 	}
 
 	UpdateUI(DrawString, m_textLine){
