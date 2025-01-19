@@ -3,6 +3,7 @@
 #include <box2cpp/box2cpp.h>
 #include <emscripten.h>
 #include <emscripten/bind.h>
+#include <malloc.h>
 
 using namespace emscripten;
 using namespace b2;
@@ -1296,7 +1297,28 @@ B2_INLINE b2Vec2 RandomVec2( float lo, float hi )
 	return v;
 }
 
+int mallinfo_get_allocated_space() {
+    return mallinfo().uordblks;
+}
+
+int mallinfo_get_free_space() {
+    return mallinfo().fordblks;
+}
+
+int mallinfo_get_total_space() {
+    auto info = mallinfo();
+    return info.arena + info.hblkhd;
+}
+
 EMSCRIPTEN_BINDINGS(box2d) {
+
+    // ------------------------------------------------------------------------
+    // Memory debugging
+    // ------------------------------------------------------------------------
+    function("mallinfo_get_allocated_space", &mallinfo_get_allocated_space);
+    function("mallinfo_get_free_space", &mallinfo_get_free_space);
+    function("mallinfo_get_total_space", &mallinfo_get_total_space);
+
     // ------------------------------------------------------------------------
     // b2World
     // ------------------------------------------------------------------------
