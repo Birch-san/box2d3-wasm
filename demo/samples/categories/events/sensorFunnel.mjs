@@ -184,9 +184,8 @@ export default class SensorFunnel extends Sample{
 
 		const deferredDestructions = new Set();
 
-		const beginEvents = sensorEvents.GetBeginEvents();
-		for ( let i = 0; i < beginEvents.length; i++ ){
-			const event = beginEvents[i];
+		for ( let i = 0; i < sensorEvents.beginCount; i++ ){
+			const event = sensorEvents.GetBeginEvent(i);
 			const visitorId = event.visitorShapeId;
 			const bodyId = b2Shape_GetBody( visitorId );
 			const elementId = Human_GetUserData(this.box2d, bodyId );
