@@ -146,11 +146,10 @@ export default class SensorBooked extends Sample{
 		super.Step();
 
 		const sensorEvents = b2World_GetSensorEvents( this.m_worldId );
-		const beginEvents = sensorEvents.GetBeginEvents();
 
-		for ( let i = 0; i < beginEvents.length; i++ )
+		for ( let i = 0; i < sensorEvents.beginCount; i++ )
 		{
-			const event = beginEvents[i];
+			const event = sensorEvents.GetBeginEvent(i);
 			if ( B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
 			{
 				console.assert( this.m_isVisiting == false );
@@ -158,11 +157,10 @@ export default class SensorBooked extends Sample{
 			}
 		}
 
-		const endEvents = sensorEvents.GetEndEvents();
 
-		for ( let i = 0; i < endEvents.length; ++i )
+		for ( let i = 0; i < sensorEvents.endCount; ++i )
 		{
-			const event = endEvents[i];
+			const event = sensorEvents.GetEndEvent(i);
 
 			const wasVisitorDestroyed = b2Shape_IsValid( event.visitorShapeId ) == false;
 			if ( wasVisitorDestroyed || B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
