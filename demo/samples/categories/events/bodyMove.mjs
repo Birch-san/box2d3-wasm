@@ -156,11 +156,10 @@ export default class BodyMove extends Sample{
 
 		// Process body events
 		const bodyEvents = b2World_GetBodyEvents( this.m_worldId );
-		const moveEvents = bodyEvents.GetMoveEvents();
 		for ( let i = 0; i < bodyEvents.moveCount; ++i )
 		{
 			// draw the transform of every body that moved (not sleeping)
-			const event = moveEvents[i];
+			const event = bodyEvents.GetMoveEvent(i);
 
 			const drawCommandTransform = {
 				data: [
@@ -206,9 +205,6 @@ export default class BodyMove extends Sample{
 		this.debugDraw.restoreCanvas();
 
 		bodyEvents.delete();
-		moveEvents.forEach(moveEvent => {
-			moveEvent.transform.delete();
-		});
 	}
 
 	CreateUI(){
