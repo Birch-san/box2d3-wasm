@@ -179,12 +179,13 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawString = [](b2Vec2 p, const char* s, void* context) {
+        debugDraw.DrawString = [](b2Vec2 p, const char* s, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
             DebugDrawCommand cmd;
             cmd.commandType = DebugDrawCommandType::e_string;
+            cmd.color = color;
             cmd.vertexCount = 1;
 
             cmd.data[0] = p.x;

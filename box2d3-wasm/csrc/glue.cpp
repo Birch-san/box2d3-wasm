@@ -163,7 +163,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor<const b2WorldDef&>()
         .property("gravity", &b2WorldDef::gravity, return_value_policy::reference())
         .property("restitutionThreshold", &b2WorldDef::restitutionThreshold)
-        .property("contactPushSpeed", &b2WorldDef::contactPushSpeed)
+        .property("contactPushMaxSpeed", &b2WorldDef::contactPushMaxSpeed)
         .property("hitEventThreshold", &b2WorldDef::hitEventThreshold)
         .property("contactHertz", &b2WorldDef::contactHertz)
         .property("contactDampingRatio", &b2WorldDef::contactDampingRatio)
@@ -182,19 +182,19 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     value_object<b2BodyId>("b2BodyId")
         .field("index1", &b2BodyId::index1)
         .field("world0", &b2BodyId::world0)
-        .field("revision", &b2BodyId::revision)
+        .field("generation", &b2BodyId::generation)
         ;
 
 
     value_object<b2ShapeId>("b2ShapeId")
         .field("index1", &b2ShapeId::index1)
         .field("world0", &b2ShapeId::world0)
-        .field("revision", &b2ShapeId::revision)
+        .field("generation", &b2ShapeId::generation)
         ;
 
     value_object<b2WorldId>("b2WorldId")
         .field("index1", &b2WorldId::index1)
-        .field("revision", &b2WorldId::revision)
+        .field("generation", &b2WorldId::generation)
         ;
 
     class_<b2CastOutput>("b2CastOutput")
@@ -347,30 +347,29 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2Profile>("b2Profile")
         .constructor()
-        .property("step", &b2Profile::step)
         .property("pairs", &b2Profile::pairs)
         .property("collide", &b2Profile::collide)
+        .property("step", &b2Profile::step)
         .property("solve", &b2Profile::solve)
-        .property("buildIslands", &b2Profile::buildIslands)
+        .property("mergeIslands", &b2Profile::mergeIslands)
+        .property("prepareStages", &b2Profile::prepareStages)
         .property("solveConstraints", &b2Profile::solveConstraints)
-        .property("prepareTasks", &b2Profile::prepareTasks)
-        .property("solverTasks", &b2Profile::solverTasks)
         .property("prepareConstraints", &b2Profile::prepareConstraints)
         .property("integrateVelocities", &b2Profile::integrateVelocities)
         .property("warmStart", &b2Profile::warmStart)
-        .property("solveVelocities", &b2Profile::solveVelocities)
+        .property("solveImpulses", &b2Profile::solveImpulses)
         .property("integratePositions", &b2Profile::integratePositions)
-        .property("relaxVelocities", &b2Profile::relaxVelocities)
+        .property("relaxImpulses", &b2Profile::relaxImpulses)
         .property("applyRestitution", &b2Profile::applyRestitution)
         .property("storeImpulses", &b2Profile::storeImpulses)
-        .property("finalizeBodies", &b2Profile::finalizeBodies)
         .property("splitIslands", &b2Profile::splitIslands)
-        .property("sleepIslands", &b2Profile::sleepIslands)
+        .property("transforms", &b2Profile::transforms)
         .property("hitEvents", &b2Profile::hitEvents)
-        .property("broadphase", &b2Profile::broadphase)
-        .property("continuous", &b2Profile::continuous)
+        .property("refit", &b2Profile::refit)
+        .property("bullets", &b2Profile::bullets)
+        .property("sleepIslands", &b2Profile::sleepIslands)
+        .property("sensors", &b2Profile::sensors)
         ;
-
 
     class_<b2TreeStats>("b2TreeStats")
         .constructor()
@@ -532,7 +531,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("filter", &b2ShapeDef::filter, return_value_policy::reference())
         .property("customColor", &b2ShapeDef::customColor)
         .property("isSensor", &b2ShapeDef::isSensor)
-        .property("enableSensorEvents", &b2ShapeDef::enableSensorEvents)
         .property("enableContactEvents", &b2ShapeDef::enableContactEvents)
         .property("enableHitEvents", &b2ShapeDef::enableHitEvents)
         .property("enablePreSolveEvents", &b2ShapeDef::enablePreSolveEvents)
@@ -637,7 +635,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     value_object<b2ChainId>("b2ChainId")
         .field("index1", &b2ChainId::index1)
         .field("world0", &b2ChainId::world0)
-        .field("revision", &b2ChainId::revision)
+        .field("generation", &b2ChainId::generation)
         ;
 
     class_<b2ChainSegment>("b2ChainSegment")
@@ -712,8 +710,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetSensorOverlaps", +[](const Shape& shape) {
             return getArrayWrapper<b2ShapeId>(shape, &Shape::GetSensorCapacity, &Shape::GetSensorOverlaps);
         })
-        .function("EnableSensorEvents", &Shape::EnableSensorEvents)
-        .function("AreSensorEventsEnabled", &Shape::AreSensorEventsEnabled)
         .function("EnablePreSolveEvents", &Shape::EnablePreSolveEvents)
         .function("ArePreSolveEventsEnabled", &Shape::ArePreSolveEventsEnabled)
         .function("GetClosestPoint", &Shape::GetClosestPoint)
@@ -859,7 +855,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetLocalVector", &Body::GetLocalVector)
         .function("GetPosition", &Body::GetPosition)
         .function("GetRotation", &Body::GetRotation)
-        .function("EnableSensorEvents", &Body::EnableSensorEvents)
         .function("SetTransform", &Body::SetTransform)
         .function("GetTransform", &Body::GetTransform)
         .function("GetShapeCount", &Body::GetShapeCount)
@@ -946,7 +941,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor()
         .property("index1", &b2JointId::index1)
         .property("world0", &b2JointId::world0)
-        .property("revision", &b2JointId::revision)
+        .property("generation", &b2JointId::generation)
         ;
 
     class_<b2DistanceJointDef>("b2DistanceJointDef")
@@ -1508,8 +1503,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Shape_GetRestitution", &b2Shape_GetRestitution);
     function("b2Shape_GetFilter", &b2Shape_GetFilter);
     function("b2Shape_SetFilter", &b2Shape_SetFilter);
-    function("b2Shape_EnableSensorEvents", &b2Shape_EnableSensorEvents);
-    function("b2Shape_AreSensorEventsEnabled", &b2Shape_AreSensorEventsEnabled);
     function("b2Shape_EnableContactEvents", &b2Shape_EnableContactEvents);
     function("b2Shape_AreContactEventsEnabled", &b2Shape_AreContactEventsEnabled);
     function("b2Shape_EnablePreSolveEvents", &b2Shape_EnablePreSolveEvents);
@@ -1548,6 +1541,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return result;
     }, allow_raw_pointers());
     function("b2Shape_GetAABB", &b2Shape_GetAABB);
+    function("b2Shape_GetMassData", &b2Shape_GetMassData);
     function("b2Shape_GetClosestPoint", &b2Shape_GetClosestPoint);
 
     // ------------------------------------------------------------------------
@@ -1606,7 +1600,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_GetPointer", +[](b2BodyId bodyId) -> emscripten::val {
         return emscripten::val(bodyId.index1);
     });
-    function("b2Body_EnableSensorEvents", &b2Body_EnableSensorEvents);
     function("b2Body_EnableContactEvents", &b2Body_EnableContactEvents);
     function("b2Body_EnableHitEvents", &b2Body_EnableHitEvents);
     function("b2Body_GetShapeCount", &b2Body_GetShapeCount);
@@ -1634,6 +1627,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     }, allow_raw_pointers());
     function("b2Body_ComputeAABB", &b2Body_ComputeAABB);
     function("b2Body_GetWorld", &b2Body_GetWorld);
+    function("b2Body_GetLocalPointVelocity", &b2Body_GetLocalPointVelocity);
+    function("b2Body_GetWorldPointVelocity", &b2Body_GetWorldPointVelocity);
 
     // ------------------------------------------------------------------------
     // b2Joint
@@ -1802,7 +1797,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("B2_ID_EQUALS", +[](const emscripten::val& id1, const emscripten::val& id2) -> bool {
         return  id1["index1"].as<int32_t>() == id2["index1"].as<int32_t>() &&
                 id1["world0"].as<uint16_t>() == id2["world0"].as<uint16_t>() &&
-                id1["revision"].as<uint16_t>() == id2["revision"].as<uint16_t>();
+                id1["generation"].as<uint16_t>() == id2["generation"].as<uint16_t>();
     });
 
     constant("B2_PI", B2_PI);
