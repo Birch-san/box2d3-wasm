@@ -45,16 +45,6 @@ emscripten::val getArrayWrapper(const ObjectType& object,
 }
 
 template<typename T>
-emscripten::val getEventsArray(const T* events, int count) {
-    if (count == 0) return emscripten::val::array();
-    auto result = emscripten::val::array();
-    for (int i = 0; i < count; i++) {
-        result.set(i, events[i]);
-    }
-    return result;
-}
-
-template<typename T>
 emscripten::val toBytes(const T& value) {
     auto array = emscripten::val::global("Uint8Array").new_(sizeof(T));
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&value);
@@ -286,11 +276,11 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2SensorEvents>("b2SensorEvents")
         .constructor()
-        .function("GetBeginEvents", +[](const b2SensorEvents& events) {
-            return getEventsArray(events.beginEvents, events.beginCount);
+        .function("GetBeginEvent", +[](const b2SensorEvents& events, int index) {
+            return events.beginEvents[index];
         })
-        .function("GetEndEvents", +[](const b2SensorEvents& events) {
-            return getEventsArray(events.endEvents, events.endCount);
+        .function("GetEndEvent", +[](const b2SensorEvents& events, int index) {
+            return events.endEvents[index];
         })
         .property("beginCount", &b2SensorEvents::beginCount)
         .property("endCount", &b2SensorEvents::endCount)
@@ -298,8 +288,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2BodyEvents>("b2BodyEvents")
         .constructor()
-        .function("GetMoveEvents", +[](const b2BodyEvents& events) {
-            return getEventsArray(events.moveEvents, events.moveCount);
+        .function("GetMoveEvent", +[](const b2BodyEvents& events, int index) {
+            return events.moveEvents[index];
         })
         .property("moveCount", &b2BodyEvents::moveCount)
         ;
@@ -315,14 +305,14 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("beginCount", &b2ContactEvents::beginCount)
         .property("endCount", &b2ContactEvents::endCount)
         .property("hitCount", &b2ContactEvents::hitCount)
-        .function("GetBeginEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.beginEvents, events.beginCount);
+        .function("GetBeginEvent", +[](const b2ContactEvents& events, int index) {
+            return events.beginEvents[index];
         })
-        .function("GetEndEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.endEvents, events.endCount);
+        .function("GetEndEvent", +[](const b2ContactEvents& events, int index) {
+            return events.endEvents[index];
         })
-        .function("GetHitEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.hitEvents, events.hitCount);
+        .function("GetHitEvent", +[](const b2ContactEvents& events, int index) {
+            return events.hitEvents[index];
         })
         ;
 
