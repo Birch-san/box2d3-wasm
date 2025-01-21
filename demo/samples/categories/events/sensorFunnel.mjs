@@ -160,6 +160,8 @@ export default class SensorFunnel extends Sample{
 
 		this.m_isSpawned[index] = true;
 		this.m_side = -this.m_side;
+
+		center.delete();
 	}
 
 	DestroyElement(index){
@@ -203,6 +205,8 @@ export default class SensorFunnel extends Sample{
 			this.CreateElement();
 			this.m_wait += e_wait;
 		}
+
+		sensorEvents.delete();
 	}
 
 	CreateUI(){
