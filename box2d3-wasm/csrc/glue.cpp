@@ -294,10 +294,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("moveCount", &b2BodyEvents::moveCount)
         ;
 
-    value_object<b2BodyMoveEvent>("b2BodyMoveEvent")
-        .field("transform", &b2BodyMoveEvent::transform)
-        .field("bodyId", &b2BodyMoveEvent::bodyId)
-        .field("fellAsleep", &b2BodyMoveEvent::fellAsleep)
+    class_<b2BodyMoveEvent>("b2BodyMoveEvent")
+        .property("transform", &b2BodyMoveEvent::transform, return_value_policy::reference())
+        .property("bodyId", &b2BodyMoveEvent::bodyId)
+        .property("fellAsleep", &b2BodyMoveEvent::fellAsleep)
         ;
 
      class_<b2ContactEvents>("b2ContactEvents")
