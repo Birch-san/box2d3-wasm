@@ -189,6 +189,7 @@ export default class BodyMove extends Sample{
 					this.m_sleepCount -= 1;
 				}
 			}
+			event.delete();
 		}
 
 		const drawCircleCommand = {
