@@ -461,9 +461,11 @@ export default class DebugDrawRenderer {
         this.ctx.font = `${fontSize}px Arial`;
         this.ctx.fillStyle = 'rgba(230, 230, 230, 1)';
 
-        const allocated = `${this.toMB(this.Module.mallinfo_get_allocated_space())} MB`;
-        const free = `${this.toMB(this.Module.mallinfo_get_free_space())} MB`;
-        const total = `${this.toMB(this.Module.mallinfo_get_total_space())} MB`;
+        const memoryStats = this.Module.GetMemoryStats();
+
+        const allocated = `${this.toMB(memoryStats.allocatedSpace)} MB`;
+        const free = `${this.toMB(memoryStats.freeSpace)} MB`;
+        const total = `${this.toMB(memoryStats.totalSpace)} MB`;
 
         let maxWidth = 0;
         [allocated, free, total].forEach((text) => {
