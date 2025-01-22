@@ -1274,27 +1274,64 @@ B2_INLINE b2Vec2 RandomVec2( float lo, float hi )
 	return v;
 }
 
-int mallinfo_get_allocated_space() {
-    return mallinfo().uordblks;
-}
-
-int mallinfo_get_free_space() {
-    return mallinfo().fordblks;
-}
-
-int mallinfo_get_total_space() {
-    auto info = mallinfo();
-    return info.arena + info.hblkhd;
-}
+struct MemoryStats {
+    size_t arena;
+    size_t ordblks;
+    size_t smblks;
+    size_t hblks;
+    size_t hblkhd;
+    size_t usmblks;
+    size_t fsmblks;
+    size_t uordblks;
+    size_t fordblks;
+    size_t keepcost;
+    // user-friendly aliases
+    size_t allocatedSpace;
+    size_t freeSpace;
+    size_t totalSpace;
+};
 
 EMSCRIPTEN_BINDINGS(box2d) {
-
     // ------------------------------------------------------------------------
     // Memory debugging
     // ------------------------------------------------------------------------
-    function("mallinfo_get_allocated_space", &mallinfo_get_allocated_space);
-    function("mallinfo_get_free_space", &mallinfo_get_free_space);
-    function("mallinfo_get_total_space", &mallinfo_get_total_space);
+    value_object<MemoryStats>("MemoryStats")
+        // original mallinfo fields
+        .field("arena", &MemoryStats::arena)
+        .field("ordblks", &MemoryStats::ordblks)
+        .field("smblks", &MemoryStats::smblks)
+        .field("hblks", &MemoryStats::hblks)
+        .field("hblkhd", &MemoryStats::hblkhd)
+        .field("usmblks", &MemoryStats::usmblks)
+        .field("fsmblks", &MemoryStats::fsmblks)
+        .field("uordblks", &MemoryStats::uordblks)
+        .field("fordblks", &MemoryStats::fordblks)
+        .field("keepcost", &MemoryStats::keepcost)
+        // user-friendly aliases
+        .field("allocatedSpace", &MemoryStats::allocatedSpace)
+        .field("freeSpace", &MemoryStats::freeSpace)
+        .field("totalSpace", &MemoryStats::totalSpace)
+    ;
+
+   function("GetMemoryStats", +[]() -> MemoryStats {
+        struct mallinfo info = mallinfo();
+        size_t totalSpace = static_cast<size_t>(info.arena) + static_cast<size_t>(info.hblkhd);
+        return MemoryStats {
+            static_cast<size_t>(info.arena),
+            static_cast<size_t>(info.ordblks),
+            static_cast<size_t>(info.smblks),
+            static_cast<size_t>(info.hblks),
+            static_cast<size_t>(info.hblkhd),
+            static_cast<size_t>(info.usmblks),
+            static_cast<size_t>(info.fsmblks),
+            static_cast<size_t>(info.uordblks),
+            static_cast<size_t>(info.fordblks),
+            static_cast<size_t>(info.keepcost),
+            static_cast<size_t>(info.uordblks),
+            static_cast<size_t>(info.fordblks),
+            totalSpace
+        };
+    });
 
     // ------------------------------------------------------------------------
     // b2World
