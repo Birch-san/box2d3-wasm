@@ -78,6 +78,10 @@ export default class SensorBooked extends Sample{
 		shapeDef.isSensor = true;
 		const box = b2MakeSquare( 1.0 );
 		this.m_sensorShapeId = b2CreatePolygonShape( this.m_sensorBodyId, shapeDef, box );
+
+		bodyDef.delete();
+		shapeDef.delete();
+		box.delete();
 	}
 
 	CreateVisitor()
@@ -105,6 +109,10 @@ export default class SensorBooked extends Sample{
 		circle.radius = 0.5;
 
 		this.m_visitorShapeId = b2CreateCircleShape( this.m_visitorBodyId, shapeDef, circle );
+
+		bodyDef.delete();
+		shapeDef.delete();
+		circle.delete();
 	}
 
 	DestroySensor(){
@@ -150,7 +158,7 @@ export default class SensorBooked extends Sample{
 		for ( let i = 0; i < sensorEvents.beginCount; i++ )
 		{
 			const event = sensorEvents.GetBeginEvent(i);
-			if ( B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
+			if (this.m_visitorShapeId &&  B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
 			{
 				console.assert( this.m_isVisiting == false );
 				this.m_isVisiting = true;
@@ -162,13 +170,16 @@ export default class SensorBooked extends Sample{
 		{
 			const event = sensorEvents.GetEndEvent(i);
 
-			const wasVisitorDestroyed = b2Shape_IsValid( event.visitorShapeId ) == false;
+			const wasVisitorDestroyed = !this.m_visitorBodyId;
+			console.log('wasVisitorDestroyed', wasVisitorDestroyed, event.visitorShapeId, this.m_visitorShapeId);
 			if ( wasVisitorDestroyed || B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
 			{
 				console.assert( this.m_isVisiting == true );
 				this.m_isVisiting = false;
 			}
 		}
+
+		sensorEvents.delete();
 	}
 
 	CreateUI(){
