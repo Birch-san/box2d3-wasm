@@ -317,27 +317,23 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         ;
 
     class_<b2ContactBeginTouchEvent>("b2ContactBeginTouchEvent")
-        .constructor()
         .property("shapeIdA", &b2ContactBeginTouchEvent::shapeIdA)
         .property("shapeIdB", &b2ContactBeginTouchEvent::shapeIdB)
         .property("manifold", &b2ContactBeginTouchEvent::manifold, return_value_policy::reference())
-        ;
+    ;
 
     class_<b2ContactData>("b2ContactData")
-        .constructor()
         .property("shapeIdA", &b2ContactData::shapeIdA)
         .property("shapeIdB", &b2ContactData::shapeIdB)
         .property("manifold", &b2ContactData::manifold, return_value_policy::reference())
         ;
 
-    class_<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
-        .constructor()
-        .property("shapeIdA", &b2ContactEndTouchEvent::shapeIdA)
-        .property("shapeIdB", &b2ContactEndTouchEvent::shapeIdB)
+    value_object<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
+        .field("shapeIdA", &b2ContactEndTouchEvent::shapeIdA)
+        .field("shapeIdB", &b2ContactEndTouchEvent::shapeIdB)
         ;
 
     class_<b2ContactHitEvent>("b2ContactHitEvent")
-        .constructor()
         .property("shapeIdA", &b2ContactHitEvent::shapeIdA)
         .property("shapeIdB", &b2ContactHitEvent::shapeIdB)
         .property("point", &b2ContactHitEvent::point, return_value_policy::reference())
