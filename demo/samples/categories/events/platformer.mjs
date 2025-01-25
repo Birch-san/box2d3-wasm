@@ -34,7 +34,7 @@ export default class Platformer extends Sample{
 			b2Capsule
 		} = this.box2d;
 
-		b2World_SetPreSolveCallback( this.m_worldId, this.PreSolve);
+		this.m_callback = b2World_SetPreSolveCallback( this.m_worldId, this.PreSolve);
 
 		// Ground
 		{
@@ -46,6 +46,10 @@ export default class Platformer extends Sample{
 			segment.point2.Set(20.0, 0.0);
 
 			b2CreateSegmentShape( groundId, shapeDef, segment );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			segment.delete();
 		}
 
 		// Static Platform
@@ -63,6 +67,10 @@ export default class Platformer extends Sample{
 
 			const box = b2MakeBox( 2.0, 0.5 );
 			b2CreatePolygonShape( bodyId, shapeDef, box );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			box.delete();
 		}
 
 		// Moving Platform
@@ -80,6 +88,10 @@ export default class Platformer extends Sample{
 
 			const box = b2MakeBox( 3.0, 0.5 );
 			b2CreatePolygonShape( this.m_movingPlatformId, shapeDef, box );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			box.delete();
 		}
 
 		// Player
@@ -100,6 +112,10 @@ export default class Platformer extends Sample{
 			shapeDef.friction = 0.1;
 
 			this.m_playerShapeId = b2CreateCapsuleShape( this.m_playerId, shapeDef, capsule );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			capsule.delete();
 		}
 
 		this.m_force = 25.0;
@@ -165,6 +181,12 @@ export default class Platformer extends Sample{
 
 	Despawn(){
 		Keyboard.HideTouchControls();
+
+		const {
+			b2World_DeleteCallback
+		} = this.box2d;
+
+		b2World_DeleteCallback(this.m_callback );
 	}
 
 	Step(){
