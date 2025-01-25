@@ -175,7 +175,6 @@ export default class SensorBooked extends Sample{
 			const event = sensorEvents.GetEndEvent(i);
 
 			const wasVisitorDestroyed = !this.m_visitorBodyId;
-			console.log('wasVisitorDestroyed', wasVisitorDestroyed, event.visitorShapeId, this.m_visitorShapeId);
 			if ( wasVisitorDestroyed || B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
 			{
 				console.assert( this.m_isVisiting == true );

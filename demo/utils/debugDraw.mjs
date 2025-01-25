@@ -473,26 +473,33 @@ export default class DebugDrawRenderer {
             maxWidth = Math.max(maxWidth, width);
         });
 
+        const lines = 4;
+
         const x = this.ctx.canvas.width - padding;
-        const y = this.ctx.canvas.height - fontSize * 3 + fontSize / 2;
+        let y = this.ctx.canvas.height - fontSize * lines + fontSize / 2;
 
         const allocatedText = 'Allocated:';
         const allocatedSize = this.ctx.measureText(allocatedText).width;
 
         const totalWidth = maxWidth + padding + allocatedSize;
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.fillRect(x - totalWidth - padding, y - fontSize, totalWidth + padding * 2, fontSize * 3 + padding);
+        this.ctx.fillRect(x - totalWidth - padding, y - fontSize, totalWidth + padding * 2, fontSize * lines + padding);
 
         const currentAlign = this.ctx.textAlign;
 
+        this.ctx.fillStyle = 'rgba(160, 160, 160, 1)';
         this.ctx.textAlign = 'right';
+        this.ctx.fillText('WASM Memory', x, y);
         this.ctx.fillStyle = 'rgba(230, 230, 230, 1)';
+        y += fontSize;
         this.ctx.fillText(allocated, x, y);
-        this.ctx.fillText(free, x, y + fontSize);
-        this.ctx.fillText(total, x, y + fontSize * 2);
         this.ctx.fillText(allocatedText, x-maxWidth - padding, y);
-        this.ctx.fillText('Free:', x-maxWidth - padding, y + fontSize);
-        this.ctx.fillText('Total:', x-maxWidth - padding, y + fontSize * 2);
+        y += fontSize;
+        this.ctx.fillText(free, x, y);
+        this.ctx.fillText('Free:', x-maxWidth - padding, y);
+        y += fontSize;
+        this.ctx.fillText(total, x, y);
+        this.ctx.fillText('Total:', x-maxWidth - padding, y);
 
         this.ctx.textAlign = currentAlign;
     }
