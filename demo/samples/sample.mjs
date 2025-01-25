@@ -15,14 +15,14 @@ export default class Sample{
 			b2CreateThreadedWorld,
 		} = box2d;
 
-		this.worldDef = b2DefaultWorldDef();
-		this.worldDef.enableSleep = settings.enableSleep;
+		const worldDef = b2DefaultWorldDef();
+		worldDef.enableSleep = settings.enableSleep;
 
 		if(settings.workerCount > 1){
 			this.m_taskSystem = new TaskSystem(settings.workerCount);
-			this.m_worldId = b2CreateThreadedWorld(this.worldDef, this.m_taskSystem);
+			this.m_worldId = b2CreateThreadedWorld(worldDef, this.m_taskSystem);
 		} else {
-			this.m_worldId = b2CreateWorld(this.worldDef);
+			this.m_worldId = b2CreateWorld(worldDef);
 		}
 
 		this.m_stepCount = 0;
@@ -32,6 +32,8 @@ export default class Sample{
 		this.m_aveProfile = {...profileInterface};
 
 		this.pane = null;
+
+		worldDef.delete();
 	}
 
 	Step(){
@@ -284,7 +286,12 @@ export default class Sample{
 		m_textLine = this.HandleProfile(DrawString, m_textLine);
 		return m_textLine;
 	}
-	Destroy(){}
+	Destroy(){
+		const {
+			b2DestroyWorld
+		} = this.box2d;
+		b2DestroyWorld(this.m_worldId);
+	}
 }
 
 const profileInterface = {
