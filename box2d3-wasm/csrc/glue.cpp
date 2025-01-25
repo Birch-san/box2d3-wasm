@@ -600,7 +600,15 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             self.count = length;
         })
         .property("count", &b2ChainDef::count)
-        .property("internalValue", &b2ChainDef::internalValue);
+        .property("internalValue", &b2ChainDef::internalValue)
+        .function("delete", +[](b2ChainDef* self) {
+            if (self->points != nullptr) {
+                delete[] self->points;
+                self->points = nullptr;
+            }
+            delete self;
+        }, allow_raw_pointers())
+        ;
 
     class_<BasicChainInterface<Chain, false>>("BasicChainInterface");
 
@@ -937,11 +945,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<BasicWeldJointInterface<WeldJoint, false>>("BasicWeldJointInterface");
     class_<BasicWheelJointInterface<WheelJoint, false>>("BasicWheelJointInterface");
 
-    class_<b2JointId>("b2JointId")
-        .constructor()
-        .property("index1", &b2JointId::index1)
-        .property("world0", &b2JointId::world0)
-        .property("generation", &b2JointId::generation)
+    value_object<b2JointId>("b2JointId")
+        .field("index1", &b2JointId::index1)
+        .field("world0", &b2JointId::world0)
+        .field("generation", &b2JointId::generation)
         ;
 
     class_<b2DistanceJointDef>("b2DistanceJointDef")
@@ -1651,7 +1658,19 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return result;
     });
     function("b2Body_GetJointCount", &b2Body_GetJointCount);
-    function("b2Body_GetJoints", &b2Body_GetJoints, allow_raw_pointers());
+
+    function("b2Body_GetJoints", +[](b2BodyId bodyId) -> emscripten::val {
+        int capacity = b2Body_GetJointCount(bodyId);
+        std::vector<b2JointId> joints(capacity);
+        int count = b2Body_GetJoints(bodyId, joints.data(), capacity);
+
+        auto result = emscripten::val::array();
+        for (int i = 0; i < count; i++) {
+            result.set(i, joints[i]);
+        }
+        return result;
+    });
+
     function("b2Body_GetContactCapacity", &b2Body_GetContactCapacity);
     function("b2Body_GetContactData", +[](b2BodyId bodyId, int capacity) -> emscripten::val {
         std::vector<b2ContactData> contactData(capacity);
