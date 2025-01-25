@@ -41,6 +41,9 @@ export default class Contacts extends Sample{
 			chainDef.isLoop = true;
 
 			b2CreateChain( groundId, chainDef );
+
+			bodyDef.delete();
+			chainDef.delete();
 		}
 
 		// Player
@@ -61,6 +64,10 @@ export default class Contacts extends Sample{
 			shapeDef.enableContactEvents = true;
 
 			this.m_coreShapeId = b2CreateCircleShape( this.m_playerId, shapeDef, circle );
+
+			bodyDef.delete();
+			circle.delete();
+			shapeDef.delete();
 		}
 
 		this.m_debrisIds = new Array(e_count);
@@ -116,7 +123,9 @@ export default class Contacts extends Sample{
 		const bodyDef = b2DefaultBodyDef();
 		bodyDef.type = b2BodyType.b2_dynamicBody;
 		bodyDef.position.Set(RandomFloatRange( -38.0, 38.0 ), RandomFloatRange( -38.0, 38.0 ));
-		bodyDef.rotation = b2MakeRot( RandomFloatRange( -B2_PI, B2_PI ) );
+		const rot = b2MakeRot( RandomFloatRange( -B2_PI, B2_PI ) );;
+		bodyDef.rotation = rot;
+		rot.delete();
 		bodyDef.linearVelocity.Set(RandomFloatRange( -5.0, 5.0 ), RandomFloatRange( -5.0, 5.0 ));
 		bodyDef.angularVelocity = RandomFloatRange( -1.0, 1.0 );
 		bodyDef.gravityScale = 0.0;
@@ -139,6 +148,8 @@ export default class Contacts extends Sample{
 			circle.center.Set(0.0, 0.0);
 			circle.radius = 0.5;
 			b2CreateCircleShape( this.m_debrisIds[index], shapeDef, circle );
+
+			circle.delete();
 		}
 		else if ( ( index + 1 ) % 2 == 0 )
 		{
@@ -147,12 +158,19 @@ export default class Contacts extends Sample{
 			capsule.center2.Set( 0.0, 0.25 );
 			capsule.radius = 0.25;
 			b2CreateCapsuleShape( this.m_debrisIds[index], shapeDef, capsule );
+
+			capsule.delete();
 		}
 		else
 		{
 			const box = b2MakeBox( 0.4, 0.6 );
 			b2CreatePolygonShape( this.m_debrisIds[index], shapeDef, box );
+
+			box.delete();
 		}
+
+		bodyDef.delete();
+		shapeDef.delete();
 	}
 
 	Despawn(){
@@ -194,25 +212,28 @@ export default class Contacts extends Sample{
 
 		const position = b2Body_GetPosition( this.m_playerId );
 
+		const force = new b2Vec2();
 		if ( Keyboard.IsDown(Key.A) )
 		{
-			b2Body_ApplyForce( this.m_playerId, new b2Vec2(-this.m_force, 0.0), position, true );
+			b2Body_ApplyForce( this.m_playerId, force.Set(-this.m_force, 0.0), position, true );
 		}
 
 		if ( Keyboard.IsDown(Key.D) )
 		{
-			b2Body_ApplyForce( this.m_playerId, new b2Vec2(this.m_force, 0.0), position, true );
+			b2Body_ApplyForce( this.m_playerId, force.Set(this.m_force, 0.0), position, true );
 		}
 
 		if ( Keyboard.IsDown(Key.W) )
 		{
-			b2Body_ApplyForce( this.m_playerId, new b2Vec2(0.0, this.m_force), position, true );
+			b2Body_ApplyForce( this.m_playerId, force.Set(0.0, this.m_force), position, true );
 		}
 
 		if ( Keyboard.IsDown(Key.S) )
 		{
-			b2Body_ApplyForce( this.m_playerId, new b2Vec2(0.0, -this.m_force), position, true );
+			b2Body_ApplyForce( this.m_playerId, force.Set(0.0, -this.m_force), position, true );
 		}
+		force.delete();
+		position.delete();
 
 		super.Step();
 
@@ -225,11 +246,11 @@ export default class Contacts extends Sample{
 
 		// Process contact begin touch events.
 		const contactEvents = b2World_GetContactEvents( this.m_worldId );
-		const beginEvents = contactEvents.GetBeginEvents();
 
-		for ( let i = 0; i < beginEvents.length; i++ )
+		for ( let i = 0; i < contactEvents.beginCount; i++ )
 		{
-			const event = beginEvents[i];
+			const event = contactEvents.GetBeginEvent(i);
+
 			const bodyIdA = b2Shape_GetBody( event.shapeIdA );
 			const bodyIdB = b2Shape_GetBody( event.shapeIdB );
 
@@ -272,8 +293,14 @@ export default class Contacts extends Sample{
 
 							this.debugDraw.drawSegment( {data: [p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorBlueViolet});
 							this.debugDraw.drawPoint( {data: [p1.x, p1.y, 100.0], color:b2HexColor.b2_colorWhite} );
+
+							point.delete();
+							offset.delete();
+							p2.delete();
 						}
 					}
+
+					contactData[j].delete();
 				}
 			}
 			else
@@ -306,8 +333,14 @@ export default class Contacts extends Sample{
 
 							this.debugDraw.drawSegment( {data:[p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorYellowGreen} );
 							this.debugDraw.drawPoint( {data: [p1.x, p1.y, 10.0], color: b2HexColor.b2_colorWhite} );
+
+							point.delete();
+							offset.delete();
+							p2.delete();
 						}
 					}
+
+					contactData[j].delete();
 				}
 			}
 
@@ -379,7 +412,10 @@ export default class Contacts extends Sample{
 					attachCount += 1;
 				}
 			}
+			event.delete();
 		}
+
+		contactEvents.delete();
 
 		// Attach debris to player body
 		for ( let i = 0; i < attachCount; ++i )
@@ -416,19 +452,27 @@ export default class Contacts extends Sample{
 				case b2ShapeType.b2_circleShape:
 				{
 					const circle = b2Shape_GetCircle( shapeId );
-					circle.center = b2TransformPoint( relativeTransform, circle.center );
-
+					const p = b2TransformPoint( relativeTransform, circle.center );
+					circle.center.Copy(p);
 					b2CreateCircleShape( this.m_playerId, shapeDef, circle );
+
+					circle.delete();
+					p.delete();
 				}
 				break;
 
 				case b2ShapeType.b2_capsuleShape:
 				{
 					const capsule = b2Shape_GetCapsule( shapeId );
-					capsule.center1 = b2TransformPoint( relativeTransform, capsule.center1 );
-					capsule.center2 = b2TransformPoint( relativeTransform, capsule.center2 );
-
+					const p1 = b2TransformPoint( relativeTransform, capsule.center1 );
+					const p2 = b2TransformPoint( relativeTransform, capsule.center2 );
+					capsule.center1.Copy(p1);
+					capsule.center2.Copy(p2);
 					b2CreateCapsuleShape( this.m_playerId, shapeDef, capsule );
+
+					capsule.delete();
+					p1.delete();
+					p2.delete();
 				}
 				break;
 
@@ -438,12 +482,20 @@ export default class Contacts extends Sample{
 					const polygon = b2TransformPolygon( relativeTransform, originalPolygon );
 
 					b2CreatePolygonShape( this.m_playerId, shapeDef, polygon );
+
+					originalPolygon.delete();
+					polygon.delete();
 				}
 				break;
 
 				default:
 					console.assert( false );
 			}
+
+			shapeDef.delete();
+			playerTransform.delete();
+			debrisTransform.delete();
+			relativeTransform.delete();
 
 			delete this.m_bodyUserData[b2Body_GetPointer( debrisId )];
 			b2DestroyBody( debrisId );
