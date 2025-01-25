@@ -87,7 +87,6 @@ export default class Donut {
 
 			rotA.delete();
 			rotB.delete();
-			weldJoint.delete(); // we need to delete the allocated memory for the handler
 		}
 
 		this.m_isSpawned = true;
