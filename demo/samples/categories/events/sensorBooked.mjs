@@ -27,17 +27,21 @@ export default class SensorBooked extends Sample{
 			const shapeDef = b2DefaultShapeDef();
 
 			const groundSegment = new b2Segment();
-			groundSegment.point1 = new b2Vec2(-10, 0);
-			groundSegment.point2 = new b2Vec2(10, 0);
+			groundSegment.point1.Set(-10, 0);
+			groundSegment.point2.Set(10, 0);
 			b2CreateSegmentShape( groundId, shapeDef, groundSegment );
 
-			groundSegment.point1 = new b2Vec2(-10, 0);
-			groundSegment.point2 = new b2Vec2(-10, 10);
+			groundSegment.point1.Set(-10, 0);
+			groundSegment.point2.Set(-10, 10);
 			b2CreateSegmentShape( groundId, shapeDef, groundSegment );
 
-			groundSegment.point1 = new b2Vec2(10, 0);
-			groundSegment.point2 = new b2Vec2(10, 10);
+			groundSegment.point1.Set(10, 0);
+			groundSegment.point2.Set(10, 10);
 			b2CreateSegmentShape( groundId, shapeDef, groundSegment );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			groundSegment.delete();
 
 		}
 
@@ -237,8 +241,8 @@ export default class SensorBooked extends Sample{
 	}
 
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();
