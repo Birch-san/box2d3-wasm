@@ -367,10 +367,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("sensors", &b2Profile::sensors)
         ;
 
-    class_<b2TreeStats>("b2TreeStats")
-        .constructor()
-        .property("nodeVisits", &b2TreeStats::nodeVisits)
-        .property("leafVisits", &b2TreeStats::leafVisits)
+    value_object<b2TreeStats>("b2TreeStats")
+        .field("nodeVisits", &b2TreeStats::nodeVisits)
+        .field("leafVisits", &b2TreeStats::leafVisits)
         ;
 
     function("b2DefaultQueryFilter", &b2DefaultQueryFilter);
