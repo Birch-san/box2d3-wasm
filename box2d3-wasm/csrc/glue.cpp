@@ -1507,19 +1507,26 @@ EMSCRIPTEN_BINDINGS(box2d) {
        }
     );
     function("b2World_SetPreSolveCallback",
-       +[](b2WorldId worldId, emscripten::val callback) {
-           b2World_SetPreSolveCallback(worldId,
-               +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* userData) -> bool {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeIdA),
-                       emscripten::val(shapeIdB),
-                       emscripten::val(manifold)
-                   ).as<bool>();
-               },
-               new emscripten::val(callback)
-           );
-       }
+        +[](b2WorldId worldId, emscripten::val callback) {
+            auto callbackPtr = new emscripten::val(callback);
+            b2World_SetPreSolveCallback(worldId,
+                +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* userData) -> bool {
+                    auto callback = *reinterpret_cast<emscripten::val*>(userData);
+                    return callback(
+                        emscripten::val(shapeIdA),
+                        emscripten::val(shapeIdB),
+                        emscripten::val(manifold)
+                    ).as<bool>();
+                },
+                callbackPtr
+            );
+            return reinterpret_cast<uint32_t>(callbackPtr);
+        }
+    );
+    function("b2World_DeleteCallback",
+        +[](uint32_t ptr) {
+            delete reinterpret_cast<emscripten::val*>(ptr);
+        }
     );
     function("b2World_SetGravity", &b2World_SetGravity);
     function("b2World_GetGravity", &b2World_GetGravity);
