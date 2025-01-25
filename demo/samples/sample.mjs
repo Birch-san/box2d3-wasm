@@ -119,7 +119,13 @@ export default class Sample{
 		box.upperBound.Copy(p).Add(d);
 
 		const queryContext = { point: p, bodyId: null };
-		b2World_OverlapAABB( this.m_worldId, box, b2DefaultQueryFilter(), (shapeId) => this.QueryCallback(shapeId, queryContext));
+
+		const filter = b2DefaultQueryFilter();
+		b2World_OverlapAABB( this.m_worldId, box, filter, (shapeId) => this.QueryCallback(shapeId, queryContext));
+		filter.delete();
+
+		box.delete();
+		d.delete();
 
 		if(queryContext.bodyId){
 			const bodyDef = b2DefaultBodyDef();
@@ -134,12 +140,12 @@ export default class Sample{
 			mouseDef.maxForce = 1000.0 * b2Body_GetMass( queryContext.bodyId );
 			this.m_mouseJointId = b2CreateMouseJoint( this.m_worldId, mouseDef );
 
+			bodyDef.delete();
+			mouseDef.delete();
+
 			b2Body_SetAwake( queryContext.bodyId, true );
 			return true;
 		}
-
-		box.delete();
-		d.delete();
 	}
 	MouseUp(){
 		const {

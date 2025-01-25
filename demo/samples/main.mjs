@@ -186,7 +186,7 @@ function onPointerDown(event){
 			&& Math.abs(state.mousePos.y - state.mouseDownPos.y) < maxMovementForClick
 		) {
 			const p = camera.convertScreenToWorld(state.mousePos);
-			const worldPos = new box2d.b2Vec2().Set(p.x, p.y);
+			const worldPos = new box2d.b2Vec2(p.x, p.y);
 			const interacting = sample?.MouseDown(worldPos);
 			worldPos.delete();
 			// block camera controls if interacting with the sample
@@ -198,7 +198,7 @@ function onPointerDown(event){
 function onPointerMove(event){
 	state.mousePos = {x: event.clientX, y: event.clientY};
 	const p = camera.convertScreenToWorld(state.mousePos);
-	const worldPos = new box2d.b2Vec2().Set(p.x, p.y);
+	const worldPos = new box2d.b2Vec2(p.x, p.y);
 	sample?.MouseMove(worldPos);
 	worldPos.delete();
 }
