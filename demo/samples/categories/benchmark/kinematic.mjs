@@ -44,10 +44,17 @@ export default class Kinematic extends Sample{
 			for ( let j = -span; j < span; j++ )
 			{
 				const x = j * grid;
-				const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, new b2Vec2(x, y), b2Rot_identity );
+				const p = new b2Vec2(x, y);
+				const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, p, b2Rot_identity );
 				b2CreatePolygonShape( bodyId, shapeDef, square );
+
+				p.delete();
+				square.delete();
 			}
 		}
+
+		bodyDef.delete();
+		shapeDef.delete();
 
 		// All shapes have been added so I can efficiently compute the mass properties.
 		b2Body_ApplyMassFromShapes( bodyId );
