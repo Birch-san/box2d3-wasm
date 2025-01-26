@@ -33,6 +33,8 @@ export default class ManyTumblers extends Sample{
 
 		this.m_angularSpeed = 25.0;
 
+		bodyDef.delete();
+
 		this.CreateUI();
 		this.Spawn();
 	}
@@ -61,14 +63,23 @@ export default class ManyTumblers extends Sample{
 		shapeDef.density = 50.0;
 
 		let polygon;
-		polygon = b2MakeOffsetBox( 0.25, 2.0, new b2Vec2(2.0, 0.0), b2Rot_identity );
+		const p = new b2Vec2();
+		polygon = b2MakeOffsetBox( 0.25, 2.0, p.Set(2.0, 0.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
-		polygon = b2MakeOffsetBox( 0.25, 2.0, new b2Vec2(-2.0, 0.0), b2Rot_identity );
+		polygon.delete();
+		polygon = b2MakeOffsetBox( 0.25, 2.0, p.Set(-2.0, 0.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
-		polygon = b2MakeOffsetBox( 2.0, 0.25, new b2Vec2(0.0, 2.0), b2Rot_identity );
+		polygon.delete();
+		polygon = b2MakeOffsetBox( 2.0, 0.25, p.Set(0.0, 2.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
-		polygon = b2MakeOffsetBox( 2.0, 0.25, new b2Vec2(0.0, -2.0), b2Rot_identity );
+		polygon.delete();
+		polygon = b2MakeOffsetBox( 2.0, 0.25, p.Set(0.0, -2.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
+		polygon.delete();
+		p.delete();
+
+		bodyDef.delete();
+		shapeDef.delete();
 	}
 
 	Step(){
@@ -103,7 +114,12 @@ export default class ManyTumblers extends Sample{
 				b2CreateCapsuleShape( this.m_bodyIds[this.m_bodyIndex], shapeDef, capsule );
 
 				this.m_bodyIndex += 1;
+
+				bodyDef.delete();
 			}
+
+			shapeDef.delete();
+			capsule.delete();
 		}
 	}
 
@@ -216,9 +232,13 @@ export default class ManyTumblers extends Sample{
 		});
 	}
 
+	Despawn(){
+		this.m_positions.forEach( position => position.delete() );
+	}
+
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();
