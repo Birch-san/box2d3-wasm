@@ -53,7 +53,9 @@ export default class Spinner extends Sample{
 			for ( let i = 0; i < SPINNER_POINT_COUNT; i++ )
 			{
 				points[i] = {x: p.x, y: p.y + 32.0 };
-				p.Copy(b2RotateVector( q, p ));
+				const pRotated = b2RotateVector( q, p );
+				p.Copy(pRotated);
+				pRotated.delete();
 			}
 
 			const chainDef = b2DefaultChainDef();
@@ -62,6 +64,11 @@ export default class Spinner extends Sample{
 			chainDef.friction = 0.1;
 
 			b2CreateChain( groundId, chainDef );
+
+			q.delete();
+			p.delete();
+			bodyDef.delete();
+			chainDef.delete();
 		}
 
 		{
@@ -88,6 +95,11 @@ export default class Spinner extends Sample{
 			jointDef.maxMotorTorque = maxMotorTorque;
 
 			this.m_revoluteJoint = b2CreateRevoluteJoint( this.m_worldId, jointDef );
+
+			bodyDef.delete();
+			box.delete();
+			shapeDef.delete();
+			jointDef.delete();
 		}
 
 		this.Spawn();
@@ -171,6 +183,12 @@ export default class Spinner extends Sample{
 				y += 1.0;
 			}
 		}
+
+		capsule.delete();
+		circle.delete();
+		square.delete();
+		bodyDef.delete();
+		shapeDef.delete();
 	}
 
 
@@ -249,8 +267,8 @@ export default class Spinner extends Sample{
 	}
 
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();
