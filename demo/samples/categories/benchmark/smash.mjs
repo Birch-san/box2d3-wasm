@@ -55,6 +55,10 @@ function CreateSmash( box2d, worldId )
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.density = 8.0;
 		b2CreatePolygonShape( bodyId, shapeDef, box );
+
+		box.delete();
+		bodyDef.delete();
+		shapeDef.delete();
 	}
 
 	const d = 0.4;
@@ -78,4 +82,8 @@ function CreateSmash( box2d, worldId )
 			b2CreatePolygonShape( bodyId, shapeDef, box );
 		}
 	}
+
+	box.delete();
+	bodyDef.delete();
+	shapeDef.delete();
 }
