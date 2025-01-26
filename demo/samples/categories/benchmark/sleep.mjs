@@ -41,6 +41,10 @@ export default class Sleep extends Sample{
 		this.m_sleepTotal = 0.0;
 		this.m_sleepCount = 0;
 
+		bodyDef.delete();
+		box.delete();
+		shapeDef.delete();
+
 		this.Spawn();
 	}
 
@@ -99,6 +103,10 @@ export default class Sleep extends Sample{
 			}
 		}
 
+		box.delete();
+		bodyDef.delete();
+		shapeDef.delete();
+
 		this.m_bodyCount = index;
 	}
 
@@ -140,12 +148,12 @@ export default class Sleep extends Sample{
 
 		if ( this.m_wakeCount > 0 )
 		{
-			m_textLine += DrawString( 5, m_textLine, `wake ave = ${(this.m_wakeTotal / this.m_wakeCount).toFixed(6)} ms`);
+			m_textLine = DrawString( 5, m_textLine, `wake ave = ${(this.m_wakeTotal / this.m_wakeCount).toFixed(6)} ms`);
 		}
 
 		if ( this.m_sleepCount > 0 )
 		{
-			m_textLine += DrawString( 5, m_textLine, `sleep ave = ${(this.m_sleepTotal / this.m_sleepCount).toFixed(6)} ms` );
+			m_textLine = DrawString( 5, m_textLine, `sleep ave = ${(this.m_sleepTotal / this.m_sleepCount).toFixed(6)} ms` );
 		}
 	}
 
