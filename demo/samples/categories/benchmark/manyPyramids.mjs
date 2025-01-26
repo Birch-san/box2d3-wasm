@@ -18,8 +18,8 @@ export default class ManyPyramids extends Sample{
 	}
 
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();
@@ -59,6 +59,10 @@ function CreateSmallPyramid(box2d, worldId, baseCount, extent, centerX, baseY )
 			b2CreatePolygonShape( bodyId, shapeDef, box );
 		}
 	}
+
+	bodyDef.delete();
+	shapeDef.delete();
+	box.delete();
 }
 
 function CreateManyPyramids( box2d, worldId )
@@ -95,6 +99,8 @@ function CreateManyPyramids( box2d, worldId )
 		segment.point2.Set( 0.5 * 2.0 * groundWidth, groundY );
 		b2CreateSegmentShape( groundId, shapeDef, segment );
 		groundY += groundDeltaY;
+
+		segment.delete();
 	}
 
 	const baseWidth = 2.0 * extent * baseCount;
@@ -110,4 +116,7 @@ function CreateManyPyramids( box2d, worldId )
 
 		baseY += groundDeltaY;
 	}
+
+	bodyDef.delete();
+	shapeDef.delete();
 }
