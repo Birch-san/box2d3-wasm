@@ -1,6 +1,5 @@
 import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js';
 import Sample from "../../sample.mjs";
-import settings from "../../settings.mjs";
 import b2HexColor from '../../b2HexColor.mjs';
 
 const e_rayCast = 0;
@@ -117,6 +116,8 @@ export default class Cast extends Sample{
 					}
 
 					b2CreatePolygonShape( bodyId, shapeDef, box );
+
+					box.delete();
 				}
 
 				x += this.m_grid;
@@ -132,6 +133,10 @@ export default class Cast extends Sample{
 
 		this.m_buildTime = performance.now() - timer;
 		this.m_minTime = 1e6;
+
+		worldDef.delete();
+		bodyDef.delete();
+		shapeDef.delete();
 	}
 
 	CreateUI(){
@@ -239,28 +244,40 @@ export default class Cast extends Sample{
 		});
 	}
 
-	CastCallback( shapeId, point, normal, fraction, context )
+	CastCallback( rayCallbackResult, context )
 	{
+		const {point, fraction} = rayCallbackResult;
+
 		const result = context;
-		result.point = point;
+		result.point = {x: point.x, y: point.y};
 		result.fraction = fraction;
 		result.hit = true;
+
+		rayCallbackResult.delete();
+
 		return fraction;
 	}
 
-	OverlapCallback( shapeId, context )
+	OverlapCallback( overlapCallbackResult, context )
 	{
 		const {
 			b2Shape_GetAABB,
 			b2AABB_Center
 		} = this.box2d;
 
+		const {shapeId} = overlapCallbackResult;
+
 		const result = context;
 		if ( result.count < 32 )
 		{
 			const aabb = b2Shape_GetAABB( shapeId );
-			result.points[result.count] = b2AABB_Center( aabb );
+			const center = b2AABB_Center( aabb );
+
+			result.points[result.count] = {x: center.x, y: center.y};
 			result.count += 1;
+
+			aabb.delete();
+			center.delete();
 		}
 
 		return true;
@@ -277,7 +294,7 @@ export default class Cast extends Sample{
 			b2World_OverlapAABB,
 			b2AABB,
 			b2Lerp,
-			b2Vec2
+			b2Vec2,
 		} = this.box2d;
 
 		super.Step();
@@ -306,12 +323,15 @@ export default class Cast extends Sample{
 
 				if ( i == this.m_drawIndex )
 				{
-					drawResult = result;
+					drawResult = {point: {x: result.point.x, y: result.point.y}, hit: result.hit};
 				}
+
 
 				nodeVisits += result.nodeVisits;
 				leafVisits += result.leafVisits;
 				hitCount += result.hit ? 1 : 0;
+
+				result.delete();
 			}
 
 			ms = performance.now() - timer;
@@ -345,6 +365,8 @@ export default class Cast extends Sample{
 				drawPointCommand.color = b2HexColor.b2_colorWhite;
 				this.debugDraw.drawPoint(drawPointCommand);
 			}
+
+			p2.delete();
 		}
 		else if ( this.m_queryType == e_circleCast )
 		{
@@ -369,7 +391,7 @@ export default class Cast extends Sample{
 				const result = {};
 				const traversalResult =
 					b2World_CastCircle( this.m_worldId, circle, origin, translation, filter,
-										(shapeId, point, normal, fraction) => this.CastCallback(shapeId, point, normal, fraction, result));
+										(rayCallbackResult) => this.CastCallback(rayCallbackResult, result));
 
 
 				if ( i == this.m_drawIndex )
@@ -380,6 +402,8 @@ export default class Cast extends Sample{
 				nodeVisits += traversalResult.nodeVisits;
 				leafVisits += traversalResult.leafVisits;
 				hitCount += result.hit ? 1 : 0;
+
+				origin.delete();
 			}
 
 			ms = performance.now() - timer;
@@ -420,7 +444,12 @@ export default class Cast extends Sample{
 				drawPointCommand.data = [drawResult.point.x, drawResult.point.y, 5.0];
 				drawPointCommand.color = b2HexColor.b2_colorWhite;
 				this.debugDraw.drawPoint(drawPointCommand);
+
+				t.delete();
 			}
+
+			circle.delete();
+			p2.delete();
 		}
 		else if ( this.m_queryType == e_overlap )
 		{
@@ -443,8 +472,7 @@ export default class Cast extends Sample{
 
 				result.count = 0;
 				const traversalResult = b2World_OverlapAABB( this.m_worldId, aabb, filter,
-															  (shapeId) => this.OverlapCallback(shapeId, result) );
-				// aabb.delete(); // cleanup memory
+															  (overlapCallbackResult) => this.OverlapCallback(overlapCallbackResult, result) );
 				if ( i == this.m_drawIndex )
 				{
 					drawResult = result;
@@ -453,6 +481,8 @@ export default class Cast extends Sample{
 				nodeVisits += traversalResult.nodeVisits;
 				leafVisits += traversalResult.leafVisits;
 				hitCount += result.count;
+
+				aabb.delete();
 			}
 
 			ms = performance.now() - timer;
@@ -475,7 +505,6 @@ export default class Cast extends Sample{
 
 			this.debugDraw.drawPolygon(drawAABBCommand);
 
-			// aabb.delete(); // cleanup memory
 			for ( let i = 0; i < drawResult.count; i++ )
 			{
 				const drawPointCommand = {
@@ -485,6 +514,9 @@ export default class Cast extends Sample{
 
 				this.debugDraw.drawPoint(drawPointCommand);
 			}
+
+			extent.delete();
+			aabb.delete();
 		}
 
 		this.hitCount = hitCount;
@@ -493,6 +525,8 @@ export default class Cast extends Sample{
 		this.ms = ms;
 
 		this.debugDraw.restoreCanvas();
+
+		filter.delete();
 	}
 
 	UpdateUI(DrawString, m_textLine){
@@ -512,9 +546,14 @@ export default class Cast extends Sample{
 		return m_textLine;
 	}
 
+	Despawn(){
+		this.m_origins.forEach(origin => origin.delete());
+		this.m_translations.forEach(translation => translation.delete());
+	}
+
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();
