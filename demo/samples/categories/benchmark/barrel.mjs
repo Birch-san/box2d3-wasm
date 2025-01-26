@@ -42,13 +42,15 @@ export default class Barrel extends Sample{
 			const groundId = b2CreateBody( this.m_worldId, bodyDef );
 
 			const shapeDef = b2DefaultShapeDef();
+			const p = new b2Vec2();
 
 			let y = 0.0;
 			let x = -40.0 * gridSize;
 			for ( let i = 0; i < 81; ++i )
 			{
-				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, new b2Vec2(x, y), b2Rot_identity );
+				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, p.Set(x, y), b2Rot_identity );
 				b2CreatePolygonShape( groundId, shapeDef, box );
+				box.delete();
 				x += gridSize;
 			}
 
@@ -56,8 +58,9 @@ export default class Barrel extends Sample{
 			x = -40.0 * gridSize;
 			for ( let i = 0; i < 100; ++i )
 			{
-				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, new b2Vec2(x, y), b2Rot_identity );
+				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, p.Set(x, y), b2Rot_identity );
 				b2CreatePolygonShape( groundId, shapeDef, box );
+				box.delete();
 				y += gridSize;
 			}
 
@@ -65,15 +68,21 @@ export default class Barrel extends Sample{
 			x = 40.0 * gridSize;
 			for ( let i = 0; i < 100; ++i )
 			{
-				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, new b2Vec2(x, y), b2Rot_identity );
+				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, p.Set(x, y), b2Rot_identity );
 				b2CreatePolygonShape( groundId, shapeDef, box );
+				box.delete();
 				y += gridSize;
 			}
+			p.delete();
 
 			const segment = new b2Segment();
 			segment.point1.Set(-800.0, -80.0);
 			segment.point2.Set(800.0, -80.0);
 			b2CreateSegmentShape( groundId, shapeDef, segment );
+
+			segment.delete();
+			bodyDef.delete();
+			shapeDef.delete();
 		}
 
 		this.m_shapeType = e_shapes.e_compoundShape;
@@ -87,7 +96,6 @@ export default class Barrel extends Sample{
 
 	Spawn(){
 		const {
-			b2DestroyBody,
 			b2DefaultBodyDef,
 			b2BodyType,
 			b2CreateBody,
@@ -98,26 +106,10 @@ export default class Barrel extends Sample{
 			b2ComputeHull,
 			b2MakePolygon,
 			b2MakeBox,
-			b2Vec2,
 			b2CreatePolygonShape,
 			b2DefaultShapeDef,
 			RandomFloatRange
 		} = this.box2d;
-
-		for ( let i = 0; i < e_maxRows * e_maxColumns; i++ )
-		{
-			if ( this.m_bodies[i] !== null )
-			{
-				b2DestroyBody( this.m_bodies[i] );
-				this.m_bodies[i] = null;
-			}
-
-			if ( this.m_humans[i]?.isSpawned )
-			{
-				this.m_humans[i].Despawn();
-				this.m_humans[i] = null;
-			}
-		}
 
 		let m_columnCount = e_maxColumns;
 		let m_rowCount = e_maxRows;
@@ -162,16 +154,19 @@ export default class Barrel extends Sample{
 		const points = [{x: -0.1, y: -0.5}, {x: 0.1, y: -0.5}, {x: 0.0, y: 0.5}];
 		const wedgeHull = b2ComputeHull( points );
 		const wedge = b2MakePolygon( wedgeHull, 0.0 );
+		wedgeHull.delete();
 
 		const vertices = [{x: -1.0, y: 0.0}, {x: 0.5, y: 1.0}, {x: 0.0, y: 2.0}];
 		let hull = b2ComputeHull( vertices);
 		const left = b2MakePolygon( hull, 0.0 );
+		hull.delete();
 
 		vertices[0] = {x: 1.0, y: 0.0};
 		vertices[1] = {x: -0.5, y: 1.0};
 		vertices[2] = {x: 0.0, y: 2.0};
 		hull = b2ComputeHull( vertices );
 		const right = b2MakePolygon( hull, 0.0 );
+		hull.delete();
 
 		// b2Polygon top = b2MakeOffsetBox(0.8f, 0.2f, {0.0f, 0.8f}, 0.0f);
 		// b2Polygon leftLeg = b2MakeOffsetBox(0.2f, 0.5f, {-0.6f, 0.5f}, 0.0f);
@@ -206,7 +201,7 @@ export default class Barrel extends Sample{
 			{
 				let y = j * ( shift + extray ) + centery + yStart;
 
-				bodyDef.position = new b2Vec2( x + side, y );
+				bodyDef.position.Set( x + side, y );
 				side = -side;
 
 				if ( this.m_shapeType == e_shapes.e_circleShape )
@@ -220,8 +215,8 @@ export default class Barrel extends Sample{
 					this.m_bodies[index] = b2CreateBody( this.m_worldId, bodyDef );
 					capsule.radius = RandomFloatRange( 0.25, 0.5 );
 					const length = RandomFloatRange( 0.25, 1.0 );
-					capsule.center1 = new b2Vec2(0.0, -0.5 * length );
-					capsule.center2 = new b2Vec2(0.0, 0.5 * length );
+					capsule.center1.Set(0.0, -0.5 * length );
+					capsule.center2.Set(0.0, 0.5 * length );
 					b2CreateCapsuleShape( this.m_bodies[index], shapeDef, capsule );
 				}
 				else if ( this.m_shapeType == e_shapes.e_mixShape )
@@ -238,8 +233,8 @@ export default class Barrel extends Sample{
 					{
 						capsule.radius = RandomFloatRange( 0.25, 0.5 );
 						const length = RandomFloatRange( 0.25, 1.0 );
-						capsule.center1 = new b2Vec2(0.0, -0.5 * length );
-						capsule.center2 = new b2Vec2(0.0, 0.5 * length );
+						capsule.center1.Set(0.0, -0.5 * length );
+						capsule.center2.Set(0.0, 0.5 * length );
 						b2CreateCapsuleShape( this.m_bodies[index], shapeDef, capsule );
 					}
 					else if ( mod == 2 )
@@ -252,6 +247,8 @@ export default class Barrel extends Sample{
 						const value = RandomFloatRange( -1.0, 1.0 );
 						box.radius = 0.25 * Math.max( 0.0, value );
 						b2CreatePolygonShape( this.m_bodies[index], shapeDef, box );
+
+						box.delete();
 					}
 					else
 					{
@@ -283,10 +280,36 @@ export default class Barrel extends Sample{
 				index += 1;
 			}
 		}
+
+		bodyDef.delete();
+		shapeDef.delete();
+		capsule.delete();
+		circle.delete();
+		wedge.delete();
+		left.delete();
+		right.delete();
 	}
 
 
 	Despawn(){
+		const {
+			b2DestroyBody
+		} = this.box2d;
+
+		for ( let i = 0; i < e_maxRows * e_maxColumns; i++ )
+		{
+			if ( this.m_bodies[i] !== null )
+			{
+				b2DestroyBody( this.m_bodies[i] );
+				this.m_bodies[i] = null;
+			}
+
+			if ( this.m_humans[i]?.isSpawned )
+			{
+				this.m_humans[i].Despawn();
+				this.m_humans[i] = null;
+			}
+		}
 	}
 
 	Step(){
@@ -331,8 +354,8 @@ export default class Barrel extends Sample{
 	}
 
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();
