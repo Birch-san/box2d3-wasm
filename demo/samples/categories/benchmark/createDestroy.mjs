@@ -34,6 +34,10 @@ export default class CreateDestroy extends Sample{
 		this.m_iterations = 10;
 		this.m_bodyCount = 0;
 
+		bodyDef.delete();
+		box.delete();
+		shapeDef.delete();
+
 		this.Spawn();
 	}
 
@@ -93,6 +97,10 @@ export default class CreateDestroy extends Sample{
 		}
 
 		this.m_bodyCount = index;
+
+		bodyDef.delete();
+		shapeDef.delete();
+		box.delete();
 	}
 
 	Step(){
