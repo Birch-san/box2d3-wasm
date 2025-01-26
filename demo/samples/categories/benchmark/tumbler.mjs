@@ -46,40 +46,51 @@ function CreateTumbler(box2d, worldId){
 	{
 		const bodyDef = b2DefaultBodyDef();
 		groundId = b2CreateBody( worldId, bodyDef );
+		bodyDef.delete();
 	}
 
 	{
 		const bodyDef = b2DefaultBodyDef();
 		bodyDef.type = b2BodyType.b2_dynamicBody;
-		bodyDef.position = new b2Vec2(0.0, 10.0);
+		bodyDef.position.Set(0.0, 10.0);
 		const bodyId = b2CreateBody( worldId, bodyDef );
 
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.density = 50.0;
 
 		let polygon;
-		polygon = b2MakeOffsetBox( 0.5, 10.0, new b2Vec2(10.0, 0.0), b2Rot_identity );
+		const p = new b2Vec2();
+		polygon = b2MakeOffsetBox( 0.5, 10.0, p.Set(10.0, 0.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
-		polygon = b2MakeOffsetBox( 0.5, 10.0, new b2Vec2(-10.0, 0.0), b2Rot_identity );
+		polygon.delete();
+		polygon = b2MakeOffsetBox( 0.5, 10.0, p.Set(-10.0, 0.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
-		polygon = b2MakeOffsetBox( 10.0, 0.5, new b2Vec2(0.0, 10.0), b2Rot_identity );
+		polygon.delete();
+		polygon = b2MakeOffsetBox( 10.0, 0.5, p.Set(0.0, 10.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
-		polygon = b2MakeOffsetBox( 10.0, 0.5, new b2Vec2(0.0, -10.0), b2Rot_identity );
+		polygon.delete();
+		polygon = b2MakeOffsetBox( 10.0, 0.5, p.Set(0.0, -10.0), b2Rot_identity );
 		b2CreatePolygonShape( bodyId, shapeDef, polygon );
+		polygon.delete();
+		p.delete();
 
 		const motorSpeed = 25.0;
 
 		const jd = b2DefaultRevoluteJointDef();
 		jd.bodyIdA = groundId;
 		jd.bodyIdB = bodyId;
-		jd.localAnchorA = new b2Vec2(0.0, 10.0);
-		jd.localAnchorB = new b2Vec2(0.0, 0.0);
+		jd.localAnchorA.Set(0.0, 10.0);
+		jd.localAnchorB.Set(0.0, 0.0);
 		jd.referenceAngle = 0.0;
 		jd.motorSpeed = ( B2_PI / 180.0 ) * motorSpeed;
 		jd.maxMotorTorque = 1e8;
 		jd.enableMotor = true;
 
 		b2CreateRevoluteJoint( worldId, jd );
+
+		bodyDef.delete();
+		shapeDef.delete();
+		jd.delete();
 	}
 
 	const gridCount = 45;
@@ -96,7 +107,7 @@ function CreateTumbler(box2d, worldId){
 
 		for ( let j = 0; j < gridCount; j++ )
 		{
-			bodyDef.position = new b2Vec2(x, y );
+			bodyDef.position.Set(x, y );
 			const bodyId = b2CreateBody( worldId, bodyDef );
 
 			b2CreatePolygonShape( bodyId, shapeDef, polygon );
@@ -106,4 +117,8 @@ function CreateTumbler(box2d, worldId){
 
 		y += 0.4;
 	}
+
+	polygon.delete();
+	bodyDef.delete();
+	shapeDef.delete();
 }
