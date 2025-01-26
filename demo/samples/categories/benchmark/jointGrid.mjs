@@ -91,4 +91,9 @@ function CreateJointGrid(box2d, worldId )
 			bodies[index++] = body;
 		}
 	}
+
+	shapeDef.delete();
+	circle.delete();
+	jd.delete();
+	bodyDef.delete();
 }
