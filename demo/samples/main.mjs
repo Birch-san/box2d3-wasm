@@ -17,6 +17,7 @@ const state = {
 
 let box2d = null;
 let sample = null;
+let sampleLoading = false;
 let sampleUrl = './categories/events/sensorFunnel.mjs';
 let sampleName = null;
 let pane = null;
@@ -37,8 +38,12 @@ const ctx = canvas.getContext("2d");
 const camera = new Camera({autoResize: true, controls: true, canvas});
 let debugDraw = null;
 
-function loadSample(url) {
-	console.log('loading sample', url);
+async function loadSample(url) {
+	if(sampleLoading){
+		return;
+	}
+	sampleLoading = true;
+
 	if(sample){
 		sample.Destroy();
 		sample = null;
@@ -48,11 +53,12 @@ function loadSample(url) {
 	sampleName = url.slice(13);
 	window.history.pushState({}, sampleName, `?sample=${sampleName}`);
 
-	import(url).then((module) => {
-		sample = new module.default(box2d, camera, debugDraw);
-		updateDebugDrawFlags();
-		addUI();
-	});
+	const module = await import(url);
+	sample = new module.default(box2d, camera, debugDraw);
+	updateDebugDrawFlags();
+	addUI();
+
+	sampleLoading = false;
 }
 
 const debugDrawFlagKeys = ['drawShapes', 'drawJoints', 'drawJointExtras', 'drawAABBs', 'drawMass', 'drawContacts', 'drawGraphColors', 'drawContactNormals', 'drawContactImpulses', 'drawFrictionImpulses'];
