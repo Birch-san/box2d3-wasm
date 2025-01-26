@@ -1293,6 +1293,29 @@ struct MemoryStats {
     size_t totalSpace;
 };
 
+struct b2RayCallbackResult {
+    b2ShapeId shapeId;
+    b2Vec2 point;
+    b2Vec2 normal;
+    float fraction;
+};
+
+struct b2OverlapCallbackResult {
+    b2ShapeId shapeId;
+};
+
+float RayCastCallback(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) {
+    auto* callback = reinterpret_cast<emscripten::val*>(userData);
+    b2RayCallbackResult params = { shapeId, point, normal, fraction };
+    return callback->operator()(emscripten::val(params)).as<float>();
+}
+
+bool OverlapCallback(b2ShapeId shapeId, void* userData) {
+    auto* callback = reinterpret_cast<emscripten::val*>(userData);
+    b2OverlapCallbackResult params = { shapeId };
+    return callback->operator()(emscripten::val(params)).as<bool>();
+}
+
 EMSCRIPTEN_BINDINGS(box2d) {
     // ------------------------------------------------------------------------
     // Memory debugging
@@ -1368,137 +1391,104 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return emscripten::val(worldId.index1);
     });
     // function("b2World_DumpMemoryStats", &b2World_DumpMemoryStats);
+
+    class_<b2RayCallbackResult>("b2RayCallbackResult")
+        .constructor<>()
+        .property("shapeId", &b2RayCallbackResult::shapeId)
+        .property("point", &b2RayCallbackResult::point, return_value_policy::reference())
+        .property("normal", &b2RayCallbackResult::normal, return_value_policy::reference())
+        .property("fraction", &b2RayCallbackResult::fraction)
+    ;
+    value_object<b2OverlapCallbackResult>("b2OverlapCallbackResult")
+        .field("shapeId", &b2OverlapCallbackResult::shapeId)
+    ;
     function("b2World_OverlapAABB",
-        +[](b2WorldId worldId, const b2AABB& aabb, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapAABB(worldId, aabb, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+        +[](b2WorldId worldId, const b2AABB& aabb, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapAABB(worldId, aabb, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
-    );
+    , allow_raw_pointers());
     function("b2World_OverlapPoint",
         +[](b2WorldId worldId, b2Vec2 point, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapPoint(worldId, point, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapPoint(worldId, point, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
-    );
-
+    , allow_raw_pointers());
     function("b2World_OverlapCircle",
         +[](b2WorldId worldId, const b2Circle* circle, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapCircle(worldId, circle, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapCircle(worldId, circle, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
     , allow_raw_pointers());
-
     function("b2World_OverlapCapsule",
         +[](b2WorldId worldId, const b2Capsule* capsule, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapCapsule(worldId, capsule, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapCapsule(worldId, capsule, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
     , allow_raw_pointers());
-
     function("b2World_OverlapPolygon",
         +[](b2WorldId worldId, const b2Polygon* polygon, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapPolygon(worldId, polygon, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapPolygon(worldId, polygon, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
     , allow_raw_pointers());
-
     function("b2World_CastRay",
         +[](b2WorldId worldId, b2Vec2 origin, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_CastRay(worldId, origin, translation, filter,
-                +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                    auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                    return callback(
-                        emscripten::val(shapeId),
-                        emscripten::val(point),
-                        emscripten::val(normal),
-                        fraction
-                    ).as<float>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastRay(worldId, origin, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
-    );
+    , allow_raw_pointers());
     function("b2World_CastRayClosest", &b2World_CastRayClosest);
     function("b2World_CastCircle",
-       +[](b2WorldId worldId, const b2Circle* circle, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-           return b2World_CastCircle(worldId, circle, originTransform, translation, filter,
-               +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeId),
-                       emscripten::val(point),
-                       emscripten::val(normal),
-                       fraction
-                   ).as<float>();
-               },
-               &callback
-           );
-       }
+        +[](b2WorldId worldId, const b2Circle* circle, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastCircle(worldId, circle, originTransform, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
+        }
     , allow_raw_pointers());
     function("b2World_CastCapsule",
        +[](b2WorldId worldId, const b2Capsule* capsule, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-           return b2World_CastCapsule(worldId, capsule, originTransform, translation, filter,
-               +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeId),
-                       emscripten::val(point),
-                       emscripten::val(normal),
-                       fraction
-                   ).as<float>();
-               },
-               &callback
-           );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastCapsule(worldId, capsule, originTransform, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
        }
     , allow_raw_pointers());
     function("b2World_CastPolygon",
        +[](b2WorldId worldId, const b2Polygon* polygon, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-           return b2World_CastPolygon(worldId, polygon, originTransform, translation, filter,
-               +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeId),
-                       emscripten::val(point),
-                       emscripten::val(normal),
-                       fraction
-                   ).as<float>();
-               },
-               &callback
-           );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastPolygon(worldId, polygon, originTransform, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
        }
     , allow_raw_pointers());
     function("b2World_SetCustomFilterCallback",
        +[](b2WorldId worldId, emscripten::val callback) {
-           b2World_SetCustomFilterCallback(worldId,
-               +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* userData) -> bool {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeIdA),
-                       emscripten::val(shapeIdB)
-                   ).as<bool>();
-               },
-               new emscripten::val(callback)
-           );
+            auto callbackPtr = new emscripten::val(callback);
+            b2World_SetCustomFilterCallback(worldId,
+                +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* userData) -> bool {
+                    auto callback = *reinterpret_cast<emscripten::val*>(userData);
+                    return callback(
+                        emscripten::val(shapeIdA),
+                        emscripten::val(shapeIdB)
+                    ).as<bool>();
+                },
+                callbackPtr
+            );
+            return reinterpret_cast<uint32_t>(callbackPtr);
        }
     );
     function("b2World_SetPreSolveCallback",
