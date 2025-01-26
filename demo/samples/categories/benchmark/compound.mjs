@@ -32,14 +32,17 @@ export default class Compound extends Sample{
 			const groundId = b2CreateBody( this.m_worldId, bodyDef );
 			const shapeDef = b2DefaultShapeDef();
 
+			const p = new b2Vec2(0.0, 0.0);
+
 			for ( let i = 0; i < height; i++ )
 			{
 				const y = grid * i;
 				for ( let j = i; j < width; j++ )
 				{
 					const x = grid * j;
-					const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, new b2Vec2(x, y), b2Rot_identity );
+					const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, p.Set(x, y), b2Rot_identity );
 					b2CreatePolygonShape( groundId, shapeDef, square );
+					square.delete();
 				}
 			}
 
@@ -49,10 +52,15 @@ export default class Compound extends Sample{
 				for ( let j = i; j < width; j++ )
 				{
 					const x = -grid * j;
-					const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, new b2Vec2(x, y), b2Rot_identity );
+					const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, p.Set(x, y), b2Rot_identity );
 					b2CreatePolygonShape( groundId, shapeDef, square );
+					square.delete();
 				}
 			}
+
+			bodyDef.delete();
+			shapeDef.delete();
+			p.delete();
 		}
 
 		{
@@ -78,18 +86,25 @@ export default class Compound extends Sample{
 					for ( let i = 0; i < span; i++ )
 					{
 						const y = i * grid;
+						const p = new b2Vec2();
 						for ( let j = 0; j < span; j++ )
 						{
 							const x = j * grid;
-							const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, new b2Vec2(x, y), b2Rot_identity );
+							const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, p.Set(x, y), b2Rot_identity );
 							b2CreatePolygonShape( bodyId, shapeDef, square );
+
+							square.delete();
 						}
+						p.delete();
 					}
 
 					// All shapes have been added so I can efficiently compute the mass properties.
 					b2Body_ApplyMassFromShapes( bodyId );
 				}
 			}
+
+			bodyDef.delete();
+			shapeDef.delete();
 		}
 	}
 }
