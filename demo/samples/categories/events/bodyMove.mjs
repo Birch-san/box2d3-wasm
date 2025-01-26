@@ -44,22 +44,38 @@ export default class BodyMove extends Sample{
 			const shapeDef = b2DefaultShapeDef();
 			shapeDef.friction = 0.1;
 
-			let box = b2MakeOffsetBox( 12.0, 0.1, new b2Vec2(-10.0, -0.1), b2MakeRot( -0.15 * B2_PI ) );
-			b2CreatePolygonShape( groundId, shapeDef, box );
+			const p = new b2Vec2();
 
-			box = b2MakeOffsetBox( 12.0, 0.1, new b2Vec2(10.0, -0.1 ), b2MakeRot( 0.15 * B2_PI ) );
+			let rot = b2MakeRot( -0.15 * B2_PI );
+			let box = b2MakeOffsetBox( 12.0, 0.1, p.Set(-10.0, -0.1), rot );
 			b2CreatePolygonShape( groundId, shapeDef, box );
+			rot.delete();
+			box.delete();
+
+			rot = b2MakeRot( 0.15 * B2_PI );
+			box = b2MakeOffsetBox( 12.0, 0.1, p.Set(10.0, -0.1 ), rot );
+			b2CreatePolygonShape( groundId, shapeDef, box );
+			box.delete();
+			rot.delete();
 
 			shapeDef.restitution = 0.8;
 
-			box = b2MakeOffsetBox( 0.1, 10.0, new b2Vec2(19.9, 10.0 ), b2Rot_identity );
+			box = b2MakeOffsetBox( 0.1, 10.0, p.Set(19.9, 10.0 ), b2Rot_identity );
 			b2CreatePolygonShape( groundId, shapeDef, box );
+			box.delete();
 
-			box = b2MakeOffsetBox( 0.1, 10.0, new b2Vec2(-19.9, 10.0 ), b2Rot_identity );
+			box = b2MakeOffsetBox( 0.1, 10.0, p.Set(-19.9, 10.0 ), b2Rot_identity );
 			b2CreatePolygonShape( groundId, shapeDef, box );
+			box.delete();
 
-			box = b2MakeOffsetBox( 20.0, 0.1, new b2Vec2(0.0, 20.1 ), b2Rot_identity );
+			box = b2MakeOffsetBox( 20.0, 0.1, p.Set(0.0, 20.1 ), b2Rot_identity );
 			b2CreatePolygonShape( groundId, shapeDef, box );
+			box.delete();
+
+			p.delete();
+
+			bodyDef.delete();
+			shapeDef.delete();
 		}
 
 		this.CreateUI();
@@ -115,9 +131,7 @@ export default class BodyMove extends Sample{
 			}
 			else if ( remainder == 1 )
 			{
-				// b2CreateCircleShape( this.m_bodyIds[this.m_count], shapeDef, circle );
-				b2CreateCapsuleShape( this.m_bodyIds[this.m_count], shapeDef, capsule );
-
+				b2CreateCircleShape( this.m_bodyIds[this.m_count], shapeDef, circle );
 			}
 			else if ( remainder == 2 )
 			{
@@ -128,15 +142,25 @@ export default class BodyMove extends Sample{
 				const poly = RandomPolygon( 0.75 );
 				poly.radius = 0.1;
 				b2CreatePolygonShape( this.m_bodyIds[this.m_count], shapeDef, poly );
+				poly.delete();
 			}
 
 			this.m_count += 1;
 			x += 1.0;
 		}
+
+		capsule.delete();
+		circle.delete();
+		square.delete();
+
+		bodyDef.delete();
+		shapeDef.delete();
 	}
 
 	Despawn(){
 		Keyboard.HideTouchControls();
+
+		this.m_explosionPosition.delete();
 	}
 
 	Step(){
@@ -235,6 +259,7 @@ export default class BodyMove extends Sample{
 			def.falloff = 0.1;
 			def.impulsePerLength = this.m_explosionMagnitude;
 			b2World_Explode( this.m_worldId, def );
+			def.delete();
 		});
 
 		const PARAMS = {
