@@ -3,6 +3,11 @@ import Sample from "../../sample.mjs";
 
 import Keyboard, { Key } from '../../../utils/keyboard.mjs';
 
+const GROUND = 0x00000001;
+const PLAYER = 0x00000002;
+const FOOT = 0x00000004;
+const ALL_BITS = ( ~0 );
+
 export default class FootSensor extends Sample{
 	constructor(box2d, camera, debugDraw){
 		super(box2d, camera, debugDraw);
@@ -12,7 +17,6 @@ export default class FootSensor extends Sample{
 
 		this.m_playerId = null;
 		this.m_sensorId = null;
-
 
 		const {
 			b2DefaultBodyDef,
@@ -44,6 +48,8 @@ export default class FootSensor extends Sample{
 			const chainDef = b2DefaultChainDef();
 			chainDef.SetPoints( points );
 			chainDef.isLoop = false;
+			chainDef.filter.categoryBits = GROUND;
+			chainDef.filter.maskBits = FOOT | PLAYER;
 
 			b2CreateChain( groundId, chainDef );
 
@@ -58,6 +64,8 @@ export default class FootSensor extends Sample{
 			bodyDef.position.Set(0.0, 1.0);
 			this.m_playerId = b2CreateBody( this.m_worldId, bodyDef );
 			const shapeDef = b2DefaultShapeDef();
+			shapeDef.filter.categoryBits = PLAYER;
+			shapeDef.filter.maskBits = GROUND;
 			shapeDef.friction = 0.3;
 
 			const capsule = new b2Capsule();
@@ -68,6 +76,8 @@ export default class FootSensor extends Sample{
 
 			const boxOffset = new b2Vec2(0.0, -1.0);
 			const box = b2MakeOffsetBox( 0.5, 0.25, boxOffset, b2Rot_identity );
+			shapeDef.filter.categoryBits = FOOT;
+			shapeDef.filter.maskBits = GROUND;
 			shapeDef.isSensor = true;
 			this.m_sensorId = b2CreatePolygonShape( this.m_playerId, shapeDef, box );
 
