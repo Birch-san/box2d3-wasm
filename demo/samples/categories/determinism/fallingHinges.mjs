@@ -36,7 +36,6 @@ export default class FallingHinges extends Sample{
 			b2BodyType,
 			B2_PI,
 			b2MakeRot,
-			b2Body_GetTransform,
 		} = this.box2d;
 
 		{
@@ -47,6 +46,10 @@ export default class FallingHinges extends Sample{
 			const box = b2MakeBox( 20.0, 1.0 );
 			const shapeDef = b2DefaultShapeDef();
 			b2CreatePolygonShape( groundId, shapeDef, box );
+
+			bodyDef.delete();
+			box.delete();
+			shapeDef.delete();
 		}
 
 		const h = 0.25;
@@ -91,7 +94,9 @@ export default class FallingHinges extends Sample{
 				);
 
 				// this tests the deterministic cosine and sine functions
-				bodyDef.rotation = b2MakeRot( 0.1 * i - 1.0 );
+				const rot = b2MakeRot( 0.1 * i - 1.0 );
+				bodyDef.rotation = rot;
+				rot.delete();
 
 				const bodyId = b2CreateBody( this.m_worldId, bodyDef );
 
@@ -113,8 +118,14 @@ export default class FallingHinges extends Sample{
 				this.m_bodies[bodyIndex] = bodyId;
 
 				bodyIndex += 1;
+
+				bodyDef.delete();
 			}
 		}
+
+		box.delete();
+		shapeDef.delete();
+		jointDef.delete();
 
 		this.CreateUI();
 	}
@@ -146,11 +157,14 @@ export default class FallingHinges extends Sample{
 					const xf = b2Body_GetTransform( this.m_bodies[i] );
 					//printf( "%d %.9f %.9f %.9f %.9f\n", i, xf.p.x, xf.p.y, xf.q.c, xf.q.s );
 					hash = b2Hash( hash, xf.ToBytes() );
+					xf.delete();
 				}
 
 				this.m_sleepStep = this.m_stepCount - 1;
 				this.m_hash = hash;
 			}
+
+			bodyEvents.delete();
 		}
 	}
 
