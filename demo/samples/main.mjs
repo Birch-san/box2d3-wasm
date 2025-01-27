@@ -71,7 +71,7 @@ function updateDebugDrawFlags(){
 }
 
 async function initialize(){
-	const maxThreads = typeof Worker !== 'undefined' ? navigator.hardwareConcurrency || 4 : 1;
+	const maxThreads = navigator.hardwareConcurrency || 4;
 
 	box2d = await Box2DFactory({
 		pthreadCount: maxThreads,
