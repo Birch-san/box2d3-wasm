@@ -17,7 +17,7 @@ export default class FallingHinges extends Sample{
 
 		camera.center = {x: 0.0, y: 7.5 };
 		camera.zoom = 10;
-
+		settings.enableSleep = true;
 		settings.drawJoints = true;
 
 		this.m_bodies = new Array(e_columns * e_rows);

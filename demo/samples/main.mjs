@@ -71,7 +71,13 @@ function updateDebugDrawFlags(){
 }
 
 async function initialize(){
-	box2d = await Box2DFactory();
+	const maxThreads = navigator.hardwareConcurrency || 4;
+
+	box2d = await Box2DFactory({
+		pthreadCount: maxThreads,
+	});
+
+	settings.workerCount = Math.min(4, maxThreads);
 
 	debugDraw = new DebugDrawRenderer(box2d, ctx, {
 		pixelToMeters: settings.ptm,
@@ -89,21 +95,23 @@ async function initialize(){
 	addControls();
 }
 
+const PARAMS = {};
+
 function addUI(){
+	PARAMS.pause = settings.pause,
+	PARAMS.sleep = settings.enableSleep,
+	PARAMS['warm starting'] = settings.enableWarmStarting,
+	PARAMS.continuous = settings.enableContinuous,
+	PARAMS.profile = settings.profile,
+	PARAMS['wasm memory'] = settings.debugWASMMemory,
+	PARAMS.workers = settings.workerCount
+
 	if(pane){
-		pane.dispose();
+		pane.refresh();
+		return;
 	}
 
 	const container = document.getElementById('main-settings');
-
-	const PARAMS = {
-		pause: false,
-		sleep: settings.enableSleep,
-		'warm starting': settings.enableWarmStarting,
-		continuous: settings.enableContinuous,
-		profile: settings.profile,
-		'wasm memory': settings.debugWASMMemory,
-	};
 
 	pane = new Pane({
 		title: 'Main Settings',
@@ -143,6 +151,15 @@ function addUI(){
 	main.addBinding(PARAMS, 'wasm memory').on('change', (event) => {
 		settings.debugWASMMemory = event.value;
 		debugDraw.debugMemory = event.value;
+	});
+
+	main.addBinding(PARAMS, 'workers', {
+		step: 1,
+		min: 1,
+		max: navigator.hardwareConcurrency || 4,
+	}).on('change', event => {
+		settings.workerCount = event.value;
+		loadSample(sampleUrl);
 	});
 
 	main.addButton({

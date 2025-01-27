@@ -13,6 +13,7 @@ export default class Sample{
 			b2DefaultWorldDef,
 			b2CreateWorld,
 			b2CreateThreadedWorld,
+			TaskSystem
 		} = box2d;
 
 		const worldDef = b2DefaultWorldDef();
@@ -73,7 +74,7 @@ export default class Sample{
 		this.m_stepCount++;
 	}
 
-	QueryCallback(shapeId, context)
+	QueryCallback(overlapCallbackResult, context)
 	{
 		const {
 			b2Shape_GetBody,
@@ -81,6 +82,8 @@ export default class Sample{
 			b2Shape_TestPoint,
 			b2BodyType,
 		} = this.box2d;
+
+		const {shapeId} = overlapCallbackResult;
 
 		const bodyId = b2Shape_GetBody( shapeId );
 		const bodyType = b2Body_GetType( bodyId );
@@ -121,7 +124,7 @@ export default class Sample{
 		const queryContext = { point: p, bodyId: null };
 
 		const filter = b2DefaultQueryFilter();
-		b2World_OverlapAABB( this.m_worldId, box, filter, (shapeId) => this.QueryCallback(shapeId, queryContext));
+		b2World_OverlapAABB( this.m_worldId, box, filter, (overlapCallbackResult) => this.QueryCallback(overlapCallbackResult, queryContext));
 		filter.delete();
 
 		box.delete();
@@ -297,6 +300,9 @@ export default class Sample{
 			b2DestroyWorld
 		} = this.box2d;
 		b2DestroyWorld(this.m_worldId);
+
+		this.m_taskSystem?.ClearTasks();
+		this.m_taskSystem?.delete();
 	}
 }
 
