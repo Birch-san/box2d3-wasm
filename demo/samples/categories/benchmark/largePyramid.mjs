@@ -47,12 +47,16 @@ function CreateLargePyramid(box2d, worldId){
 
 	{
 		const bodyDef = b2DefaultBodyDef();
-		bodyDef.position = new b2Vec2(0.0, -1.0);
+		bodyDef.position.Set(0.0, -1.0);
 		const groundId = b2CreateBody( worldId, bodyDef );
 
 		const box = b2MakeBox( 100.0, 1.0 );
 		const shapeDef = b2DefaultShapeDef();
 		b2CreatePolygonShape( groundId, shapeDef, box );
+
+		bodyDef.delete();
+		box.delete();
+		shapeDef.delete();
 	}
 
 	const bodyDef = b2DefaultBodyDef();
@@ -75,10 +79,14 @@ function CreateLargePyramid(box2d, worldId){
 		{
 			const x = ( i + 1.0 ) * shift + 2.0 * ( j - i ) * shift - h * baseCount;
 
-			bodyDef.position = new b2Vec2(x, y);
+			bodyDef.position.Set(x, y);
 
 			const bodyId = b2CreateBody( worldId, bodyDef );
 			b2CreatePolygonShape( bodyId, shapeDef, box );
 		}
 	}
+
+	bodyDef.delete();
+	shapeDef.delete();
+	box.delete();
 }

@@ -17,6 +17,7 @@ const state = {
 
 let box2d = null;
 let sample = null;
+let sampleLoading = false;
 let sampleUrl = './categories/events/sensorFunnel.mjs';
 let sampleName = null;
 let pane = null;
@@ -37,8 +38,12 @@ const ctx = canvas.getContext("2d");
 const camera = new Camera({autoResize: true, controls: true, canvas});
 let debugDraw = null;
 
-function loadSample(url) {
-	console.log('loading sample', url);
+async function loadSample(url) {
+	if(sampleLoading){
+		return;
+	}
+	sampleLoading = true;
+
 	if(sample){
 		sample.Destroy();
 		sample = null;
@@ -48,11 +53,12 @@ function loadSample(url) {
 	sampleName = url.slice(13);
 	window.history.pushState({}, sampleName, `?sample=${sampleName}`);
 
-	import(url).then((module) => {
-		sample = new module.default(box2d, camera, debugDraw);
-		updateDebugDrawFlags();
-		addUI();
-	});
+	const module = await import(url);
+	sample = new module.default(box2d, camera, debugDraw);
+	updateDebugDrawFlags();
+	addUI();
+
+	sampleLoading = false;
 }
 
 const debugDrawFlagKeys = ['drawShapes', 'drawJoints', 'drawJointExtras', 'drawAABBs', 'drawMass', 'drawContacts', 'drawGraphColors', 'drawContactNormals', 'drawContactImpulses', 'drawFrictionImpulses'];
@@ -67,7 +73,11 @@ function updateDebugDrawFlags(){
 async function initialize(){
 	box2d = await Box2DFactory();
 
-	debugDraw = new DebugDrawRenderer(box2d, ctx, settings.ptm, true, settings.maxDebugDrawCommands);
+	debugDraw = new DebugDrawRenderer(box2d, ctx, {
+		pixelToMeters: settings.ptm,
+		maxDebugDrawCommands: settings.maxDebugDrawCommands,
+		debugMemory: settings.debugWASMMemory,
+	});
 
 	requestAnimationFrame(update);
 
@@ -92,6 +102,7 @@ function addUI(){
 		'warm starting': settings.enableWarmStarting,
 		continuous: settings.enableContinuous,
 		profile: settings.profile,
+		'wasm memory': settings.debugWASMMemory,
 	};
 
 	pane = new Pane({
@@ -127,6 +138,11 @@ function addUI(){
 
 	main.addBinding(PARAMS, 'profile').on('change', (event) => {
 		settings.profile = event.value;
+	});
+
+	main.addBinding(PARAMS, 'wasm memory').on('change', (event) => {
+		settings.debugWASMMemory = event.value;
+		debugDraw.debugMemory = event.value;
 	});
 
 	main.addButton({
@@ -176,9 +192,9 @@ function onPointerDown(event){
 			&& Math.abs(state.mousePos.y - state.mouseDownPos.y) < maxMovementForClick
 		) {
 			const p = camera.convertScreenToWorld(state.mousePos);
-			const worldPos = new box2d.b2Vec2().Set(p.x, p.y);
-
+			const worldPos = new box2d.b2Vec2(p.x, p.y);
 			const interacting = sample?.MouseDown(worldPos);
+			worldPos.delete();
 			// block camera controls if interacting with the sample
 			canvas.blockTouchCameraControls = interacting;
 		}
@@ -188,8 +204,9 @@ function onPointerDown(event){
 function onPointerMove(event){
 	state.mousePos = {x: event.clientX, y: event.clientY};
 	const p = camera.convertScreenToWorld(state.mousePos);
-	const worldPos = new box2d.b2Vec2().Set(p.x, p.y);
+	const worldPos = new box2d.b2Vec2(p.x, p.y);
 	sample?.MouseMove(worldPos);
+	worldPos.delete();
 }
 
 function onPointerUp(event){

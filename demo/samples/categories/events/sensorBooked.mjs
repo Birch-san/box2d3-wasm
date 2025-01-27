@@ -27,17 +27,21 @@ export default class SensorBooked extends Sample{
 			const shapeDef = b2DefaultShapeDef();
 
 			const groundSegment = new b2Segment();
-			groundSegment.point1 = new b2Vec2(-10, 0);
-			groundSegment.point2 = new b2Vec2(10, 0);
+			groundSegment.point1.Set(-10, 0);
+			groundSegment.point2.Set(10, 0);
 			b2CreateSegmentShape( groundId, shapeDef, groundSegment );
 
-			groundSegment.point1 = new b2Vec2(-10, 0);
-			groundSegment.point2 = new b2Vec2(-10, 10);
+			groundSegment.point1.Set(-10, 0);
+			groundSegment.point2.Set(-10, 10);
 			b2CreateSegmentShape( groundId, shapeDef, groundSegment );
 
-			groundSegment.point1 = new b2Vec2(10, 0);
-			groundSegment.point2 = new b2Vec2(10, 10);
+			groundSegment.point1.Set(10, 0);
+			groundSegment.point2.Set(10, 10);
 			b2CreateSegmentShape( groundId, shapeDef, groundSegment );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			groundSegment.delete();
 
 		}
 
@@ -78,6 +82,10 @@ export default class SensorBooked extends Sample{
 		shapeDef.isSensor = true;
 		const box = b2MakeSquare( 1.0 );
 		this.m_sensorShapeId = b2CreatePolygonShape( this.m_sensorBodyId, shapeDef, box );
+
+		bodyDef.delete();
+		shapeDef.delete();
+		box.delete();
 	}
 
 	CreateVisitor()
@@ -105,6 +113,10 @@ export default class SensorBooked extends Sample{
 		circle.radius = 0.5;
 
 		this.m_visitorShapeId = b2CreateCircleShape( this.m_visitorBodyId, shapeDef, circle );
+
+		bodyDef.delete();
+		shapeDef.delete();
+		circle.delete();
 	}
 
 	DestroySensor(){
@@ -146,31 +158,31 @@ export default class SensorBooked extends Sample{
 		super.Step();
 
 		const sensorEvents = b2World_GetSensorEvents( this.m_worldId );
-		const beginEvents = sensorEvents.GetBeginEvents();
 
-		for ( let i = 0; i < beginEvents.length; i++ )
+		for ( let i = 0; i < sensorEvents.beginCount; i++ )
 		{
-			const event = beginEvents[i];
-			if ( B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
+			const event = sensorEvents.GetBeginEvent(i);
+			if (this.m_visitorShapeId &&  B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
 			{
 				console.assert( this.m_isVisiting == false );
 				this.m_isVisiting = true;
 			}
 		}
 
-		const endEvents = sensorEvents.GetEndEvents();
 
-		for ( let i = 0; i < endEvents.length; ++i )
+		for ( let i = 0; i < sensorEvents.endCount; ++i )
 		{
-			const event = endEvents[i];
+			const event = sensorEvents.GetEndEvent(i);
 
-			const wasVisitorDestroyed = b2Shape_IsValid( event.visitorShapeId ) == false;
+			const wasVisitorDestroyed = !this.m_visitorBodyId;
 			if ( wasVisitorDestroyed || B2_ID_EQUALS( event.visitorShapeId, this.m_visitorShapeId ) )
 			{
 				console.assert( this.m_isVisiting == true );
 				this.m_isVisiting = false;
 			}
 		}
+
+		sensorEvents.delete();
 	}
 
 	CreateUI(){
@@ -228,8 +240,8 @@ export default class SensorBooked extends Sample{
 	}
 
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();

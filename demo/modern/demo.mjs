@@ -8,12 +8,12 @@ const box2d = await Box2DFactory();
 const canvas = document.getElementById("demo-canvas");
 const ctx = canvas.getContext("2d");
 
-const pixelsPerMeter = 10;
+const pixelToMeters = 10;
 const subStepCount = 4;
 
 const hdRendering = params.get('hd') === '1';
 
-const debugDraw = new DebugDrawRenderer(box2d, ctx, pixelsPerMeter, hdRendering); // true for high dpi
+const debugDraw = new DebugDrawRenderer(box2d, ctx, {pixelToMeters, autoHD: hdRendering}); // true for high dpi
 debugDraw.offset = {
   x: 40,
   y: -29
@@ -125,30 +125,30 @@ function drawProfile(stepDuration, profile) {
   if (statsLevel < 1) return;
   ctx.fillText(`fps: ${Math.floor(1000/stepDuration)}`, 10 * hdScale, 20 * hdScale);
   ctx.fillText(`threading: ${taskSystem ? 'on' : 'off'}`, 100 * hdScale, 20 * hdScale);
-  ctx.fillText(`memory: ${performance.memory?.usedJSHeapSize ?? '(Unavailable)'}`, 300 * hdScale, 20 * hdScale);
+  debugDraw.debugMemory = true;
   if (statsLevel < 2) return;
   ctx.fillText(`step: ${profile.step.toFixed(2)}ms`, 10 * hdScale, 40 * hdScale);
   ctx.fillText(`pairs: ${profile.pairs.toFixed(2)}ms`, 10 * hdScale, 60 * hdScale);
   ctx.fillText(`collide: ${profile.collide.toFixed(2)}ms`, 10 * hdScale, 80 * hdScale);
   ctx.fillText(`solve: ${profile.solve.toFixed(2)}ms`, 10 * hdScale, 100 * hdScale);
-  ctx.fillText(`buildIslands: ${profile.buildIslands.toFixed(2)}ms`, 10 * hdScale, 120 * hdScale);
-  ctx.fillText(`solveConstraints: ${profile.solveConstraints.toFixed(2)}ms`, 10 * hdScale, 140 * hdScale);
-  ctx.fillText(`prepareTasks: ${profile.prepareTasks.toFixed(2)}ms`, 10 * hdScale, 160 * hdScale);
-  ctx.fillText(`solverTasks: ${profile.solverTasks.toFixed(2)}ms`, 10 * hdScale, 180 * hdScale);
-  ctx.fillText(`prepareConstraints: ${profile.prepareConstraints.toFixed(2)}ms`, 10 * hdScale, 200 * hdScale);
-  ctx.fillText(`integrateVelocities: ${profile.integrateVelocities.toFixed(2)}ms`, 10 * hdScale, 220 * hdScale);
-  ctx.fillText(`warmStart: ${profile.warmStart.toFixed(2)}ms`, 10 * hdScale, 240 * hdScale);
-  ctx.fillText(`solveVelocities: ${profile.solveVelocities.toFixed(2)}ms`, 10 * hdScale, 260 * hdScale);
-  ctx.fillText(`integratePositions: ${profile.integratePositions.toFixed(2)}ms`, 10 * hdScale, 280 * hdScale);
-  ctx.fillText(`relaxVelocities: ${profile.relaxVelocities.toFixed(2)}ms`, 10 * hdScale, 300 * hdScale);
-  ctx.fillText(`applyRestitution: ${profile.applyRestitution.toFixed(2)}ms`, 10 * hdScale, 320 * hdScale);
-  ctx.fillText(`storeImpulses: ${profile.storeImpulses.toFixed(2)}ms`, 10 * hdScale, 340 * hdScale);
-  ctx.fillText(`finalizeBodies: ${profile.finalizeBodies.toFixed(2)}ms`, 10 * hdScale, 360 * hdScale);
-  ctx.fillText(`sleepIslands: ${profile.sleepIslands.toFixed(2)}ms`, 10 * hdScale, 380 * hdScale);
-  ctx.fillText(`splitIslands: ${profile.splitIslands.toFixed(2)}ms`, 10 * hdScale, 400 * hdScale);
+  ctx.fillText(`mergeIslands: ${profile.mergeIslands.toFixed(2)}ms`, 10 * hdScale, 120 * hdScale);
+  ctx.fillText(`prepareStages: ${profile.prepareStages.toFixed(2)}ms`, 10 * hdScale, 140 * hdScale);
+  ctx.fillText(`solveConstraints: ${profile.solveConstraints.toFixed(2)}ms`, 10 * hdScale, 160 * hdScale);
+  ctx.fillText(`prepareConstraints: ${profile.prepareConstraints.toFixed(2)}ms`, 10 * hdScale, 180 * hdScale);
+  ctx.fillText(`integrateVelocities: ${profile.integrateVelocities.toFixed(2)}ms`, 10 * hdScale, 200 * hdScale);
+  ctx.fillText(`warmStart: ${profile.warmStart.toFixed(2)}ms`, 10 * hdScale, 220 * hdScale);
+  ctx.fillText(`solveImpulses: ${profile.solveImpulses.toFixed(2)}ms`, 10 * hdScale, 240 * hdScale);
+  ctx.fillText(`integratePositions: ${profile.integratePositions.toFixed(2)}ms`, 10 * hdScale, 260 * hdScale);
+  ctx.fillText(`applyRestitution: ${profile.applyRestitution.toFixed(2)}ms`, 10 * hdScale, 280 * hdScale);
+  ctx.fillText(`storeImpulses: ${profile.storeImpulses.toFixed(2)}ms`, 10 * hdScale, 300 * hdScale);
+  ctx.fillText(`transforms: ${profile.transforms.toFixed(2)}ms`, 10 * hdScale, 320 * hdScale);
+  ctx.fillText(`splitIslands: ${profile.splitIslands.toFixed(2)}ms`, 10 * hdScale, 340 * hdScale);
+  ctx.fillText(`hitEvents: ${profile.hitEvents.toFixed(2)}ms`, 10 * hdScale, 360 * hdScale);
+  ctx.fillText(`refit: ${profile.refit.toFixed(2)}ms`, 10 * hdScale, 380 * hdScale);
+  ctx.fillText(`bullets: ${profile.bullets.toFixed(2)}ms`, 10 * hdScale, 400 * hdScale);
   ctx.fillText(`hitEvents: ${profile.hitEvents.toFixed(2)}ms`, 10 * hdScale, 420 * hdScale);
-  ctx.fillText(`broadphase: ${profile.broadphase.toFixed(2)}ms`, 10 * hdScale, 440 * hdScale);
-  ctx.fillText(`continuous: ${profile.continuous.toFixed(2)}ms`, 10 * hdScale, 460 * hdScale);
+  ctx.fillText(`sleepIslands: ${profile.sleepIslands.toFixed(2)}ms`, 10 * hdScale, 440 * hdScale);
+  ctx.fillText(`sensors: ${profile.sensors.toFixed(2)}ms`, 10 * hdScale, 460 * hdScale);
 }
 
 let handle;
@@ -168,6 +168,7 @@ function loop(prevMs) {
     const duration = end - start;
     const profile = b2World_GetProfile(worldId);
     drawProfile(duration, profile);
+    profile.delete();
 };
 
 loop(window.performance.now());

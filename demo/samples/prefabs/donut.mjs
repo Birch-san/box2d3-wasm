@@ -5,6 +5,7 @@ export default class Donut {
 		this.box2d = box2d;
 		this.m_bodyIds = [];
 		this.m_isSpawned = false;
+		this.donut_userData = {};
 	}
 
 	Spawn(worldId, position, scale, groupIndex, userData){
@@ -20,7 +21,8 @@ export default class Donut {
 			b2CreateWeldJoint,
 			b2CreateBody,
 			b2CreateCapsuleShape,
-			B2_PI
+			B2_PI,
+			b2Body_GetPointer
 		} = this.box2d;
 
 		console.assert( this.m_isSpawned == false );
@@ -38,7 +40,6 @@ export default class Donut {
 
 		const bodyDef = b2DefaultBodyDef();
 		bodyDef.type = b2BodyType.b2_dynamicBody;
-		bodyDef.SetUserData( userData );
 
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.density = 1.0;
@@ -50,10 +51,16 @@ export default class Donut {
 		for ( let i = 0; i < e_sides; i++ )
 		{
 			bodyDef.position.Set( radius * Math.cos( angle ) + center.x, radius * Math.sin( angle ) + center.y );
-			bodyDef.rotation = b2MakeRot( angle );
+
+			const rot = b2MakeRot( angle );
+			bodyDef.rotation = rot;
+			rot.delete();
 
 			this.m_bodyIds[i] = b2CreateBody( worldId, bodyDef );
 			b2CreateCapsuleShape( this.m_bodyIds[i], shapeDef, capsule );
+
+			const bodyPointer = b2Body_GetPointer(this.m_bodyIds[i]);
+			this.donut_userData[bodyPointer] = userData;
 
 			angle += deltaAngle;
 		}
@@ -72,12 +79,23 @@ export default class Donut {
 			weldDef.bodyIdB = this.m_bodyIds[i];
 			const rotA = b2Body_GetRotation( prevBodyId );
 			const rotB = b2Body_GetRotation( this.m_bodyIds[i] );
-			weldDef.referenceAngle = b2RelativeAngle( rotB, rotA );
-			b2CreateWeldJoint( worldId, weldDef );
+
+			const relativeAngle = b2RelativeAngle( rotB, rotA );
+			weldDef.referenceAngle = relativeAngle;
+			const weldJoint = b2CreateWeldJoint( worldId, weldDef );
 			prevBodyId = weldDef.bodyIdB;
+
+			rotA.delete();
+			rotB.delete();
 		}
 
 		this.m_isSpawned = true;
+
+		weldDef.delete();
+		bodyDef.delete();
+		shapeDef.delete();
+		capsule.delete();
+
 	}
 	Despawn()
 	{
@@ -85,11 +103,14 @@ export default class Donut {
 
 		const {
 			b2DestroyBody,
+			b2Body_GetPointer
 		} = this.box2d;
 
 		for ( let i = 0; i < e_sides; i++ )
 		{
 			if(this.m_bodyIds[i]){
+				const bodyPointer = b2Body_GetPointer( this.m_bodyIds[i] );
+				delete this.donut_userData[bodyPointer];
 				b2DestroyBody( this.m_bodyIds[i] );
 			}
 		}

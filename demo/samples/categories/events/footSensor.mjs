@@ -3,6 +3,11 @@ import Sample from "../../sample.mjs";
 
 import Keyboard, { Key } from '../../../utils/keyboard.mjs';
 
+const GROUND = 0x00000001;
+const PLAYER = 0x00000002;
+const FOOT = 0x00000004;
+const ALL_BITS = ( ~0 );
+
 export default class FootSensor extends Sample{
 	constructor(box2d, camera, debugDraw){
 		super(box2d, camera, debugDraw);
@@ -12,7 +17,6 @@ export default class FootSensor extends Sample{
 
 		this.m_playerId = null;
 		this.m_sensorId = null;
-
 
 		const {
 			b2DefaultBodyDef,
@@ -44,8 +48,13 @@ export default class FootSensor extends Sample{
 			const chainDef = b2DefaultChainDef();
 			chainDef.SetPoints( points );
 			chainDef.isLoop = false;
+			chainDef.filter.categoryBits = GROUND;
+			chainDef.filter.maskBits = FOOT | PLAYER;
 
 			b2CreateChain( groundId, chainDef );
+
+			bodyDef.delete();
+			chainDef.delete();
 		}
 
 		{
@@ -55,6 +64,8 @@ export default class FootSensor extends Sample{
 			bodyDef.position.Set(0.0, 1.0);
 			this.m_playerId = b2CreateBody( this.m_worldId, bodyDef );
 			const shapeDef = b2DefaultShapeDef();
+			shapeDef.filter.categoryBits = PLAYER;
+			shapeDef.filter.maskBits = GROUND;
 			shapeDef.friction = 0.3;
 
 			const capsule = new b2Capsule();
@@ -63,9 +74,18 @@ export default class FootSensor extends Sample{
 			capsule.radius = 0.5;
 			b2CreateCapsuleShape( this.m_playerId, shapeDef, capsule );
 
-			const box = b2MakeOffsetBox( 0.5, 0.25, new b2Vec2(0.0, -1.0 ), b2Rot_identity );
+			const boxOffset = new b2Vec2(0.0, -1.0);
+			const box = b2MakeOffsetBox( 0.5, 0.25, boxOffset, b2Rot_identity );
+			shapeDef.filter.categoryBits = FOOT;
+			shapeDef.filter.maskBits = GROUND;
 			shapeDef.isSensor = true;
 			this.m_sensorId = b2CreatePolygonShape( this.m_playerId, shapeDef, box );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			capsule.delete();
+			boxOffset.delete();
+			box.delete();
 		}
 
 		this.m_overlapCount = 0;
@@ -81,6 +101,7 @@ export default class FootSensor extends Sample{
 
 	Despawn(){
 		Keyboard.HideTouchControls();
+		this.m_overlapPoints.forEach(overlap => overlap.delete());
 	}
 
 	Step(){
@@ -96,24 +117,26 @@ export default class FootSensor extends Sample{
 		} = this.box2d;
 
 
+		const force = new b2Vec2();
 		if ( Keyboard.IsDown(Key.A))
 		{
-			b2Body_ApplyForceToCenter( this.m_playerId, new b2Vec2(-50.0, 0.0 ), true );
+			b2Body_ApplyForceToCenter( this.m_playerId, force.Set(-50.0, 0.0 ), true );
 		}
 
 		if ( Keyboard.IsDown(Key.D) )
 		{
-			b2Body_ApplyForceToCenter( this.m_playerId, new b2Vec2(50.0, 0.0 ), true );
+			b2Body_ApplyForceToCenter( this.m_playerId, force.Set(50.0, 0.0 ), true );
 		}
+		force.delete();
 
 		super.Step();
 
-		const sensorEvents = b2World_GetSensorEvents( this.m_worldId );
-		const beginEvents = sensorEvents.GetBeginEvents();
 
-		for ( let i = 0; i < beginEvents.length; i++ )
+		const sensorEvents = b2World_GetSensorEvents( this.m_worldId );
+
+		for ( let i = 0; i < sensorEvents.beginCount; i++ )
 		{
-			const event = beginEvents[i];
+			const event = sensorEvents.GetBeginEvent(i);
 
 			console.assert(B2_ID_EQUALS( event.visitorShapeId, this.m_sensorId ) === false);
 
@@ -123,11 +146,9 @@ export default class FootSensor extends Sample{
 			}
 		}
 
-		const endEvents = sensorEvents.GetEndEvents();
-
-		for ( let i = 0; i < endEvents.length; ++i )
+		for ( let i = 0; i < sensorEvents.endCount; ++i )
 		{
-			const event = endEvents[i];
+			const event = sensorEvents.GetEndEvent(i);
 
 			console.assert(B2_ID_EQUALS( event.visitorShapeId, this.m_sensorId ) === false);
 			if ( B2_ID_EQUALS( event.sensorShapeId, this.m_sensorId ) )
@@ -136,9 +157,11 @@ export default class FootSensor extends Sample{
 			}
 		}
 
+
 		const capacity = b2Shape_GetSensorCapacity( this.m_sensorId );
 		const overlaps = b2Shape_GetSensorOverlaps( this.m_sensorId, capacity );
 
+		this.m_overlapPoints.forEach(overlap => overlap.delete());
 		this.m_overlapPoints.length = 0;
 
 		for ( let i = 0; i < overlaps.length; i++ )
@@ -146,8 +169,11 @@ export default class FootSensor extends Sample{
 			const shapeId = overlaps[i];
 			const aabb = b2Shape_GetAABB( shapeId );
 			const point = b2AABB_Center( aabb );
+			aabb.delete();
 			this.m_overlapPoints.push(point);
 		}
+
+		sensorEvents.delete();
 	}
 
 	UpdateUI(DrawString, m_textLine){

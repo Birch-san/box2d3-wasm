@@ -1,10 +1,9 @@
 import Sample from "../../sample.mjs";
-import settings from "../../settings.mjs";
 
 const e_maxBaseCount = 100;
 const e_maxBodyCount = e_maxBaseCount * ( e_maxBaseCount + 1 ) / 2;
 
-export default class CreateDestroy extends Sample{
+export default class Sleep extends Sample{
 	constructor(box2d, camera, debugDraw){
 		super(box2d, camera, debugDraw);
 
@@ -33,6 +32,14 @@ export default class CreateDestroy extends Sample{
 		this.m_baseCount = 100;
 		this.m_iterations = 10;
 		this.m_bodyCount = 0;
+
+		this.m_awake = false;
+
+		this.m_wakeTotal = 0.0;
+		this.m_wakeCount = 0;
+
+		this.m_sleepTotal = 0.0;
+		this.m_sleepCount = 0;
 
 		bodyDef.delete();
 		box.delete();
@@ -96,30 +103,58 @@ export default class CreateDestroy extends Sample{
 			}
 		}
 
-		this.m_bodyCount = index;
-
+		box.delete();
 		bodyDef.delete();
 		shapeDef.delete();
-		box.delete();
+
+		this.m_bodyCount = index;
 	}
 
 	Step(){
-		const start = performance.now();
+		const {
+			b2Body_SetAwake,
+		} = this.box2d;
+
+		let start = performance.now();
+
+		const b2GetMillisecondsAndReset = () => {
+			const end = performance.now();
+			const ms = end - start;
+			start = end;
+			return ms
+		}
 
 		for ( let i = 0; i < this.m_iterations; i++ )
 		{
-			this.Spawn();
+			b2Body_SetAwake( this.m_bodies[0], this.m_awake );
+			if ( this.m_awake )
+			{
+				this.m_wakeTotal += b2GetMillisecondsAndReset();
+				this.m_wakeCount += 1;
+			}
+			else
+			{
+				this.m_sleepTotal += b2GetMillisecondsAndReset();
+				this.m_sleepCount += 1;
+			}
+			this.m_awake = !this.m_awake;
 		}
-
-		const end = performance.now();
-		this.m_deltaTime = end - start;
 
 		super.Step();
 	}
 
 	UpdateUI(DrawString, m_textLine){
 		m_textLine = super.UpdateUI(DrawString, m_textLine);
-		DrawString(5, m_textLine, `milliseconds=${this.m_deltaTime.toFixed(2)}`);
+
+		if ( this.m_wakeCount > 0 )
+		{
+			m_textLine = DrawString( 5, m_textLine, `wake ave = ${(this.m_wakeTotal / this.m_wakeCount).toFixed(6)} ms`);
+		}
+
+		if ( this.m_sleepCount > 0 )
+		{
+			m_textLine = DrawString( 5, m_textLine, `sleep ave = ${(this.m_sleepTotal / this.m_sleepCount).toFixed(6)} ms` );
+		}
 	}
 
 	Destroy(){

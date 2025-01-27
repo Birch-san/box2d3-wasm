@@ -1,18 +1,29 @@
+const defaultDebugDrawOptions = {
+    pixelToMeters: 32,
+    autoHD: true,
+    maxDebugDrawCommands: 10000,
+    debugMemory: false
+}
+
 export default class DebugDrawRenderer {
-    constructor(Module, context, scale, autoHD = true, maxCommands = 10000) {
+    constructor(Module, context, options = {}) {
+        const { pixelToMeters, autoHD, maxDebugDrawCommands, debugMemory } = { ...defaultDebugDrawOptions, ...options };
+
         this.Module = Module;
         this.ctx = context;
-        this.baseScale = scale;
+        this.baseScale = pixelToMeters;
         this.offset = { x: 0, y: 0 };
 
         this.autoHD = autoHD;
         this.dpr = autoHD ? Math.min(window.devicePixelRatio || 1, 2) : 1;
         this.finalScale = this.baseScale * this.dpr;
 
-        this.debugDrawCommandBuffer = new Module.DebugDrawCommandBuffer(maxCommands);
+        this.debugDrawCommandBuffer = new Module.DebugDrawCommandBuffer(maxDebugDrawCommands);
         this.colorCache = {};
         this.colorCache[1.0] = this.initializeColorCache();
         this.colorCache[0.5] = this.initializeColorCache(0.5);
+
+        this.debugMemory = debugMemory;
     }
 
     initializeColorCache(alpha = 1.0) {
@@ -236,6 +247,8 @@ export default class DebugDrawRenderer {
         this.restoreCanvas();
     }
 
+    toMB = (bytes) => (bytes / 1048576).toFixed(4);
+
     drawPolygon(cmd) {
         this.ctx.beginPath();
         for (let i = 0; i < cmd.vertexCount; i++) {
@@ -441,6 +454,56 @@ export default class DebugDrawRenderer {
         this.ctx.restore();
     }
 
+    drawMemoryUsage() {
+        const fontSize = 12 * this.dpr;
+        const padding = 6 * this.dpr;
+
+        this.ctx.font = `${fontSize}px Arial`;
+        this.ctx.fillStyle = 'rgba(230, 230, 230, 1)';
+
+        const memoryStats = this.Module.GetMemoryStats();
+
+        const allocated = `${this.toMB(memoryStats.allocatedSpace)} MB`;
+        const free = `${this.toMB(memoryStats.freeSpace)} MB`;
+        const total = `${this.toMB(memoryStats.totalSpace)} MB`;
+
+        let maxWidth = 0;
+        [allocated, free, total].forEach((text) => {
+            const width = this.ctx.measureText(text).width;
+            maxWidth = Math.max(maxWidth, width);
+        });
+
+        const lines = 4;
+
+        const x = this.ctx.canvas.width - padding;
+        let y = this.ctx.canvas.height - fontSize * lines + fontSize / 2;
+
+        const allocatedText = 'Allocated:';
+        const allocatedSize = this.ctx.measureText(allocatedText).width;
+
+        const totalWidth = maxWidth + padding + allocatedSize;
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(x - totalWidth - padding, y - fontSize, totalWidth + padding * 2, fontSize * lines + padding);
+
+        const currentAlign = this.ctx.textAlign;
+
+        this.ctx.fillStyle = 'rgba(160, 160, 160, 1)';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText('WASM Memory', x, y);
+        this.ctx.fillStyle = 'rgba(230, 230, 230, 1)';
+        y += fontSize;
+        this.ctx.fillText(allocated, x, y);
+        this.ctx.fillText(allocatedText, x-maxWidth - padding, y);
+        y += fontSize;
+        this.ctx.fillText(free, x, y);
+        this.ctx.fillText('Free:', x-maxWidth - padding, y);
+        y += fontSize;
+        this.ctx.fillText(total, x, y);
+        this.ctx.fillText('Total:', x-maxWidth - padding, y);
+
+        this.ctx.textAlign = currentAlign;
+    }
+
     colorToHTML(color, alpha = 1.0) {
         if (this.colorCache[alpha] && this.colorCache[alpha][color]) {
             return this.colorCache[alpha][color];
@@ -494,5 +557,7 @@ export default class DebugDrawRenderer {
         const commandStride = this.debugDrawCommandBuffer.GetCommandStride();
         this.processCommands(commandsPtr, commandsSize, commandStride);
         this.debugDrawCommandBuffer.ClearCommands();
+
+        if(this.debugMemory) this.drawMemoryUsage();
     }
 }

@@ -34,7 +34,7 @@ export default class Platformer extends Sample{
 			b2Capsule
 		} = this.box2d;
 
-		b2World_SetPreSolveCallback( this.m_worldId, this.PreSolve);
+		this.m_callback = b2World_SetPreSolveCallback( this.m_worldId, this.PreSolve);
 
 		// Ground
 		{
@@ -46,6 +46,10 @@ export default class Platformer extends Sample{
 			segment.point2.Set(20.0, 0.0);
 
 			b2CreateSegmentShape( groundId, shapeDef, segment );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			segment.delete();
 		}
 
 		// Static Platform
@@ -63,6 +67,10 @@ export default class Platformer extends Sample{
 
 			const box = b2MakeBox( 2.0, 0.5 );
 			b2CreatePolygonShape( bodyId, shapeDef, box );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			box.delete();
 		}
 
 		// Moving Platform
@@ -80,6 +88,10 @@ export default class Platformer extends Sample{
 
 			const box = b2MakeBox( 3.0, 0.5 );
 			b2CreatePolygonShape( this.m_movingPlatformId, shapeDef, box );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			box.delete();
 		}
 
 		// Player
@@ -100,6 +112,10 @@ export default class Platformer extends Sample{
 			shapeDef.friction = 0.1;
 
 			this.m_playerShapeId = b2CreateCapsuleShape( this.m_playerId, shapeDef, capsule );
+
+			bodyDef.delete();
+			shapeDef.delete();
+			capsule.delete();
 		}
 
 		this.m_force = 25.0;
@@ -147,8 +163,10 @@ export default class Platformer extends Sample{
 		let separation = 0.0;
 		for ( let i = 0; i < manifold.pointCount; i++ )
 		{
-			const s = manifold.GetPoint(i).separation;
+			const point = manifold.GetPoint(i);
+			const s = point.separation;
 			separation = separation < s ? separation : s;
+			point.delete();
 		}
 
 		if ( separation > 0.1 * this.m_radius )
@@ -163,6 +181,12 @@ export default class Platformer extends Sample{
 
 	Despawn(){
 		Keyboard.HideTouchControls();
+
+		const {
+			b2World_DeleteCallback
+		} = this.box2d;
+
+		b2World_DeleteCallback(this.m_callback );
 	}
 
 	Step(){
@@ -186,6 +210,7 @@ export default class Platformer extends Sample{
 			let capacity = b2Body_GetContactCapacity( this.m_playerId );
 			capacity = Math.min( capacity, 4 );
 			const contactData = b2Body_GetContactData( this.m_playerId, capacity );
+
 			for ( let i = 0; i < contactData.length; i++ )
 			{
 				const bodyIdA = b2Shape_GetBody( contactData[i].shapeIdA );
@@ -200,49 +225,60 @@ export default class Platformer extends Sample{
 					sign = 1.0;
 				}
 
-				if ( sign * contactData[i].manifold.normal.y > 0.9 )
+				const shouldBeAbleToJump = sign * contactData[i].manifold.normal.y > 0.9;
+
+				contactData[i].delete();
+
+				if ( shouldBeAbleToJump )
 				{
 					canJump = true;
 					break;
 				}
 			}
 		}
+		velocity.delete();
 
 		// A kinematic body is moved by setting its velocity. This
 		// ensure friction works correctly.
 		const platformPosition = b2Body_GetPosition( this.m_movingPlatformId );
+		const force = new b2Vec2();
 		if ( platformPosition.x < -15.0 )
 		{
-			b2Body_SetLinearVelocity( this.m_movingPlatformId, new b2Vec2(2.0, 0.0) );
+			b2Body_SetLinearVelocity( this.m_movingPlatformId, force.Set(2.0, 0.0) );
 		}
 		else if ( platformPosition.x > 15.0 )
 		{
-			b2Body_SetLinearVelocity( this.m_movingPlatformId, new b2Vec2(-2.0, 0.0) );
+			b2Body_SetLinearVelocity( this.m_movingPlatformId, force.Set(-2.0, 0.0) );
 		}
 
 		if ( Keyboard.IsDown(Key.A) )
 		{
-			b2Body_ApplyForceToCenter( this.m_playerId, new b2Vec2(-this.m_force, 0.0 ), true );
+			b2Body_ApplyForceToCenter( this.m_playerId, force.Set(-this.m_force, 0.0 ), true );
 		}
 
 		if ( Keyboard.IsDown(Key.D) )
 		{
-			b2Body_ApplyForceToCenter( this.m_playerId, new b2Vec2(this.m_force, 0.0 ), true );
+			b2Body_ApplyForceToCenter( this.m_playerId, force.Set(this.m_force, 0.0 ), true );
 		}
+		platformPosition.delete();
+		force.delete();
 
 		if ( Keyboard.IsPressed(Key.Space) )
 		{
 			if ( canJump )
 			{
-				b2Body_ApplyLinearImpulseToCenter( this.m_playerId, new b2Vec2(0.0, this.m_impulse ), true );
+				const force = new b2Vec2(0.0, this.m_impulse );
+				b2Body_ApplyLinearImpulseToCenter( this.m_playerId, force, true );
 				this.m_jumpDelay = 0.5;
 				this.m_jumping = true;
+				force.delete();
 			}
 		}
 		else
 		{
 			this.m_jumping = false;
 		}
+
 
 		super.Step();
 
@@ -309,6 +345,7 @@ export default class Platformer extends Sample{
 
 		const contactCount = this.platformContactData?.length;
 		const pointCount = this.platformContactData?.[0]?.manifold?.pointCount || 0;
+		this.platformContactData?.[0]?.delete();
 
 		m_textLine = DrawString( 5, m_textLine, `Platform contact count = ${contactCount}, point count = ${pointCount}`);
 		m_textLine = DrawString( 5, m_textLine, "Movement: A/D/Space" );

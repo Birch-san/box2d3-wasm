@@ -89,14 +89,26 @@ export default class SensorFunnel extends Sample{
 
 				y -= 14.0;
 				sign = -sign;
+
+				box.delete();
+				shapeDef.delete();
+				revoluteDef.delete();
 			}
 
 			{
-				const box = b2MakeOffsetBox( 4.0, 1.0, new b2Vec2(0.0, -30.5), b2Rot_identity );
+				const pos = new b2Vec2(0.0, -30.5);
+				const box = b2MakeOffsetBox( 4.0, 1.0, pos, b2Rot_identity );
 				const shapeDef = b2DefaultShapeDef();
 				shapeDef.isSensor = true;
 				b2CreatePolygonShape( groundId, shapeDef, box );
+
+				pos.delete();
+				box.delete();
+				shapeDef.delete();
 			}
+
+			bodyDef.delete();
+			chainDef.delete();
 		}
 
 		this.m_type = params.get('m_type') ? parseInt(params.get('m_type')) : e_human;
@@ -160,6 +172,8 @@ export default class SensorFunnel extends Sample{
 
 		this.m_isSpawned[index] = true;
 		this.m_side = -this.m_side;
+
+		center.delete();
 	}
 
 	DestroyElement(index){
@@ -184,9 +198,8 @@ export default class SensorFunnel extends Sample{
 
 		const deferredDestructions = new Set();
 
-		const beginEvents = sensorEvents.GetBeginEvents();
-		for ( let i = 0; i < beginEvents.length; i++ ){
-			const event = beginEvents[i];
+		for ( let i = 0; i < sensorEvents.beginCount; i++ ){
+			const event = sensorEvents.GetBeginEvent(i);
 			const visitorId = event.visitorShapeId;
 			const bodyId = b2Shape_GetBody( visitorId );
 			const elementId = Human_GetUserData(this.box2d, bodyId );
@@ -204,6 +217,8 @@ export default class SensorFunnel extends Sample{
 			this.CreateElement();
 			this.m_wait += e_wait;
 		}
+
+		sensorEvents.delete();
 	}
 
 	CreateUI(){
@@ -235,8 +250,8 @@ export default class SensorFunnel extends Sample{
 	}
 
 	Destroy(){
-		super.Destroy();
 		this.Despawn();
+		super.Destroy();
 
 		if (this.pane){
 			this.pane.dispose();

@@ -1,7 +1,7 @@
 [submodule "box2d"]
 	path = box2d
-	url = https://github.com/Birch-san/box2d.git
-	branch = birch
+	url = https://github.com/erincatto/box2d.git
+	branch = main
 [submodule "box2cpp"]
 	path = box2cpp
 	url = https://github.com/Birch-san/box2cpp.git

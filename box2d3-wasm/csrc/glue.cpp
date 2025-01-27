@@ -3,6 +3,7 @@
 #include <box2cpp/box2cpp.h>
 #include <emscripten.h>
 #include <emscripten/bind.h>
+#include <malloc.h>
 
 using namespace emscripten;
 using namespace b2;
@@ -39,16 +40,6 @@ emscripten::val getArrayWrapper(const ObjectType& object,
     auto result = emscripten::val::array();
     for (int i = 0; i < count; i++) {
         result.set(i, items[i]);
-    }
-    return result;
-}
-
-template<typename T>
-emscripten::val getEventsArray(T* events, int count) {
-    if (count == 0) return emscripten::val::array();
-    auto result = emscripten::val::array();
-    for (int i = 0; i < count; i++) {
-        result.set(i, events[i]);
     }
     return result;
 }
@@ -172,7 +163,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor<const b2WorldDef&>()
         .property("gravity", &b2WorldDef::gravity, return_value_policy::reference())
         .property("restitutionThreshold", &b2WorldDef::restitutionThreshold)
-        .property("contactPushSpeed", &b2WorldDef::contactPushSpeed)
+        .property("contactPushMaxSpeed", &b2WorldDef::contactPushMaxSpeed)
         .property("hitEventThreshold", &b2WorldDef::hitEventThreshold)
         .property("contactHertz", &b2WorldDef::contactHertz)
         .property("contactDampingRatio", &b2WorldDef::contactDampingRatio)
@@ -188,25 +179,22 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("internalValue", &b2WorldDef::internalValue)
         ;
 
-    class_<b2BodyId>("b2BodyId")
-        .constructor()
-        .property("index1", &b2BodyId::index1)
-        .property("world0", &b2BodyId::world0)
-        .property("revision", &b2BodyId::revision)
+    value_object<b2BodyId>("b2BodyId")
+        .field("index1", &b2BodyId::index1)
+        .field("world0", &b2BodyId::world0)
+        .field("generation", &b2BodyId::generation)
         ;
 
 
-    class_<b2ShapeId>("b2ShapeId")
-        .constructor()
-        .property("index1", &b2ShapeId::index1)
-        .property("world0", &b2ShapeId::world0)
-        .property("revision", &b2ShapeId::revision)
+    value_object<b2ShapeId>("b2ShapeId")
+        .field("index1", &b2ShapeId::index1)
+        .field("world0", &b2ShapeId::world0)
+        .field("generation", &b2ShapeId::generation)
         ;
 
-    class_<b2WorldId>("b2WorldId")
-        .constructor()
-        .property("index1", &b2WorldId::index1)
-        .property("revision", &b2WorldId::revision)
+    value_object<b2WorldId>("b2WorldId")
+        .field("index1", &b2WorldId::index1)
+        .field("generation", &b2WorldId::generation)
         ;
 
     class_<b2CastOutput>("b2CastOutput")
@@ -276,25 +264,23 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         })
         ;
 
-    class_<b2SensorBeginTouchEvent>("b2SensorBeginTouchEvent")
-        .constructor()
-        .property("sensorShapeId", &b2SensorBeginTouchEvent::sensorShapeId)
-        .property("visitorShapeId", &b2SensorBeginTouchEvent::visitorShapeId)
+    value_object<b2SensorBeginTouchEvent>("b2SensorBeginTouchEvent")
+        .field("sensorShapeId", &b2SensorBeginTouchEvent::sensorShapeId)
+        .field("visitorShapeId", &b2SensorBeginTouchEvent::visitorShapeId)
         ;
 
-    class_<b2SensorEndTouchEvent>("b2SensorEndTouchEvent")
-        .constructor()
-        .property("sensorShapeId", &b2SensorEndTouchEvent::sensorShapeId)
-        .property("visitorShapeId", &b2SensorEndTouchEvent::visitorShapeId)
+    value_object<b2SensorEndTouchEvent>("b2SensorEndTouchEvent")
+        .field("sensorShapeId", &b2SensorEndTouchEvent::sensorShapeId)
+        .field("visitorShapeId", &b2SensorEndTouchEvent::visitorShapeId)
         ;
 
     class_<b2SensorEvents>("b2SensorEvents")
         .constructor()
-        .function("GetBeginEvents", +[](const b2SensorEvents& events) {
-            return getEventsArray(events.beginEvents, events.beginCount);
+        .function("GetBeginEvent", +[](const b2SensorEvents& events, int index) {
+            return events.beginEvents[index];
         })
-        .function("GetEndEvents", +[](const b2SensorEvents& events) {
-            return getEventsArray(events.endEvents, events.endCount);
+        .function("GetEndEvent", +[](const b2SensorEvents& events, int index) {
+            return events.endEvents[index];
         })
         .property("beginCount", &b2SensorEvents::beginCount)
         .property("endCount", &b2SensorEvents::endCount)
@@ -302,14 +288,13 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2BodyEvents>("b2BodyEvents")
         .constructor()
-        .function("GetMoveEvents", +[](const b2BodyEvents& events) {
-            return getEventsArray(events.moveEvents, events.moveCount);
+        .function("GetMoveEvent", +[](const b2BodyEvents& events, int index) {
+            return events.moveEvents[index];
         })
         .property("moveCount", &b2BodyEvents::moveCount)
         ;
 
     class_<b2BodyMoveEvent>("b2BodyMoveEvent")
-        .constructor()
         .property("transform", &b2BodyMoveEvent::transform, return_value_policy::reference())
         .property("bodyId", &b2BodyMoveEvent::bodyId)
         .property("fellAsleep", &b2BodyMoveEvent::fellAsleep)
@@ -320,39 +305,35 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("beginCount", &b2ContactEvents::beginCount)
         .property("endCount", &b2ContactEvents::endCount)
         .property("hitCount", &b2ContactEvents::hitCount)
-        .function("GetBeginEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.beginEvents, events.beginCount);
+        .function("GetBeginEvent", +[](const b2ContactEvents& events, int index) {
+            return events.beginEvents[index];
         })
-        .function("GetEndEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.endEvents, events.endCount);
+        .function("GetEndEvent", +[](const b2ContactEvents& events, int index) {
+            return events.endEvents[index];
         })
-        .function("GetHitEvents", +[](const b2ContactEvents& events) {
-            return getEventsArray(events.hitEvents, events.hitCount);
+        .function("GetHitEvent", +[](const b2ContactEvents& events, int index) {
+            return events.hitEvents[index];
         })
         ;
 
     class_<b2ContactBeginTouchEvent>("b2ContactBeginTouchEvent")
-        .constructor()
         .property("shapeIdA", &b2ContactBeginTouchEvent::shapeIdA)
         .property("shapeIdB", &b2ContactBeginTouchEvent::shapeIdB)
         .property("manifold", &b2ContactBeginTouchEvent::manifold, return_value_policy::reference())
-        ;
+    ;
 
     class_<b2ContactData>("b2ContactData")
-        .constructor()
         .property("shapeIdA", &b2ContactData::shapeIdA)
         .property("shapeIdB", &b2ContactData::shapeIdB)
         .property("manifold", &b2ContactData::manifold, return_value_policy::reference())
         ;
 
-    class_<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
-        .constructor()
-        .property("shapeIdA", &b2ContactEndTouchEvent::shapeIdA)
-        .property("shapeIdB", &b2ContactEndTouchEvent::shapeIdB)
+    value_object<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
+        .field("shapeIdA", &b2ContactEndTouchEvent::shapeIdA)
+        .field("shapeIdB", &b2ContactEndTouchEvent::shapeIdB)
         ;
 
     class_<b2ContactHitEvent>("b2ContactHitEvent")
-        .constructor()
         .property("shapeIdA", &b2ContactHitEvent::shapeIdA)
         .property("shapeIdB", &b2ContactHitEvent::shapeIdB)
         .property("point", &b2ContactHitEvent::point, return_value_policy::reference())
@@ -362,35 +343,33 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2Profile>("b2Profile")
         .constructor()
-        .property("step", &b2Profile::step)
         .property("pairs", &b2Profile::pairs)
         .property("collide", &b2Profile::collide)
+        .property("step", &b2Profile::step)
         .property("solve", &b2Profile::solve)
-        .property("buildIslands", &b2Profile::buildIslands)
+        .property("mergeIslands", &b2Profile::mergeIslands)
+        .property("prepareStages", &b2Profile::prepareStages)
         .property("solveConstraints", &b2Profile::solveConstraints)
-        .property("prepareTasks", &b2Profile::prepareTasks)
-        .property("solverTasks", &b2Profile::solverTasks)
         .property("prepareConstraints", &b2Profile::prepareConstraints)
         .property("integrateVelocities", &b2Profile::integrateVelocities)
         .property("warmStart", &b2Profile::warmStart)
-        .property("solveVelocities", &b2Profile::solveVelocities)
+        .property("solveImpulses", &b2Profile::solveImpulses)
         .property("integratePositions", &b2Profile::integratePositions)
-        .property("relaxVelocities", &b2Profile::relaxVelocities)
+        .property("relaxImpulses", &b2Profile::relaxImpulses)
         .property("applyRestitution", &b2Profile::applyRestitution)
         .property("storeImpulses", &b2Profile::storeImpulses)
-        .property("finalizeBodies", &b2Profile::finalizeBodies)
         .property("splitIslands", &b2Profile::splitIslands)
-        .property("sleepIslands", &b2Profile::sleepIslands)
+        .property("transforms", &b2Profile::transforms)
         .property("hitEvents", &b2Profile::hitEvents)
-        .property("broadphase", &b2Profile::broadphase)
-        .property("continuous", &b2Profile::continuous)
+        .property("refit", &b2Profile::refit)
+        .property("bullets", &b2Profile::bullets)
+        .property("sleepIslands", &b2Profile::sleepIslands)
+        .property("sensors", &b2Profile::sensors)
         ;
 
-
-    class_<b2TreeStats>("b2TreeStats")
-        .constructor()
-        .property("nodeVisits", &b2TreeStats::nodeVisits)
-        .property("leafVisits", &b2TreeStats::leafVisits)
+    value_object<b2TreeStats>("b2TreeStats")
+        .field("nodeVisits", &b2TreeStats::nodeVisits)
+        .field("leafVisits", &b2TreeStats::leafVisits)
         ;
 
     function("b2DefaultQueryFilter", &b2DefaultQueryFilter);
@@ -519,7 +498,25 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("maskBits",
             +[](const b2Filter& filter) { return static_cast<uint32_t>(filter.maskBits); },
             +[](b2Filter& filter, uint32_t val) { filter.maskBits = val; })
-        .property("groupIndex", &b2Filter::groupIndex);
+        .property("groupIndex", &b2Filter::groupIndex)
+        // 64-bit access via string conversion
+        .function("setCategoryBits64",
+            +[](b2Filter& filter, const std::string& val) {
+                filter.categoryBits = std::stoull(val);
+            })
+        .function("getCategoryBits64",
+            +[](const b2Filter& filter) -> std::string {
+                return std::to_string(filter.categoryBits);
+            })
+        .function("setMaskBits64",
+            +[](b2Filter& filter, const std::string& val) {
+                filter.maskBits = std::stoull(val);
+            })
+        .function("getMaskBits64",
+            +[](const b2Filter& filter) -> std::string {
+                return std::to_string(filter.maskBits);
+            })
+        ;
 
     class_<b2ShapeDef>("b2ShapeDef")
         .constructor()
@@ -529,7 +526,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("filter", &b2ShapeDef::filter, return_value_policy::reference())
         .property("customColor", &b2ShapeDef::customColor)
         .property("isSensor", &b2ShapeDef::isSensor)
-        .property("enableSensorEvents", &b2ShapeDef::enableSensorEvents)
         .property("enableContactEvents", &b2ShapeDef::enableContactEvents)
         .property("enableHitEvents", &b2ShapeDef::enableHitEvents)
         .property("enablePreSolveEvents", &b2ShapeDef::enablePreSolveEvents)
@@ -599,7 +595,15 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             self.count = length;
         })
         .property("count", &b2ChainDef::count)
-        .property("internalValue", &b2ChainDef::internalValue);
+        .property("internalValue", &b2ChainDef::internalValue)
+        .function("delete", +[](b2ChainDef* self) {
+            if (self->points != nullptr) {
+                delete[] self->points;
+                self->points = nullptr;
+            }
+            delete self;
+        }, allow_raw_pointers())
+        ;
 
     class_<BasicChainInterface<Chain, false>>("BasicChainInterface");
 
@@ -631,11 +635,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         })
         ;
 
-    class_<b2ChainId>("b2ChainId")
-        .constructor()
-        .property("index1", &b2ChainId::index1)
-        .property("world0", &b2ChainId::world0)
-        .property("revision", &b2ChainId::revision)
+    value_object<b2ChainId>("b2ChainId")
+        .field("index1", &b2ChainId::index1)
+        .field("world0", &b2ChainId::world0)
+        .field("generation", &b2ChainId::generation)
         ;
 
     class_<b2ChainSegment>("b2ChainSegment")
@@ -710,8 +713,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetSensorOverlaps", +[](const Shape& shape) {
             return getArrayWrapper<b2ShapeId>(shape, &Shape::GetSensorCapacity, &Shape::GetSensorOverlaps);
         })
-        .function("EnableSensorEvents", &Shape::EnableSensorEvents)
-        .function("AreSensorEventsEnabled", &Shape::AreSensorEventsEnabled)
         .function("EnablePreSolveEvents", &Shape::EnablePreSolveEvents)
         .function("ArePreSolveEventsEnabled", &Shape::ArePreSolveEventsEnabled)
         .function("GetClosestPoint", &Shape::GetClosestPoint)
@@ -857,7 +858,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetLocalVector", &Body::GetLocalVector)
         .function("GetPosition", &Body::GetPosition)
         .function("GetRotation", &Body::GetRotation)
-        .function("EnableSensorEvents", &Body::EnableSensorEvents)
         .function("SetTransform", &Body::SetTransform)
         .function("GetTransform", &Body::GetTransform)
         .function("GetShapeCount", &Body::GetShapeCount)
@@ -940,13 +940,11 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<BasicWeldJointInterface<WeldJoint, false>>("BasicWeldJointInterface");
     class_<BasicWheelJointInterface<WheelJoint, false>>("BasicWheelJointInterface");
 
-    class_<b2JointId>("b2JointId")
-        .constructor()
-        .property("index1", &b2JointId::index1)
-        .property("world0", &b2JointId::world0)
-        .property("revision", &b2JointId::revision)
+    value_object<b2JointId>("b2JointId")
+        .field("index1", &b2JointId::index1)
+        .field("world0", &b2JointId::world0)
+        .field("generation", &b2JointId::generation)
         ;
-
 
     class_<b2DistanceJointDef>("b2DistanceJointDef")
         .constructor()
@@ -1278,7 +1276,88 @@ B2_INLINE b2Vec2 RandomVec2( float lo, float hi )
 	return v;
 }
 
+struct MemoryStats {
+    size_t arena;
+    size_t ordblks;
+    size_t smblks;
+    size_t hblks;
+    size_t hblkhd;
+    size_t usmblks;
+    size_t fsmblks;
+    size_t uordblks;
+    size_t fordblks;
+    size_t keepcost;
+    // user-friendly aliases
+    size_t allocatedSpace;
+    size_t freeSpace;
+    size_t totalSpace;
+};
+
+struct b2RayCallbackResult {
+    b2ShapeId shapeId;
+    b2Vec2 point;
+    b2Vec2 normal;
+    float fraction;
+};
+
+struct b2OverlapCallbackResult {
+    b2ShapeId shapeId;
+};
+
+float RayCastCallback(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) {
+    auto* callback = reinterpret_cast<emscripten::val*>(userData);
+    b2RayCallbackResult params = { shapeId, point, normal, fraction };
+    return callback->operator()(emscripten::val(params)).as<float>();
+}
+
+bool OverlapCallback(b2ShapeId shapeId, void* userData) {
+    auto* callback = reinterpret_cast<emscripten::val*>(userData);
+    b2OverlapCallbackResult params = { shapeId };
+    return callback->operator()(emscripten::val(params)).as<bool>();
+}
+
 EMSCRIPTEN_BINDINGS(box2d) {
+    // ------------------------------------------------------------------------
+    // Memory debugging
+    // ------------------------------------------------------------------------
+    value_object<MemoryStats>("MemoryStats")
+        // original mallinfo fields
+        .field("arena", &MemoryStats::arena)
+        .field("ordblks", &MemoryStats::ordblks)
+        .field("smblks", &MemoryStats::smblks)
+        .field("hblks", &MemoryStats::hblks)
+        .field("hblkhd", &MemoryStats::hblkhd)
+        .field("usmblks", &MemoryStats::usmblks)
+        .field("fsmblks", &MemoryStats::fsmblks)
+        .field("uordblks", &MemoryStats::uordblks)
+        .field("fordblks", &MemoryStats::fordblks)
+        .field("keepcost", &MemoryStats::keepcost)
+        // user-friendly aliases
+        .field("allocatedSpace", &MemoryStats::allocatedSpace)
+        .field("freeSpace", &MemoryStats::freeSpace)
+        .field("totalSpace", &MemoryStats::totalSpace)
+    ;
+
+   function("GetMemoryStats", +[]() -> MemoryStats {
+        struct mallinfo info = mallinfo();
+        size_t totalSpace = static_cast<size_t>(info.arena) + static_cast<size_t>(info.hblkhd);
+        return MemoryStats {
+            static_cast<size_t>(info.arena),
+            static_cast<size_t>(info.ordblks),
+            static_cast<size_t>(info.smblks),
+            static_cast<size_t>(info.hblks),
+            static_cast<size_t>(info.hblkhd),
+            static_cast<size_t>(info.usmblks),
+            static_cast<size_t>(info.fsmblks),
+            static_cast<size_t>(info.uordblks),
+            static_cast<size_t>(info.fordblks),
+            static_cast<size_t>(info.keepcost),
+            static_cast<size_t>(info.uordblks),
+            static_cast<size_t>(info.fordblks),
+            totalSpace
+        };
+    });
+
     // ------------------------------------------------------------------------
     // b2World
     // ------------------------------------------------------------------------
@@ -1312,153 +1391,127 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return emscripten::val(worldId.index1);
     });
     // function("b2World_DumpMemoryStats", &b2World_DumpMemoryStats);
+
+    class_<b2RayCallbackResult>("b2RayCallbackResult")
+        .constructor<>()
+        .property("shapeId", &b2RayCallbackResult::shapeId)
+        .property("point", &b2RayCallbackResult::point, return_value_policy::reference())
+        .property("normal", &b2RayCallbackResult::normal, return_value_policy::reference())
+        .property("fraction", &b2RayCallbackResult::fraction)
+    ;
+    value_object<b2OverlapCallbackResult>("b2OverlapCallbackResult")
+        .field("shapeId", &b2OverlapCallbackResult::shapeId)
+    ;
     function("b2World_OverlapAABB",
-        +[](b2WorldId worldId, const b2AABB& aabb, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapAABB(worldId, aabb, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+        +[](b2WorldId worldId, const b2AABB& aabb, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapAABB(worldId, aabb, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
-    );
+    , allow_raw_pointers());
     function("b2World_OverlapPoint",
         +[](b2WorldId worldId, b2Vec2 point, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapPoint(worldId, point, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapPoint(worldId, point, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
-    );
-
+    , allow_raw_pointers());
     function("b2World_OverlapCircle",
         +[](b2WorldId worldId, const b2Circle* circle, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapCircle(worldId, circle, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapCircle(worldId, circle, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
     , allow_raw_pointers());
-
     function("b2World_OverlapCapsule",
         +[](b2WorldId worldId, const b2Capsule* capsule, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapCapsule(worldId, capsule, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapCapsule(worldId, capsule, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
     , allow_raw_pointers());
-
     function("b2World_OverlapPolygon",
         +[](b2WorldId worldId, const b2Polygon* polygon, b2Transform transform, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_OverlapPolygon(worldId, polygon, transform, filter,
-                +[](b2ShapeId shapeId, void* ctx) -> bool {
-                    return (*reinterpret_cast<emscripten::val*>(ctx))(emscripten::val(shapeId)).as<bool>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_OverlapPolygon(worldId, polygon, transform, filter, OverlapCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
     , allow_raw_pointers());
-
     function("b2World_CastRay",
         +[](b2WorldId worldId, b2Vec2 origin, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-            return b2World_CastRay(worldId, origin, translation, filter,
-                +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                    auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                    return callback(
-                        emscripten::val(shapeId),
-                        emscripten::val(point),
-                        emscripten::val(normal),
-                        fraction
-                    ).as<float>();
-                },
-                &callback
-            );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastRay(worldId, origin, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
         }
-    );
+    , allow_raw_pointers());
     function("b2World_CastRayClosest", &b2World_CastRayClosest);
     function("b2World_CastCircle",
-       +[](b2WorldId worldId, const b2Circle* circle, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-           return b2World_CastCircle(worldId, circle, originTransform, translation, filter,
-               +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeId),
-                       emscripten::val(point),
-                       emscripten::val(normal),
-                       fraction
-                   ).as<float>();
-               },
-               &callback
-           );
-       }
+        +[](b2WorldId worldId, const b2Circle* circle, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastCircle(worldId, circle, originTransform, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
+        }
     , allow_raw_pointers());
     function("b2World_CastCapsule",
        +[](b2WorldId worldId, const b2Capsule* capsule, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-           return b2World_CastCapsule(worldId, capsule, originTransform, translation, filter,
-               +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeId),
-                       emscripten::val(point),
-                       emscripten::val(normal),
-                       fraction
-                   ).as<float>();
-               },
-               &callback
-           );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastCapsule(worldId, capsule, originTransform, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
        }
     , allow_raw_pointers());
     function("b2World_CastPolygon",
        +[](b2WorldId worldId, const b2Polygon* polygon, b2Transform originTransform, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
-           return b2World_CastPolygon(worldId, polygon, originTransform, translation, filter,
-               +[](b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) -> float {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeId),
-                       emscripten::val(point),
-                       emscripten::val(normal),
-                       fraction
-                   ).as<float>();
-               },
-               &callback
-           );
+            auto* callbackPtr = new emscripten::val(callback);
+            b2TreeStats stats = b2World_CastPolygon(worldId, polygon, originTransform, translation, filter, RayCastCallback, callbackPtr);
+            delete callbackPtr;
+            return stats;
        }
     , allow_raw_pointers());
     function("b2World_SetCustomFilterCallback",
        +[](b2WorldId worldId, emscripten::val callback) {
-           b2World_SetCustomFilterCallback(worldId,
-               +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* userData) -> bool {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeIdA),
-                       emscripten::val(shapeIdB)
-                   ).as<bool>();
-               },
-               new emscripten::val(callback)
-           );
+            auto callbackPtr = new emscripten::val(callback);
+            b2World_SetCustomFilterCallback(worldId,
+                +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* userData) -> bool {
+                    auto callback = *reinterpret_cast<emscripten::val*>(userData);
+                    return callback(
+                        emscripten::val(shapeIdA),
+                        emscripten::val(shapeIdB)
+                    ).as<bool>();
+                },
+                callbackPtr
+            );
+            return reinterpret_cast<uint32_t>(callbackPtr);
        }
     );
     function("b2World_SetPreSolveCallback",
-       +[](b2WorldId worldId, emscripten::val callback) {
-           b2World_SetPreSolveCallback(worldId,
-               +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* userData) -> bool {
-                   auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                   return callback(
-                       emscripten::val(shapeIdA),
-                       emscripten::val(shapeIdB),
-                       emscripten::val(manifold)
-                   ).as<bool>();
-               },
-               new emscripten::val(callback)
-           );
-       }
+        +[](b2WorldId worldId, emscripten::val callback) {
+            auto callbackPtr = new emscripten::val(callback);
+            b2World_SetPreSolveCallback(worldId,
+                +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* userData) -> bool {
+                    auto callback = *reinterpret_cast<emscripten::val*>(userData);
+                    return callback(
+                        emscripten::val(shapeIdA),
+                        emscripten::val(shapeIdB),
+                        emscripten::val(manifold)
+                    ).as<bool>();
+                },
+                callbackPtr
+            );
+            return reinterpret_cast<uint32_t>(callbackPtr);
+        }
+    );
+    function("b2World_DeleteCallback",
+        +[](uint32_t ptr) {
+            delete reinterpret_cast<emscripten::val*>(ptr);
+        }
     );
     function("b2World_SetGravity", &b2World_SetGravity);
     function("b2World_GetGravity", &b2World_GetGravity);
@@ -1486,8 +1539,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Shape_GetRestitution", &b2Shape_GetRestitution);
     function("b2Shape_GetFilter", &b2Shape_GetFilter);
     function("b2Shape_SetFilter", &b2Shape_SetFilter);
-    function("b2Shape_EnableSensorEvents", &b2Shape_EnableSensorEvents);
-    function("b2Shape_AreSensorEventsEnabled", &b2Shape_AreSensorEventsEnabled);
     function("b2Shape_EnableContactEvents", &b2Shape_EnableContactEvents);
     function("b2Shape_AreContactEventsEnabled", &b2Shape_AreContactEventsEnabled);
     function("b2Shape_EnablePreSolveEvents", &b2Shape_EnablePreSolveEvents);
@@ -1526,6 +1577,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return result;
     }, allow_raw_pointers());
     function("b2Shape_GetAABB", &b2Shape_GetAABB);
+    function("b2Shape_GetMassData", &b2Shape_GetMassData);
     function("b2Shape_GetClosestPoint", &b2Shape_GetClosestPoint);
 
     // ------------------------------------------------------------------------
@@ -1584,7 +1636,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_GetPointer", +[](b2BodyId bodyId) -> emscripten::val {
         return emscripten::val(bodyId.index1);
     });
-    function("b2Body_EnableSensorEvents", &b2Body_EnableSensorEvents);
     function("b2Body_EnableContactEvents", &b2Body_EnableContactEvents);
     function("b2Body_EnableHitEvents", &b2Body_EnableHitEvents);
     function("b2Body_GetShapeCount", &b2Body_GetShapeCount);
@@ -1599,7 +1650,19 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return result;
     });
     function("b2Body_GetJointCount", &b2Body_GetJointCount);
-    function("b2Body_GetJoints", &b2Body_GetJoints, allow_raw_pointers());
+
+    function("b2Body_GetJoints", +[](b2BodyId bodyId) -> emscripten::val {
+        int capacity = b2Body_GetJointCount(bodyId);
+        std::vector<b2JointId> joints(capacity);
+        int count = b2Body_GetJoints(bodyId, joints.data(), capacity);
+
+        auto result = emscripten::val::array();
+        for (int i = 0; i < count; i++) {
+            result.set(i, joints[i]);
+        }
+        return result;
+    });
+
     function("b2Body_GetContactCapacity", &b2Body_GetContactCapacity);
     function("b2Body_GetContactData", +[](b2BodyId bodyId, int capacity) -> emscripten::val {
         std::vector<b2ContactData> contactData(capacity);
@@ -1612,6 +1675,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     }, allow_raw_pointers());
     function("b2Body_ComputeAABB", &b2Body_ComputeAABB);
     function("b2Body_GetWorld", &b2Body_GetWorld);
+    function("b2Body_GetLocalPointVelocity", &b2Body_GetLocalPointVelocity);
+    function("b2Body_GetWorldPointVelocity", &b2Body_GetWorldPointVelocity);
 
     // ------------------------------------------------------------------------
     // b2Joint
@@ -1780,7 +1845,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("B2_ID_EQUALS", +[](const emscripten::val& id1, const emscripten::val& id2) -> bool {
         return  id1["index1"].as<int32_t>() == id2["index1"].as<int32_t>() &&
                 id1["world0"].as<uint16_t>() == id2["world0"].as<uint16_t>() &&
-                id1["revision"].as<uint16_t>() == id2["revision"].as<uint16_t>();
+                id1["generation"].as<uint16_t>() == id2["generation"].as<uint16_t>();
     });
 
     constant("B2_PI", B2_PI);
