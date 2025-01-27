@@ -95,23 +95,23 @@ async function initialize(){
 	addControls();
 }
 
+const PARAMS = {};
+
 function addUI(){
+	PARAMS.pause = settings.pause,
+	PARAMS.sleep = settings.enableSleep,
+	PARAMS['warm starting'] = settings.enableWarmStarting,
+	PARAMS.continuous = settings.enableContinuous,
+	PARAMS.profile = settings.profile,
+	PARAMS['wasm memory'] = settings.debugWASMMemory,
+	PARAMS.workers = settings.workerCount
+
 	if(pane){
 		pane.refresh();
 		return;
 	}
 
 	const container = document.getElementById('main-settings');
-
-	const PARAMS = {
-		pause: false,
-		sleep: settings.enableSleep,
-		'warm starting': settings.enableWarmStarting,
-		continuous: settings.enableContinuous,
-		profile: settings.profile,
-		'wasm memory': settings.debugWASMMemory,
-		workers: settings.workerCount
-	};
 
 	pane = new Pane({
 		title: 'Main Settings',
@@ -158,7 +158,6 @@ function addUI(){
 		min: 1,
 		max: navigator.hardwareConcurrency || 4,
 	}).on('change', event => {
-		console.log(event);
 		settings.workerCount = event.value;
 		loadSample(sampleUrl);
 	});
