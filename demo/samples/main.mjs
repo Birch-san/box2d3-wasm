@@ -71,7 +71,13 @@ function updateDebugDrawFlags(){
 }
 
 async function initialize(){
-	box2d = await Box2DFactory();
+	const maxThreads = typeof Worker !== 'undefined' ? navigator.hardwareConcurrency || 4 : 1;
+
+	box2d = await Box2DFactory({
+		pthreadCount: maxThreads,
+	});
+
+	settings.workerCount = Math.min(4, maxThreads);
 
 	debugDraw = new DebugDrawRenderer(box2d, ctx, {
 		pixelToMeters: settings.ptm,
@@ -91,7 +97,8 @@ async function initialize(){
 
 function addUI(){
 	if(pane){
-		pane.dispose();
+		pane.refresh();
+		return;
 	}
 
 	const container = document.getElementById('main-settings');
@@ -103,6 +110,7 @@ function addUI(){
 		continuous: settings.enableContinuous,
 		profile: settings.profile,
 		'wasm memory': settings.debugWASMMemory,
+		workers: settings.workerCount
 	};
 
 	pane = new Pane({
@@ -143,6 +151,16 @@ function addUI(){
 	main.addBinding(PARAMS, 'wasm memory').on('change', (event) => {
 		settings.debugWASMMemory = event.value;
 		debugDraw.debugMemory = event.value;
+	});
+
+	main.addBinding(PARAMS, 'workers', {
+		step: 1,
+		min: 1,
+		max: navigator.hardwareConcurrency || 4,
+	}).on('change', event => {
+		console.log(event);
+		settings.workerCount = event.value;
+		loadSample(sampleUrl);
 	});
 
 	main.addButton({

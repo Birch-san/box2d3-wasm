@@ -13,6 +13,7 @@ export default class Sample{
 			b2DefaultWorldDef,
 			b2CreateWorld,
 			b2CreateThreadedWorld,
+			TaskSystem
 		} = box2d;
 
 		const worldDef = b2DefaultWorldDef();
@@ -297,6 +298,9 @@ export default class Sample{
 			b2DestroyWorld
 		} = this.box2d;
 		b2DestroyWorld(this.m_worldId);
+
+		this.m_taskSystem?.ClearTasks();
+		this.m_taskSystem?.delete();
 	}
 }
 
