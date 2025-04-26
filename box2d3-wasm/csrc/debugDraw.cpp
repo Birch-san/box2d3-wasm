@@ -33,7 +33,7 @@ public:
         debugDraw.drawShapes = true;
         debugDraw.drawJoints = true;
         debugDraw.drawJointExtras = false;
-        debugDraw.drawAABBs = false;
+        debugDraw.drawBounds = false;
         debugDraw.drawMass = false;
         debugDraw.drawContacts = false;
         debugDraw.drawGraphColors = false;
@@ -42,7 +42,7 @@ public:
         debugDraw.drawFrictionImpulses = false;
         debugDraw.useDrawingBounds = false;
 
-        debugDraw.DrawPolygon = [](const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context) {
+        debugDraw.DrawPolygonFcn = [](const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -59,7 +59,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSolidPolygon = [](b2Transform transform, const b2Vec2* vertices, int vertexCount, float radius, b2HexColor color, void* context) {
+        debugDraw.DrawSolidPolygonFcn = [](b2Transform transform, const b2Vec2* vertices, int vertexCount, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -84,7 +84,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawCircle = [](b2Vec2 center, float radius, b2HexColor color, void* context) {
+        debugDraw.DrawCircleFcn = [](b2Vec2 center, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -99,7 +99,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSolidCircle = [](b2Transform transform, float radius, b2HexColor color, void* context) {
+        debugDraw.DrawSolidCircleFcn = [](b2Transform transform, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -116,7 +116,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSolidCapsule = [](b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context) {
+        debugDraw.DrawSolidCapsuleFcn = [](b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -133,7 +133,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSegment = [](b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context) {
+        debugDraw.DrawSegmentFcn = [](b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -149,7 +149,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawTransform = [](b2Transform transform, void* context) {
+        debugDraw.DrawTransformFcn = [](b2Transform transform, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -164,7 +164,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawPoint = [](b2Vec2 p, float size, b2HexColor color, void* context) {
+        debugDraw.DrawPointFcn = [](b2Vec2 p, float size, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -179,7 +179,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawString = [](b2Vec2 p, const char* s, b2HexColor color, void* context) {
+        debugDraw.DrawStringFcn = [](b2Vec2 p, const char* s, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
