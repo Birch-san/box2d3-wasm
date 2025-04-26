@@ -510,11 +510,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2ShapeDef>("b2ShapeDef")
         .constructor()
-        .property("friction", &b2ShapeDef::friction)
-        .property("restitution", &b2ShapeDef::restitution)
+        .property("material", &b2ShapeDef::material, return_value_policy::reference())
         .property("density", &b2ShapeDef::density)
         .property("filter", &b2ShapeDef::filter, return_value_policy::reference())
-        .property("customColor", &b2ShapeDef::customColor)
         .property("isSensor", &b2ShapeDef::isSensor)
         .property("enableContactEvents", &b2ShapeDef::enableContactEvents)
         .property("enableHitEvents", &b2ShapeDef::enableHitEvents)
@@ -522,6 +520,15 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("invokeContactCreation", &b2ShapeDef::invokeContactCreation)
         .property("updateBodyMass", &b2ShapeDef::updateBodyMass)
         ;
+
+    function("b2DefaultSurfaceMaterial", &b2DefaultSurfaceMaterial);
+    value_object<b2SurfaceMaterial>("b2SurfaceMaterial")
+        .field("friction", &b2SurfaceMaterial::friction)
+        .field("restitution", &b2SurfaceMaterial::restitution)
+        .field("rollingResistance", &b2SurfaceMaterial::rollingResistance)
+        .field("tangentSpeed", &b2SurfaceMaterial::tangentSpeed)
+        .field("userMaterialId", &b2SurfaceMaterial::userMaterialId)
+        .field("customColor", &b2SurfaceMaterial::customColor);
 
     class_<b2Polygon>("b2Polygon")
         .constructor()
@@ -553,10 +560,31 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2ChainDef>("b2ChainDef")
         .constructor<>()
-        .property("friction", &b2ChainDef::friction)
-        .property("restitution", &b2ChainDef::restitution)
+        .property("materialCount", &b2ChainDef::materialCount)
+        .function("GetMaterials", optional_override([](const b2ChainDef& self) -> emscripten::val {
+            auto result = emscripten::val::array();
+            for (int i = 0; i < self.materialCount; i++) {
+                result.set(i, self.materials[i]);
+            }
+            return result;
+        }))
+
+        .function("SetMaterials", optional_override([](b2ChainDef& self, const emscripten::val& array) {
+            int count = array["length"].as<int>();
+
+            if (self.materials != nullptr) {
+                delete[] self.materials;
+            }
+
+            b2SurfaceMaterial* newMaterials = new b2SurfaceMaterial[count];
+            for (int i = 0; i < count; i++) {
+                newMaterials[i] = array[i].as<b2SurfaceMaterial>();
+            }
+
+            self.materials = newMaterials;
+            self.materialCount = count;
+        }))
         .property("filter", &b2ChainDef::filter, return_value_policy::reference())
-        .property("customColor", &b2ChainDef::customColor)
         .property("isLoop", &b2ChainDef::isLoop)
         .function("GetPoints", +[](const b2ChainDef& self) -> emscripten::val {
             auto result = emscripten::val::array();
