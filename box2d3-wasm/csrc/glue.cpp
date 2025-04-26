@@ -155,7 +155,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor<const b2WorldDef&>()
         .property("gravity", &b2WorldDef::gravity, return_value_policy::reference())
         .property("restitutionThreshold", &b2WorldDef::restitutionThreshold)
-        .property("contactPushMaxSpeed", &b2WorldDef::contactPushMaxSpeed)
+        .property("maxContactPushSpeed", &b2WorldDef::maxContactPushSpeed)
         .property("hitEventThreshold", &b2WorldDef::hitEventThreshold)
         .property("contactHertz", &b2WorldDef::contactHertz)
         .property("contactDampingRatio", &b2WorldDef::contactDampingRatio)
@@ -211,7 +211,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("separation", &b2ManifoldPoint::separation)
         .property("normalImpulse", &b2ManifoldPoint::normalImpulse)
         .property("tangentImpulse", &b2ManifoldPoint::tangentImpulse)
-        .property("maxNormalImpulse", &b2ManifoldPoint::maxNormalImpulse)
+        .property("totalNormalImpulse", &b2ManifoldPoint::totalNormalImpulse)
         .property("normalVelocity", &b2ManifoldPoint::normalVelocity)
         .property("id", &b2ManifoldPoint::id)
         .property("persisted", &b2ManifoldPoint::persisted)
@@ -872,7 +872,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .value("b2_distanceJoint", b2JointType::b2_distanceJoint)
         .value("b2_motorJoint", b2JointType::b2_motorJoint)
         .value("b2_mouseJoint", b2JointType::b2_mouseJoint)
-        .value("b2_nullJoint", b2JointType::b2_nullJoint)
+        .value("b2_filterJoint", b2JointType::b2_filterJoint)
         .value("b2_prismaticJoint", b2JointType::b2_prismaticJoint)
         .value("b2_revoluteJoint", b2JointType::b2_revoluteJoint)
         .value("b2_weldJoint", b2JointType::b2_weldJoint)
@@ -981,11 +981,11 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("collideConnected", &b2MouseJointDef::collideConnected)
     ;
 
-    class_<b2NullJointDef>("b2NullJointDef")
+    class_<b2FilterJointDef>("b2FilterJointDef")
         .constructor()
-        .constructor<const b2NullJointDef&>()
-        .property("bodyIdA", &b2NullJointDef::bodyIdA)
-        .property("bodyIdB", &b2NullJointDef::bodyIdB)
+        .constructor<const b2FilterJointDef&>()
+        .property("bodyIdA", &b2FilterJointDef::bodyIdA)
+        .property("bodyIdB", &b2FilterJointDef::bodyIdB)
     ;
 
     class_<b2PrismaticJointDef>("b2PrismaticJointDef")
@@ -1204,7 +1204,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("drawShapes", &b2DebugDraw::drawShapes)
         .property("drawJoints", &b2DebugDraw::drawJoints)
         .property("drawJointExtras", &b2DebugDraw::drawJointExtras)
-        .property("drawAABBs", &b2DebugDraw::drawAABBs)
+        .property("drawBounds", &b2DebugDraw::drawBounds)
         .property("drawMass", &b2DebugDraw::drawMass)
         .property("drawContacts", &b2DebugDraw::drawContacts)
         .property("drawGraphColors", &b2DebugDraw::drawGraphColors)
@@ -1695,8 +1695,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2CreateMotorJoint", &b2CreateMotorJoint, allow_raw_pointers());
     function("b2DefaultMouseJointDef", &b2DefaultMouseJointDef);
     function("b2CreateMouseJoint", &b2CreateMouseJoint, allow_raw_pointers());
-    function("b2DefaultNullJointDef", &b2DefaultNullJointDef);
-    function("b2CreateNullJoint", &b2CreateNullJoint, allow_raw_pointers());
+    function("b2DefaultFilterJointDef", &b2DefaultFilterJointDef);
+    function("b2CreateFilterJoint", &b2CreateFilterJoint, allow_raw_pointers());
     function("b2DefaultPrismaticJointDef", &b2DefaultPrismaticJointDef);
     function("b2CreatePrismaticJoint", &b2CreatePrismaticJoint, allow_raw_pointers());
     function("b2DefaultRevoluteJointDef", &b2DefaultRevoluteJointDef);
