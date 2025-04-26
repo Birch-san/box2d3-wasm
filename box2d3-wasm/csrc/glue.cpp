@@ -150,14 +150,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     }))
     ;
 
-    enum_<b2MixingRule>("b2MixingRule")
-        .value("b2_mixAverage", b2MixingRule::b2_mixAverage)
-        .value("b2_mixGeometricMean", b2MixingRule::b2_mixGeometricMean)
-        .value("b2_mixMultiply", b2MixingRule::b2_mixMultiply)
-        .value("b2_mixMinimum", b2MixingRule::b2_mixMinimum)
-        .value("b2_mixMaximum", b2MixingRule::b2_mixMaximum)
-        ;
-
     class_<b2WorldDef>("b2WorldDef")
         .constructor()
         .constructor<const b2WorldDef&>()
@@ -170,8 +162,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("jointHertz", &b2WorldDef::jointHertz)
         .property("jointDampingRatio", &b2WorldDef::jointDampingRatio)
         .property("maximumLinearSpeed", &b2WorldDef::maximumLinearSpeed)
-        .property("frictionMixingRule", &b2WorldDef::frictionMixingRule)
-        .property("restitutionMixingRule", &b2WorldDef::restitutionMixingRule)
         .property("enableSleep", &b2WorldDef::enableSleep)
         .property("enableContinuous", &b2WorldDef::enableContinuous)
         .property("workerCount", &b2WorldDef::workerCount)
@@ -1228,6 +1218,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
 uint32_t g_seed = 12345;
 uint32_t RAND_LIMIT = 32767;
+std::unique_ptr<emscripten::val> g_frictionCallback;
+std::unique_ptr<emscripten::val> g_restitutionCallback;
 
 // Simple random number generator. Using this instead of rand() for cross platform determinism.
 B2_INLINE int RandomInt()
@@ -1389,6 +1381,21 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_GetCounters", &b2World_GetCounters);
     function("b2World_GetPointer", +[](b2WorldId worldId) -> emscripten::val {
         return emscripten::val(worldId.index1);
+    });
+    function("b2World_SetFrictionCallback", +[](b2WorldId worldId, emscripten::val callback) {
+        g_frictionCallback = std::make_unique<emscripten::val>(callback);
+
+        b2World_SetFrictionCallback(worldId, [](float frictionA, int userMaterialIdA, float frictionB, int userMaterialIdB) -> float {
+            return (*g_frictionCallback)(frictionA, userMaterialIdA, frictionB, userMaterialIdB).as<float>();
+        });
+    });
+
+    function("b2World_SetRestitutionCallback", +[](b2WorldId worldId, emscripten::val callback) {
+        g_restitutionCallback = std::make_unique<emscripten::val>(callback);
+
+        b2World_SetRestitutionCallback(worldId, [](float restitutionA, int userMaterialIdA, float restitutionB, int userMaterialIdB) -> float {
+            return (*g_restitutionCallback)(restitutionA, userMaterialIdA, restitutionB, userMaterialIdB).as<float>();
+        });
     });
     // function("b2World_DumpMemoryStats", &b2World_DumpMemoryStats);
 
