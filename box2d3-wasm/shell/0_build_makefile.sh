@@ -22,11 +22,14 @@ CFLAGS=()
 CXXFLAGS=()
 case "$FLAVOUR" in
   compat)
-    CMAKE_OPTS=(${CMAKE_OPTS[@]} -DBOX2D_ENABLE_SIMD=OFF)
+    CMAKE_OPTS=(${CMAKE_OPTS[@]} -DBOX2D_DISABLE_SIMD=ON)
     ;;
   deluxe)
-    # this is ON by default but let's be explicit
-    CMAKE_OPTS=(${CMAKE_OPTS[@]} -DBOX2D_ENABLE_SIMD=ON)
+    # BOX2D_DISABLE_SIMD is probably OFF by default but let's be explicit
+    CMAKE_OPTS=(${CMAKE_OPTS[@]} -DBOX2D_DISABLE_SIMD=OFF)
+    # NOTE: -msimd128 -msse2 flags are probably redundant; I think box2d applies those for us now.
+    # https://github.com/erincatto/box2d/blob/0f2b0246f39594e93fcc8dde0fe0bb1b20b403f9/src/CMakeLists.txt#L170
+    # but I think it should be harmless to have the options duplicated.
     CFLAGS=(${CFLAGS[@]} -msimd128 -msse2 -pthread -s USE_PTHREADS=1)
     CXXFLAGS=(${CXXFLAGS[@]} -msimd128 -msse2 -pthread -s USE_PTHREADS=1)
     ;;
