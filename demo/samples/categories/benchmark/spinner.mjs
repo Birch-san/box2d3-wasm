@@ -58,10 +58,13 @@ export default class Spinner extends Sample{
 				pRotated.delete();
 			}
 
+			const material = {}
+			material.friction = 0.1;
+
 			const chainDef = b2DefaultChainDef();
 			chainDef.SetPoints(points);
 			chainDef.isLoop = true;
-			chainDef.material.friction = 0.1;
+			chainDef.SetMaterials([material]);
 
 			b2CreateChain( groundId, chainDef );
 
