@@ -590,38 +590,39 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             return result;
         }))
         .function("SetMaterials", +[](b2ChainDef& def, emscripten::val array) {
-            int length = array["length"].as<int>();
-            if (length == 0) return;
+            static std::vector<b2SurfaceMaterial> persistentMaterials;
 
-            b2SurfaceMaterial* newMaterials = new b2SurfaceMaterial[length];
+            int length = array["length"].as<int>();
+            if (length == 0) {
+                persistentMaterials.clear();
+                def.materials = nullptr;
+                def.materialCount = 0;
+                return;
+            }
+            persistentMaterials.resize(length);
 
             for (int i = 0; i < length; ++i)
             {
                 emscripten::val matVal = array[i];
+
+                persistentMaterials[i] = b2SurfaceMaterial{};
+
                 if (matVal.hasOwnProperty("friction"))
-                    newMaterials[i].friction = matVal["friction"].as<float>();
+                    persistentMaterials[i].friction = matVal["friction"].as<float>();
                 if (matVal.hasOwnProperty("restitution"))
-                    newMaterials[i].restitution = matVal["restitution"].as<float>();
+                    persistentMaterials[i].restitution = matVal["restitution"].as<float>();
                 if (matVal.hasOwnProperty("rollingResistance"))
-                    newMaterials[i].rollingResistance = matVal["rollingResistance"].as<float>();
+                    persistentMaterials[i].rollingResistance = matVal["rollingResistance"].as<float>();
                 if (matVal.hasOwnProperty("tangentSpeed"))
-                    newMaterials[i].tangentSpeed = matVal["tangentSpeed"].as<float>();
+                    persistentMaterials[i].tangentSpeed = matVal["tangentSpeed"].as<float>();
                 if (matVal.hasOwnProperty("userMaterialId"))
-                    newMaterials[i].userMaterialId = matVal["userMaterialId"].as<int>();
+                    persistentMaterials[i].userMaterialId = matVal["userMaterialId"].as<int>();
                 if (matVal.hasOwnProperty("customColor"))
-                    newMaterials[i].customColor = matVal["customColor"].as<uint32_t>();
+                    persistentMaterials[i].customColor = matVal["customColor"].as<uint32_t>();
             }
 
-            def.materials = newMaterials;
+            def.materials = persistentMaterials.data();
             def.materialCount = length;
-        })
-        .function("FreeMaterials", +[](b2ChainDef& def) {
-            if (def.materials != nullptr)
-            {
-                delete[] def.materials;
-                def.materials = nullptr;
-                def.materialCount = 0;
-            }
         })
         .property("filter", &b2ChainDef::filter, return_value_policy::reference())
         .property("isLoop", &b2ChainDef::isLoop)
