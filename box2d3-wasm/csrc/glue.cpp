@@ -716,6 +716,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     function("b2MakeRoundedBox", &b2MakeRoundedBox);
     function("b2MakeOffsetBox", &b2MakeOffsetBox);
     function("b2MakeOffsetRoundedBox", &b2MakeOffsetRoundedBox);
+    function("b2MakeProxy", &b2MakeProxy, allow_raw_pointers());
+    function("b2MakeOffsetProxy", &b2MakeOffsetProxy, allow_raw_pointers());
     function("b2TransformPolygon", &b2TransformPolygon, allow_raw_pointers());
     function("b2ComputeCircleMass", &b2ComputeCircleMass, allow_raw_pointers());
     function("b2ComputeCapsuleMass", &b2ComputeCapsuleMass, allow_raw_pointers());
