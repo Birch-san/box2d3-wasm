@@ -56,7 +56,7 @@ Run the following commands:
 
 ```bash
 FLAVOUR=deluxe TARGET_TYPE=Debug ./shell/0_build_makefile.sh
-emmake make -j8 -C cmake-build
+emmake make -j8 -C cmake-build-deluxe
 FLAVOUR=deluxe TARGET_TYPE=Debug ./shell/1_build_wasm.sh
 ```
 

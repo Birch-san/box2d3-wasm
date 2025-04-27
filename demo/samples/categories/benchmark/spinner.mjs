@@ -58,10 +58,13 @@ export default class Spinner extends Sample{
 				pRotated.delete();
 			}
 
+			const material = {}
+			material.friction = 0.1;
+
 			const chainDef = b2DefaultChainDef();
 			chainDef.SetPoints(points);
 			chainDef.isLoop = true;
-			chainDef.friction = 0.1;
+			chainDef.SetMaterials([material]);
 
 			b2CreateChain( groundId, chainDef );
 
@@ -81,7 +84,7 @@ export default class Spinner extends Sample{
 
 			const box = b2MakeRoundedBox( 0.4, 20.0, 0.2 );
 			const shapeDef = b2DefaultShapeDef();
-			shapeDef.friction = 0.0;
+			shapeDef.material.friction = 0.0;
 			b2CreatePolygonShape( spinnerId, shapeDef, box );
 
 			const motorSpeed = 5.0;
@@ -133,8 +136,8 @@ export default class Spinner extends Sample{
 		const bodyDef = b2DefaultBodyDef();
 		bodyDef.type = b2BodyType.b2_dynamicBody;
 		const shapeDef = b2DefaultShapeDef();
-		shapeDef.friction = 0.1;
-		shapeDef.restitution = 0.1;
+		shapeDef.material.friction = 0.1;
+		shapeDef.material.restitution = 0.1;
 		shapeDef.density = 0.25;
 
 

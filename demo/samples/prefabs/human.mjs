@@ -71,16 +71,16 @@ class Human {
 		{
 			for ( let i = 1; i < boneId_count; ++i )
 			{
-				b2RevoluteJoint_EnableMotor( this.bones[i].jointId, false );
+				this.box2d.b2RevoluteJoint_EnableMotor( this.bones[i].jointId, false );
 			}
 		}
 		else
 		{
 			for ( let i = 1; i < boneId_count; ++i )
 			{
-				b2RevoluteJoint_EnableMotor( this.bones[i].jointId, true );
+				this.box2d.b2RevoluteJoint_EnableMotor( this.bones[i].jointId, true );
 				const scale = this.scale * this.bones[i].frictionScale;
-				b2RevoluteJoint_SetMaxMotorTorque( this.bones[i].jointId, scale * torque );
+				this.box2d.b2RevoluteJoint_SetMaxMotorTorque( this.bones[i].jointId, scale * torque );
 			}
 		}
 	}
@@ -92,15 +92,15 @@ class Human {
 		{
 			for ( let i = 1; i < boneId_count; ++i )
 			{
-				b2RevoluteJoint_EnableSpring( this.bones[i].jointId, false );
+				this.box2d.b2RevoluteJoint_EnableSpring( this.bones[i].jointId, false );
 			}
 		}
 		else
 		{
 			for ( let i = 1; i < boneId_count; ++i )
 			{
-				b2RevoluteJoint_EnableSpring( this.bones[i].jointId, true );
-				b2RevoluteJoint_SetSpringHertz( this.bones[i].jointId, hertz );
+				this.box2d.b2RevoluteJoint_EnableSpring( this.bones[i].jointId, true );
+				this.box2d.b2RevoluteJoint_SetSpringHertz( this.bones[i].jointId, hertz );
 			}
 		}
 	}
@@ -111,9 +111,23 @@ class Human {
 
 		for ( let i = 1; i < boneId_count; ++i )
 		{
-			b2RevoluteJoint_SetSpringDampingRatio( this.bones[i].jointId, dampingRatio );
+			this.box2d.b2RevoluteJoint_SetSpringDampingRatio( this.bones[i].jointId, dampingRatio );
 		}
 	}
+
+	EnableSensorEvents(enable)
+	{
+		console.assert( this.isSpawned == true );
+		const bodyId = this.bones[boneId_torso].bodyId;
+
+		const shapes = this.box2d.b2Body_GetShapes( bodyId,  1);
+		const count = shapes.length;
+		if ( count == 1 )
+		{
+			this.box2d.b2Shape_EnableSensorEvents( shapes[0], enable );
+		}
+	}
+
 }
 
 class Bone {
@@ -163,20 +177,20 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 	bodyDef.sleepThreshold = 0.1;
 
 	const shapeDef = b2DefaultShapeDef();
-	shapeDef.friction = 0.2;
+	shapeDef.material.friction = 0.2;
 	shapeDef.filter.groupIndex = -groupIndex;
 	shapeDef.filter.categoryBits = 2;
 	shapeDef.filter.maskBits = ( 1 | 2 );
 
 	const footShapeDef = b2DefaultShapeDef();
-	footShapeDef.friction = 0.05;
+	footShapeDef.material.friction = 0.05;
 	// feet don't collide with ragdolls
 	footShapeDef.filter.categoryBits = 2;
 	footShapeDef.filter.maskBits = 1;
 
 	if ( colorize )
 	{
-		footShapeDef.customColor = b2HexColor.b2_colorSaddleBrown;
+		footShapeDef.material.customColor = b2HexColor.b2_colorSaddleBrown;
 	}
 
 	const s = scale;
@@ -204,7 +218,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		if ( colorize )
 		{
-			shapeDef.customColor = pantColor;
+			shapeDef.material.customColor = pantColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -230,7 +244,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bodyDef.type = b2BodyType.b2_dynamicBody;
 
 		if (colorize) {
-			shapeDef.customColor = shirtColor;
+			shapeDef.material.customColor = shirtColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -282,7 +296,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 0.25;
 
 		if (colorize) {
-			shapeDef.customColor = skinColor;
+			shapeDef.material.customColor = skinColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -336,7 +350,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 1.0;
 
 		if (colorize) {
-			shapeDef.customColor = pantColor;
+			shapeDef.material.customColor = pantColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -395,7 +409,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 0.5;
 
 		if (colorize) {
-			shapeDef.customColor = pantColor;
+			shapeDef.material.customColor = pantColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -452,7 +466,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 1.0;
 
 		if (colorize) {
-			shapeDef.customColor = pantColor;
+			shapeDef.material.customColor = pantColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -501,7 +515,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 0.5;
 
 		if (colorize) {
-			shapeDef.customColor = pantColor;
+			shapeDef.material.customColor = pantColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -553,7 +567,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.bodyId = b2CreateBody(worldId, bodyDef);
 
 		if (colorize) {
-			shapeDef.customColor = shirtColor;
+			shapeDef.material.customColor = shirtColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -602,7 +616,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 0.1;
 
 		if (colorize) {
-			shapeDef.customColor = skinColor;
+			shapeDef.material.customColor = skinColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -652,7 +666,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 0.5;
 
 		if (colorize) {
-			shapeDef.customColor = shirtColor;
+			shapeDef.material.customColor = shirtColor;
 		}
 
 		const capsule = new b2Capsule();
@@ -701,7 +715,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bone.frictionScale = 0.1;
 
 		if (colorize) {
-			shapeDef.customColor = skinColor;
+			shapeDef.material.customColor = skinColor;
 		}
 
 		const capsule = new b2Capsule();

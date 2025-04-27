@@ -58,7 +58,7 @@ const groundId = b2CreateBody(worldId, bd_ground);
 
 const shapeDefSegment = new b2DefaultShapeDef();
 shapeDefSegment.density = 1.0;
-shapeDefSegment.friction = 0.3;
+shapeDefSegment.material.friction = 0.3;
 
 {
   const segment = new b2Segment();
@@ -106,7 +106,7 @@ function createPyramid(worldId, height, gap) {
 
           const shapeDefDynamic = new b2DefaultShapeDef();
           shapeDefDynamic.density = 1.0;
-          shapeDefDynamic.friction = 0.3;
+          shapeDefDynamic.material.friction = 0.3;
 
           const box = b2MakeBox(boxWidth/2, boxHeight/2);
           b2CreatePolygonShape(bodyId, shapeDefDynamic, box);

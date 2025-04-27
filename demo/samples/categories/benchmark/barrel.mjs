@@ -140,7 +140,7 @@ export default class Barrel extends Sample{
 
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.density = 1.0;
-		shapeDef.friction = 0.5;
+		shapeDef.material.friction = 0.5;
 
 		const capsule = new b2Capsule();
 		capsule.center1.Set(-0.25, 0.0);

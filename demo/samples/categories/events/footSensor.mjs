@@ -50,6 +50,7 @@ export default class FootSensor extends Sample{
 			chainDef.isLoop = false;
 			chainDef.filter.categoryBits = GROUND;
 			chainDef.filter.maskBits = FOOT | PLAYER;
+			chainDef.enableSensorEvents = true;
 
 			b2CreateChain( groundId, chainDef );
 
@@ -66,7 +67,7 @@ export default class FootSensor extends Sample{
 			const shapeDef = b2DefaultShapeDef();
 			shapeDef.filter.categoryBits = PLAYER;
 			shapeDef.filter.maskBits = GROUND;
-			shapeDef.friction = 0.3;
+			shapeDef.material.friction = 0.3;
 
 			const capsule = new b2Capsule();
 			capsule.center1.Set( 0.0, -0.5 );
@@ -79,6 +80,7 @@ export default class FootSensor extends Sample{
 			shapeDef.filter.categoryBits = FOOT;
 			shapeDef.filter.maskBits = GROUND;
 			shapeDef.isSensor = true;
+			shapeDef.enableSensorEvents = true;
 			this.m_sensorId = b2CreatePolygonShape( this.m_playerId, shapeDef, box );
 
 			bodyDef.delete();

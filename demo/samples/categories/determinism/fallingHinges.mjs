@@ -57,7 +57,7 @@ export default class FallingHinges extends Sample{
 		const box = b2MakeRoundedBox( h - r, h - r, r );
 
 		const shapeDef = b2DefaultShapeDef();
-		shapeDef.friction = 0.3;
+		shapeDef.material.friction = 0.3;
 
 		const offset = 0.4 * h;
 		const dx = 10.0 * h;

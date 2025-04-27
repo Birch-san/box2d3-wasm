@@ -80,6 +80,7 @@ export default class SensorBooked extends Sample{
 
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.isSensor = true;
+		shapeDef.enableSensorEvents = true;
 		const box = b2MakeSquare( 1.0 );
 		this.m_sensorShapeId = b2CreatePolygonShape( this.m_sensorBodyId, shapeDef, box );
 

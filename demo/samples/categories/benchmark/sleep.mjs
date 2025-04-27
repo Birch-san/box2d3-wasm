@@ -79,7 +79,7 @@ export default class Sleep extends Sample{
 
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.density = 1.0;
-		shapeDef.friction = 0.5;
+		shapeDef.material.friction = 0.5;
 
 		const h = 0.5;
 		const box = b2MakeRoundedBox( h, h, 0.0 );
