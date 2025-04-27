@@ -514,6 +514,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("density", &b2ShapeDef::density)
         .property("filter", &b2ShapeDef::filter, return_value_policy::reference())
         .property("isSensor", &b2ShapeDef::isSensor)
+        .property("enableSensorEvents", &b2ShapeDef::enableSensorEvents)
         .property("enableContactEvents", &b2ShapeDef::enableContactEvents)
         .property("enableHitEvents", &b2ShapeDef::enableHitEvents)
         .property("enablePreSolveEvents", &b2ShapeDef::enablePreSolveEvents)
@@ -1602,6 +1603,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Shape_GetRestitution", &b2Shape_GetRestitution);
     function("b2Shape_GetFilter", &b2Shape_GetFilter);
     function("b2Shape_SetFilter", &b2Shape_SetFilter);
+    function("b2Shape_EnableSensorEvents", &b2Shape_EnableSensorEvents);
+    function("b2Shape_AreSensorEventsEnabled", &b2Shape_AreSensorEventsEnabled);
     function("b2Shape_EnableContactEvents", &b2Shape_EnableContactEvents);
     function("b2Shape_AreContactEventsEnabled", &b2Shape_AreContactEventsEnabled);
     function("b2Shape_EnablePreSolveEvents", &b2Shape_EnablePreSolveEvents);
