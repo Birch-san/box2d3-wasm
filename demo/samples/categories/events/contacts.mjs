@@ -288,7 +288,7 @@ export default class Contacts extends Sample{
 							const point = manifold.GetPoint(k);
 
 							const p1 = point.point;
-							const offset = new b2Vec2().Copy(normal).MulSV(point.maxNormalImpulse);
+							const offset = new b2Vec2().Copy(normal).MulSV(point.totalNormalImpulse);
 							const p2 = new b2Vec2().Copy(point.point).Add(offset);
 
 							this.debugDraw.drawSegment( {data: [p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorBlueViolet});
@@ -328,7 +328,7 @@ export default class Contacts extends Sample{
 							const point = manifold.GetPoint(k);
 
 							const p1 = point.point;
-							const offset = new b2Vec2().Copy(normal).MulSV(point.maxNormalImpulse);
+							const offset = new b2Vec2().Copy(normal).MulSV(point.totalNormalImpulse);
 							const p2 = new b2Vec2().Copy(point.point).Add(offset);
 
 							this.debugDraw.drawSegment( {data:[p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorYellowGreen} );
