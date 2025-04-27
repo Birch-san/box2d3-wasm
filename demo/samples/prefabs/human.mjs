@@ -115,7 +115,7 @@ class Human {
 		}
 	}
 
-	Human_EnableSensorEvents(enable)
+	EnableSensorEvents(enable)
 	{
 		console.assert( this.isSpawned == true );
 		const bodyId = this.bones[boneId_torso].bodyId;

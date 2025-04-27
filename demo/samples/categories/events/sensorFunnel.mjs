@@ -4,7 +4,7 @@ import Sample from "../../sample.mjs";
 import settings from '../../settings.mjs';
 
 import CreateHuman, { Human_GetUserData } from "../../prefabs/human.mjs";
-import Donut from "../../prefabs/donut.mjs";
+import Donut, { Donut_GetUserData } from "../../prefabs/donut.mjs";
 
 const params = new URLSearchParams(window.location.search);
 
@@ -73,8 +73,8 @@ export default class SensorFunnel extends Sample{
 
 				const box = b2MakeBox(6.0, 0.5 );
 				const shapeDef = b2DefaultShapeDef();
-				shapeDef.friction = 0.1;
-				shapeDef.restitution = 1.0;
+				shapeDef.material.friction = 0.1;
+				shapeDef.material.restitution = 1.0;
 				shapeDef.density = 1.0;
 
 				b2CreatePolygonShape( bodyId, shapeDef, box );
@@ -103,6 +103,7 @@ export default class SensorFunnel extends Sample{
 				const box = b2MakeOffsetBox( 4.0, 1.0, pos, b2Rot_identity );
 				const shapeDef = b2DefaultShapeDef();
 				shapeDef.isSensor = true;
+				shapeDef.enableSensorEvents = true;
 				b2CreatePolygonShape( groundId, shapeDef, box );
 
 				pos.delete();
@@ -159,7 +160,7 @@ export default class SensorFunnel extends Sample{
 		if ( this.m_type == e_donut )
 		{
 			const donut = new Donut(this.box2d);
-			donut.Spawn( this.m_worldId, center, 1.0, 0, index );
+			donut.Spawn( this.m_worldId, center, 1.0, 0, true, index );
 			this.m_elements[index] = donut;
 		}
 		else
@@ -170,6 +171,7 @@ export default class SensorFunnel extends Sample{
 			const jointDamping = 0.5;
 			const colorize = true;
 			const human = CreateHuman( this.box2d, this.m_worldId, center, scale, jointFriction, jointHertz, jointDamping, index + 1, index, colorize );
+			human.EnableSensorEvents(true);
 			this.m_elements[index] = human;
 		}
 
@@ -205,8 +207,15 @@ export default class SensorFunnel extends Sample{
 			const event = sensorEvents.GetBeginEvent(i);
 			const visitorId = event.visitorShapeId;
 			const bodyId = b2Shape_GetBody( visitorId );
-			const elementId = Human_GetUserData(this.box2d, bodyId );
-			deferredDestructions.add(elementId);
+
+
+			if(this.m_type == e_donut){
+				const elementId = Donut_GetUserData(this.box2d, bodyId );
+				deferredDestructions.add(elementId);
+			} else {
+				const elementId = Human_GetUserData(this.box2d, bodyId );
+				deferredDestructions.add(elementId);
+			}
 		}
 
 		deferredDestructions.forEach( elementId => {
@@ -244,8 +253,6 @@ export default class SensorFunnel extends Sample{
 				e_human: e_human
 			},
 		}).on('change', (event) => {
-			console.log(event.value);
-
 			this.Despawn();
 			this.m_type = event.value;
 			this.Spawn();

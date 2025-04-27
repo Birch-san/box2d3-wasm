@@ -1,14 +1,15 @@
 const e_sides = 7;
 
+const donut_userData = {};
+
 export default class Donut {
 	constructor(box2d) {
 		this.box2d = box2d;
 		this.m_bodyIds = [];
 		this.m_isSpawned = false;
-		this.donut_userData = {};
 	}
 
-	Spawn(worldId, position, scale, groupIndex, userData){
+	Spawn(worldId, position, scale, groupIndex, enableSensorEvents, userData){
 		const {
 			b2DefaultBodyDef,
 			b2DefaultShapeDef,
@@ -43,8 +44,9 @@ export default class Donut {
 
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.density = 1.0;
+		shapeDef.enableSensorEvents = enableSensorEvents;
 		shapeDef.filter.groupIndex = -groupIndex;
-		shapeDef.friction = 0.3;
+		shapeDef.material.friction = 0.3;
 
 		// Create bodies
 		let angle = 0.0;
@@ -60,7 +62,7 @@ export default class Donut {
 			b2CreateCapsuleShape( this.m_bodyIds[i], shapeDef, capsule );
 
 			const bodyPointer = b2Body_GetPointer(this.m_bodyIds[i]);
-			this.donut_userData[bodyPointer] = userData;
+			donut_userData[bodyPointer] = userData;
 
 			angle += deltaAngle;
 		}
@@ -110,7 +112,7 @@ export default class Donut {
 		{
 			if(this.m_bodyIds[i]){
 				const bodyPointer = b2Body_GetPointer( this.m_bodyIds[i] );
-				delete this.donut_userData[bodyPointer];
+				delete donut_userData[bodyPointer];
 				b2DestroyBody( this.m_bodyIds[i] );
 			}
 		}
@@ -119,4 +121,11 @@ export default class Donut {
 
 		this.m_isSpawned = false;
 	}
+}
+
+
+export function Donut_GetUserData(box2d, bodyId)
+{
+	const bodyPointer = box2d.b2Body_GetPointer(bodyId);
+	return donut_userData[bodyPointer];
 }
