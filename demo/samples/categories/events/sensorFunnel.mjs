@@ -53,10 +53,13 @@ export default class SensorFunnel extends Sample{
 				[ -8.26825142, 11.906374 ],	 [ -16.8672504, 17.1978741 ],
 			].map( ( [x, y] ) => ({x, y}) );
 
+			const material = {};
+			material.friction = 0.2;
+
 			const chainDef = b2DefaultChainDef();
 			chainDef.SetPoints(points);
 			chainDef.isLoop = true;
-			chainDef.friction = 0.2;
+			chainDef.SetMaterials([material]);
 			b2CreateChain( groundId, chainDef );
 
 			let sign = 1.0;
