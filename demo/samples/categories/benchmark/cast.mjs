@@ -288,13 +288,13 @@ export default class Cast extends Sample{
 		const {
 			b2DefaultQueryFilter,
 			b2World_CastRayClosest,
-			b2World_CastCircle,
+			b2World_CastShape,
 			b2Circle,
-			b2Transform,
 			b2World_OverlapAABB,
 			b2AABB,
 			b2Lerp,
 			b2Vec2,
+			b2MakeProxy,
 		} = this.box2d;
 
 		super.Step();
@@ -381,16 +381,12 @@ export default class Cast extends Sample{
 			for ( let i = 0; i < sampleCount; i++ )
 			{
 
-				const origin = new b2Transform();
-				origin.p.Copy( this.m_origins[i] );
-				origin.q.c = 1.0;
-				origin.q.s = 0.0;
-
+				const proxy = b2MakeProxy(this.m_origins[1], 1, this.m_radius);
 				const translation = this.m_translations[i];
 
 				const result = {};
 				const traversalResult =
-					b2World_CastCircle( this.m_worldId, circle, origin, translation, filter,
+					b2World_CastShape( this.m_worldId, proxy, translation, filter,
 										(rayCallbackResult) => this.CastCallback(rayCallbackResult, result));
 
 
@@ -403,7 +399,7 @@ export default class Cast extends Sample{
 				leafVisits += traversalResult.leafVisits;
 				hitCount += result.hit ? 1 : 0;
 
-				origin.delete();
+				proxy.delete();
 			}
 
 			ms = performance.now() - timer;
