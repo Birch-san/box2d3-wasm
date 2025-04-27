@@ -654,6 +654,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         })
         .property("count", &b2ChainDef::count)
         .property("internalValue", &b2ChainDef::internalValue)
+        .property("enableSensorEvents", &b2ChainDef::enableSensorEvents)
         .function("delete", +[](b2ChainDef* self) {
             if (self->points != nullptr) {
                 delete[] self->points;
