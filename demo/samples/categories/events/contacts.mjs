@@ -137,7 +137,7 @@ export default class Contacts extends Sample{
 		this.m_bodyUserData[bodyPointer] = index;
 
 		const shapeDef = b2DefaultShapeDef();
-		shapeDef.restitution = 0.8;
+		shapeDef.material.restitution = 0.8;
 
 		// No events when debris hits debris
 		shapeDef.enableContactEvents = false;

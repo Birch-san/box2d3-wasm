@@ -45,7 +45,7 @@ const box2d = await Box2DFactory();
 
   const shapeDef = b2DefaultShapeDef();
   shapeDef.density = 1.0;
-  shapeDef.friction = 0.3;
+  shapeDef.material.friction = 0.3;
 
   const shapeId = b2CreatePolygonShape(bodyId, shapeDef, square);
 
@@ -99,7 +99,7 @@ const box2d = await Box2DFactory();
 
   const shapeDef = b2DefaultShapeDef();
   shapeDef.density = 1.0;
-  shapeDef.friction = 0.3;
+  shapeDef.material.friction = 0.3;
 
   const body = world.CreateBody(new b2BodyDef(bd));
   body.CreatePolygonShape(shapeDef, square);

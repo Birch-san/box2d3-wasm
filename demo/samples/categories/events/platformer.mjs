@@ -109,7 +109,7 @@ export default class Platformer extends Sample{
 			capsule.center2.Set( 0.0, 0.5 );
 			capsule.radius = this.m_radius;
 			const shapeDef = b2DefaultShapeDef();
-			shapeDef.friction = 0.1;
+			shapeDef.material.friction = 0.1;
 
 			this.m_playerShapeId = b2CreateCapsuleShape( this.m_playerId, shapeDef, capsule );
 

@@ -66,7 +66,7 @@ export default class FootSensor extends Sample{
 			const shapeDef = b2DefaultShapeDef();
 			shapeDef.filter.categoryBits = PLAYER;
 			shapeDef.filter.maskBits = GROUND;
-			shapeDef.friction = 0.3;
+			shapeDef.material.friction = 0.3;
 
 			const capsule = new b2Capsule();
 			capsule.center1.Set( 0.0, -0.5 );

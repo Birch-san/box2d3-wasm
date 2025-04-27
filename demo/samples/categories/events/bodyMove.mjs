@@ -42,7 +42,7 @@ export default class BodyMove extends Sample{
 			const groundId = b2CreateBody( this.m_worldId, bodyDef );
 
 			const shapeDef = b2DefaultShapeDef();
-			shapeDef.friction = 0.1;
+			shapeDef.material.friction = 0.1;
 
 			const p = new b2Vec2();
 
@@ -58,7 +58,7 @@ export default class BodyMove extends Sample{
 			box.delete();
 			rot.delete();
 
-			shapeDef.restitution = 0.8;
+			shapeDef.material.restitution = 0.8;
 
 			box = b2MakeOffsetBox( 0.1, 10.0, p.Set(19.9, 10.0 ), b2Rot_identity );
 			b2CreatePolygonShape( groundId, shapeDef, box );
