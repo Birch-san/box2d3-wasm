@@ -15,6 +15,9 @@ export default {
     "Spinner": "./categories/benchmark/spinner.mjs",
     "Tumbler": "./categories/benchmark/tumbler.mjs"
   },
+  "Character": {
+    "Mover": "./categories/character/mover.mjs"
+  },
   "Determinism": {
     "Falling Hinges": "./categories/determinism/fallingHinges.mjs"
   },
