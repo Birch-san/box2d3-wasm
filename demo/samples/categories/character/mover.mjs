@@ -185,31 +185,41 @@ export default class Mover extends Sample {
 				const pivot = new b2Vec2(xBase + 1.0 * i, yBase);
 				jointDef.bodyIdA = prevBodyId;
 				jointDef.bodyIdB = bodyId;
-				jointDef.localAnchorA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-				jointDef.localAnchorB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+
+				let lp = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
+				jointDef.localAnchorA.Copy(lp);
+				lp.delete();
+				lp = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+				jointDef.localAnchorB.Copy(lp);
+				lp.delete();
 				b2CreateRevoluteJoint(this.m_worldId, jointDef);
 
 				prevBodyId = bodyId;
 
 				bodyDef.delete();
+				pivot.delete();
 			}
 
 			const pivot = new b2Vec2(xBase + 1.0 * count, yBase);
 			jointDef.bodyIdA = prevBodyId;
 			jointDef.bodyIdB = this.groundId2;
-			jointDef.localAnchorA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-			jointDef.localAnchorB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+			let lp = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
+			jointDef.localAnchorA.Copy(lp);
+			lp.delete();
+			lp = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+			jointDef.localAnchorB.Copy(lp);
+			lp.delete();
 			b2CreateRevoluteJoint(this.m_worldId, jointDef);
-
 
 			box.delete();
 			shapeDef.delete();
 			jointDef.delete();
+			pivot.delete();
 		}
 
 		{
 			const bodyDef = b2DefaultBodyDef();
-			bodyDef.position = new b2Vec2(32.0, 4.5);
+			bodyDef.position.Set(32.0, 4.5);
 
 			const shapeDef = b2DefaultShapeDef();
 			this.m_friendlyShape.maxPush = 0.025;
@@ -231,7 +241,7 @@ export default class Mover extends Sample {
 		{
 			const bodyDef = b2DefaultBodyDef();
 			bodyDef.type = b2BodyType.b2_dynamicBody;
-			bodyDef.position = new b2Vec2(7.0, 7.0);
+			bodyDef.position.Set(7.0, 7.0);
 			const bodyId = b2CreateBody(this.m_worldId, bodyDef);
 
 			const shapeDef = b2DefaultShapeDef();
@@ -351,11 +361,12 @@ export default class Mover extends Sample {
 			velocityAdd.delete();
 		}
 
+
 		this.m_velocity.Set(this.m_velocity.x, this.m_velocity.y - this.m_gravity * timeStep);
 
 		const pogoRestLength = 3.0 * this.m_capsule.radius;
 		const rayLength = pogoRestLength + this.m_capsule.radius;
-		const origin = new b2Vec2().Copy(b2TransformPoint(this.m_transform, this.m_capsule.center1));
+		const origin = b2TransformPoint(this.m_transform, this.m_capsule.center1);
 		const circle = new b2Circle();
 		circle.center = origin;
 		circle.radius = 0.5 * this.m_capsule.radius;
@@ -375,6 +386,7 @@ export default class Mover extends Sample {
 			hit: false,
 		};
 
+
 		if (this.m_pogoShape == PogoShape.PogoPoint) {
 			proxy = b2MakeProxy(origin, 1, 0.0);
 			translation.Set(0.0, -rayLength);
@@ -387,6 +399,8 @@ export default class Mover extends Sample {
 			proxy = b2MakeProxy(segment.point1, 2, 0.0);
 			translation.Set(0.0, -rayLength);
 		}
+
+
 
 		b2World_CastShape(this.m_worldId, proxy, translation, pogoFilter, (rayCallbackResult) => this.CastCallback(rayCallbackResult, castResult));
 
@@ -505,12 +519,11 @@ export default class Mover extends Sample {
 
 			b2Body_ApplyForce(castResult.bodyId, force, point, true);
 
-
-			origin.delete();
 			delta.delete();
 			force.delete();
 			point.delete();
 		}
+
 		const velocityAdd = new b2Vec2().Copy(this.m_velocity).MulSV(timeStep);
 		const pogoVelocityAdd = new b2Vec2(0.0, 1.0).MulSV(timeStep * this.m_pogoVelocity);
 		const target = new b2Vec2().Copy(this.m_transform.p).Add(velocityAdd).Add(pogoVelocityAdd);
@@ -530,11 +543,17 @@ export default class Mover extends Sample {
 
 		for (let iteration = 0; iteration < 5; ++iteration) {
 			this.m_planeCount = 0;
+			this.m_planes.forEach((plane) => plane.delete());
 			this.m_planes.length = 0;
 
 			const mover = new b2Capsule();
-			mover.center1.Copy(b2TransformPoint(this.m_transform, this.m_capsule.center1));
-			mover.center2.Copy(b2TransformPoint(this.m_transform, this.m_capsule.center2));
+
+			let tp = b2TransformPoint(this.m_transform, this.m_capsule.center1);
+			mover.center1.Copy(tp);
+			tp.delete();
+			tp = b2TransformPoint(this.m_transform, this.m_capsule.center2)
+			mover.center2.Copy(tp);
+			tp.delete();
 			mover.radius = this.m_capsule.radius;
 
 			b2World_CollideMover(this.m_worldId, mover, collideFilter, (shape, result) => this.PlaneResultFcn(shape, result));
@@ -542,32 +561,42 @@ export default class Mover extends Sample {
 
 			this.m_totalIterations += result.iterationCount;
 
-			console.log(result.iterationCount);
-
 			const moverTranslation = new b2Vec2().Copy(result.position).Sub(this.m_transform.p);
 
 			const fraction = b2World_CastMover(this.m_worldId, mover, moverTranslation, castFilter);
-
 
 			const delta = new b2Vec2().Copy(moverTranslation).MulSV(fraction);
 			this.m_transform.p.Add(delta);
 
 			mover.delete();
 			moverTranslation.delete();
+			result.delete();
 
-			if (b2LengthSquared(delta) < tolerance * tolerance) {
+			const ls = b2LengthSquared(delta);
+			delta.delete();
+			if (ls < tolerance * tolerance) {
 				break;
 			}
 		}
 
-		this.m_velocity.Copy(b2ClipVector(this.m_velocity, this.m_planes));
+		const cv = b2ClipVector(this.m_velocity, this.m_planes);
+		this.m_velocity.Copy(cv);
 
-		proxy.delete();
 		desiredVelocity.delete();
+		desiredDirection.delete();
+		origin.delete();
 		circle.delete();
 		segmentOffset.delete();
 		segment.delete();
+		translation.delete();
 		pogoFilter.delete();
+		proxy.delete();
+		velocityAdd.delete();
+		pogoVelocityAdd.delete();
+		target.delete();
+		collideFilter.delete();
+		castFilter.delete();
+		cv.delete();
 	}
 
 	CastCallback(rayCallbackResult, context) {
@@ -623,7 +652,8 @@ export default class Mover extends Sample {
 			b2BodyType,
 			b2Body_GetWorldCenterOfMass,
 			b2Normalize,
-			b2Body_ApplyLinearImpulseToCenter
+			b2Body_ApplyLinearImpulseToCenter,
+			b2Vec2
 		} = this.box2d;
 
 		const { shapeId } = overlapResult;
@@ -637,10 +667,15 @@ export default class Mover extends Sample {
 
 		const center = b2Body_GetWorldCenterOfMass(bodyId);
 
-		const normalizedCenter = new b2Vec2().Clone(center).Sub(this.m_transform.p);
+		const normalizedCenter = new b2Vec2().Copy(center).Sub(this.m_transform.p);
 		const direction = b2Normalize(normalizedCenter);
 		const impulse = new b2Vec2(2.0 * direction.x, 2.0);
 		b2Body_ApplyLinearImpulseToCenter(bodyId, impulse, true);
+
+		normalizedCenter.delete();
+		direction.delete();
+		impulse.delete();
+		center.delete();
 
 		return true;
 	}
@@ -654,7 +689,7 @@ export default class Mover extends Sample {
 			b2World_OverlapShape,
 			b2Circle
 		} = this.box2d;
-		if (Keyboard.isPressed(Key.A)) {
+		if (Keyboard.IsPressed(Key.K)) {
 			const offset = new b2Vec2(0.0, this.m_capsule.center1.y - 3.0 * this.m_capsule.radius);
 			const point = b2TransformPoint(this.m_transform, offset);
 
@@ -667,13 +702,33 @@ export default class Mover extends Sample {
 			filter.categoryBits = CollisionBits.MoverBit;
 			filter.maskBits = CollisionBits.DebrisBit;
 
-			b2World_OverlapShape(this.m_worldId, proxy, filter, (overlapResult) => this.Kick(overlapResult), this);
-			g_draw.DrawCircle(circle.center, circle.radius, b2_colorGoldenRod);
+			b2World_OverlapShape(this.m_worldId, proxy, filter, (overlapResult) => this.Kick(overlapResult));
+
+			this.debugDraw.drawCircle({
+				data: [
+					circle.center.x,
+					circle.center.y,
+					circle.radius,
+				],
+				color: b2HexColor.b2_colorGoldenRod
+			});
+
+			offset.delete();
+			point.delete();
+			circle.delete();
+			proxy.delete();
+			filter.delete();
 		}
 	}
 
 
 	Despawn() {
+		this.m_transform.delete();
+		this.m_velocity.delete();
+		this.m_capsule.delete();
+		this.m_elevatorBase.delete();
+		this.m_planes.forEach((plane) => plane.delete());
+		this.m_planes.length = 0;
 	}
 
 	Step() {
@@ -705,6 +760,9 @@ export default class Mover extends Sample {
 			transform.p.Copy(point);
 
 			b2Body_SetTargetTransform(this.m_elevatorId, transform, timeStep);
+
+			point.delete();
+			transform.delete();
 		}
 
 		this.m_time += timeStep;
@@ -712,6 +770,8 @@ export default class Mover extends Sample {
 		super.Step();
 
 		this.debugDraw.prepareCanvas();
+
+		this.Keyboard();
 
 		if (pause == false) {
 			let throttle = 0.0;
@@ -762,10 +822,13 @@ export default class Mover extends Sample {
 				],
 				color: b2HexColor.b2_colorYellow
 			});
+
+			p1.delete();
+			p2.delete();
 		}
 
-		const p1 = new b2Vec2().Copy(b2TransformPoint(this.m_transform, this.m_capsule.center1));
-		const p2 = new b2Vec2().Copy(b2TransformPoint(this.m_transform, this.m_capsule.center2));
+		const p1 = b2TransformPoint(this.m_transform, this.m_capsule.center1);
+		const p2 = b2TransformPoint(this.m_transform, this.m_capsule.center2);
 
 		const color = this.m_onGround ? b2HexColor.b2_colorOrange : b2HexColor.b2_colorAquamarine;
 		this.debugDraw.drawSolidCapsule({
@@ -788,6 +851,9 @@ export default class Mover extends Sample {
 			],
 			color: b2HexColor.b2_colorPurple
 		});
+
+		p1.delete();
+		p2.delete();
 
 		if (this.m_lockCamera) {
 			this.camera.center.x = this.m_transform.p.x;
