@@ -59,6 +59,7 @@ EMCC_OPTS=(
   -s FILESYSTEM=0
   # -s SUPPORT_LONGJMP=0 # this causes 'undefined symbol: _emscripten_stack_restore'
   -s EXPORTED_FUNCTIONS=_malloc,_free
+  -s EXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU16,HEAPU32
   -s ALLOW_MEMORY_GROWTH=1
   ${FLAVOUR_EMCC_OPTS[@]}
   )
