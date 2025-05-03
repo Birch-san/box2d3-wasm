@@ -112,10 +112,13 @@ case "$TARGET_TYPE" in
 esac
 >&2 echo -e "TARGET_TYPE is $TARGET_TYPE"
 
-mkdir -p "$BUILD_DIR"
-BARE_WASM="$BUILD_DIR/$BASENAME.bare.wasm"
+ES_DIR="$BUILD_DIR/dist/es/$FLAVOUR"
+ES_FILE="$ES_DIR/$BASENAME.mjs"
+ES_TSD="$ES_DIR/$BASENAME.d.ts"
 
->&2 echo -e "${Blue}Building bare WASM${NC}"
+mkdir -p "$BUILD_DIR" "$ES_DIR"
+
+>&2 echo -e "${Blue}Building...${NC}"
 set -x
 emcc -lembind \
 "$CSRC_DIR/glue.cpp" \
@@ -127,31 +130,19 @@ emcc -lembind \
 -I "$ENKITS_DIR/src" \
 -I "$B2CPP_DIR/include" \
 "${EMCC_OPTS[@]}" \
---oformat=bare -o "$BARE_WASM"
+-s ALLOW_MEMORY_GROWTH=1 \
+-s EXPORT_ES6=1 \
+"${DEBUG_OPTS[@]}" \
+"${FLAVOUR_LINK_OPTS[@]}" \
+-o "$ES_FILE" \
+--emit-tsd "$ES_TSD"
 { set +x; } 2>/dev/null
 >&2 echo -e "${Blue}Built bare WASM${NC}"
 
-ES_DIR="$BUILD_DIR/dist/es/$FLAVOUR"
-
-mkdir -p "$ES_DIR"
-
->&2 echo -e "${Blue}Building post-link targets${NC}"
-
-LINK_OPTS=(
-  ${DEBUG_OPTS[@]}
-  ${FLAVOUR_LINK_OPTS[@]}
-  -lembind
-  -s ALLOW_MEMORY_GROWTH=1
-  --post-link "$BARE_WASM"
-)
-
 ES_PRECURSOR="$ES_DIR/$BASENAME.orig.mjs"
-ES_FILE="$ES_DIR/$BASENAME.mjs"
-ES_TSD="$ES_DIR/$BASENAME.d.ts"
 ES_TSD_PRECURSOR="$ES_DIR/$BASENAME.orig.d.ts"
 >&2 echo -e "${Blue}Building ES module, $ES_DIR/$BASENAME.{mjs,wasm}${NC}"
 set -x
-emcc "${LINK_OPTS[@]}" -s EXPORT_ES6=1 -o "$ES_FILE" --emit-tsd "$ES_TSD"
 cp "$ES_FILE" "$ES_PRECURSOR"
 cp "$ES_TSD" "$ES_TSD_PRECURSOR"
 
