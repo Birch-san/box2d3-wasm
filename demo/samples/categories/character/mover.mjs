@@ -875,6 +875,20 @@ export default class Mover extends Sample {
 			container
 		});
 
+		this.pane.addButton({
+			title: this.m_touchKeyboard ? 'hide touch keyboard' : 'show touch keyboard',
+		}).on('click', () => {
+			this.m_touchKeyboard = !this.m_touchKeyboard;
+
+			if (this.m_touchKeyboard){
+				Keyboard.ShowTouchControls([Key.A, Key.D, Key.Space, Key.K]);
+			} else {
+				Keyboard.HideTouchControls();
+			}
+
+			this.CreateUI();
+		});
+
 		const PARAMS = {
 			jumpSpeed: this.m_jumpSpeed,
 			minSpeed: this.m_minSpeed,
