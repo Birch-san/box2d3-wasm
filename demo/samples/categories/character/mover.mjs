@@ -530,6 +530,7 @@ export default class Mover extends Sample {
 
 		for (let iteration = 0; iteration < 5; ++iteration) {
 			this.m_planeCount = 0;
+			this.m_planes.length = 0;
 
 			const mover = new b2Capsule();
 			mover.center1.Copy(b2TransformPoint(this.m_transform, this.m_capsule.center1));
@@ -540,6 +541,8 @@ export default class Mover extends Sample {
 			const result = b2SolvePlanes(target, this.m_planes);
 
 			this.m_totalIterations += result.iterationCount;
+
+			console.log(result.iterationCount);
 
 			const moverTranslation = new b2Vec2().Copy(result.position).Sub(this.m_transform.p);
 
@@ -787,7 +790,7 @@ export default class Mover extends Sample {
 		});
 
 		if (this.m_lockCamera) {
-			// g_camera.m_center.x = m_transform.p.x;
+			this.camera.center.x = this.m_transform.p.x;
 		}
 		this.debugDraw.restoreCanvas();
 
