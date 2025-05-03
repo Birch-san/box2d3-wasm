@@ -116,6 +116,7 @@ mkdir -p "$BUILD_DIR"
 BARE_WASM="$BUILD_DIR/$BASENAME.bare.wasm"
 
 >&2 echo -e "${Blue}Building bare WASM${NC}"
+set -x
 emcc -lembind \
 "$CSRC_DIR/glue.cpp" \
 "$CSRC_DIR/threading.cpp" \
@@ -127,6 +128,7 @@ emcc -lembind \
 -I "$B2CPP_DIR/include" \
 "${EMCC_OPTS[@]}" \
 --oformat=bare -o "$BARE_WASM"
+{ set +x; } 2>/dev/null
 >&2 echo -e "${Blue}Built bare WASM${NC}"
 
 ES_DIR="$BUILD_DIR/dist/es/$FLAVOUR"
@@ -167,5 +169,5 @@ case "$FLAVOUR" in
 esac
 awk -f "$DIR/modify_emscripten_dts.awk" -v template="$BUILD_DIR/Box2D.template.d.ts" "$ES_TSD_PRECURSOR" > "$ES_TSD"
 
-set +x
+{ set +x; } 2>/dev/null
 >&2 echo -e "${Green}Successfully built $ES_DIR/$BASENAME.{js,wasm}${NC}\n"
