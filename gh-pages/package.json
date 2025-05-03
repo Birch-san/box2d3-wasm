@@ -8,7 +8,7 @@
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "box2d3-wasm": "^4.0.1",
+    "box2d3-wasm": "^4.1.0",
     "coi-serviceworker": "^0.1.7"
   },
   "devDependencies": {
