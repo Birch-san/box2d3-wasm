@@ -106,10 +106,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor()
         .property("c", &b2Rot::c)
         .property("s", &b2Rot::s)
-        .function("SetAngle", +[](b2Rot& self, float angle) -> b2Rot {
+        .function("SetAngle", +[](b2Rot& self, float angle) {
             self.s = sinf(angle);
             self.c = cosf(angle);
-            return self;
         })
         .function("GetAngle", +[](const b2Rot& self) -> float {
             return b2Atan2(self.s, self.c);
@@ -1496,9 +1495,10 @@ EMSCRIPTEN_BINDINGS(box2d) {
         .property("push", &b2CollisionPlane::push)
         .property("clipVelocity", &b2CollisionPlane::clipVelocity);
 
-    value_object<b2PlaneSolverResult>("b2PlaneSolverResult")
-        .field("position", &b2PlaneSolverResult::position)
-        .field("iterationCount", &b2PlaneSolverResult::iterationCount);
+    class_<b2PlaneSolverResult>("b2PlaneSolverResult")
+        .constructor()
+        .property("position", &b2PlaneSolverResult::position, return_value_policy::reference())
+        .property("iterationCount", &b2PlaneSolverResult::iterationCount);
 
     function("b2SolvePlanes", +[](const b2Vec2& position, const emscripten::val& collisionPlanes) -> b2PlaneSolverResult {
         int length = collisionPlanes["length"].as<int>();
