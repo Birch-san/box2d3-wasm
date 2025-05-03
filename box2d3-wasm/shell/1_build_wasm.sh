@@ -61,7 +61,9 @@ EMCC_OPTS=(
   -s EXPORTED_FUNCTIONS=_malloc,_free
   -s EXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU16,HEAPU32
   -s ALLOW_MEMORY_GROWTH=1
+  -s EXPORT_ES6=1
   ${FLAVOUR_EMCC_OPTS[@]}
+  ${FLAVOUR_LINK_OPTS[@]}
   )
 DEBUG_OPTS=(
   -g3
@@ -131,10 +133,6 @@ emcc -lembind \
 -I "$ENKITS_DIR/src" \
 -I "$B2CPP_DIR/include" \
 "${EMCC_OPTS[@]}" \
--s ALLOW_MEMORY_GROWTH=1 \
--s EXPORT_ES6=1 \
-"${DEBUG_OPTS[@]}" \
-"${FLAVOUR_LINK_OPTS[@]}" \
 -o "$ES_FILE" \
 --emit-tsd "$ES_TSD"
 { set +x; } 2>/dev/null
