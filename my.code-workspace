@@ -23,6 +23,10 @@
       {
         "name": "gh-pages",
         "path": "gh-pages"
+      },
+      {
+        "name": "cdn",
+        "path": "cdn"
       }
     ],
     "settings": {
