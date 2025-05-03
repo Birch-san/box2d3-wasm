@@ -106,10 +106,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor()
         .property("c", &b2Rot::c)
         .property("s", &b2Rot::s)
-        .function("SetAngle", +[](b2Rot& self, float angle) -> b2Rot {
+        .function("SetAngle", +[](b2Rot& self, float angle) {
             self.s = sinf(angle);
             self.c = cosf(angle);
-            return self;
         })
         .function("GetAngle", +[](const b2Rot& self) -> float {
             return b2Atan2(self.s, self.c);
@@ -1480,19 +1479,61 @@ EMSCRIPTEN_BINDINGS(box2d) {
     value_object<b2OverlapCallbackResult>("b2OverlapCallbackResult")
         .field("shapeId", &b2OverlapCallbackResult::shapeId)
     ;
-    value_object<b2Plane>("b2Plane")
-        .field("normal", &b2Plane::normal)
-        .field("offset", &b2Plane::offset);
+    class_<b2Plane>("b2Plane")
+        .constructor()
+        .property("normal", &b2Plane::normal, return_value_policy::reference())
+        .property("offset", &b2Plane::offset, return_value_policy::reference());
 
     value_object<b2PlaneResult>("b2PlaneResult")
         .field("plane", &b2PlaneResult::plane)
         .field("hit", &b2PlaneResult::hit);
 
-    value_object<b2CollisionPlane>("b2CollisionPlane")
-        .field("plane", &b2CollisionPlane::plane)
-        .field("pushLimit", &b2CollisionPlane::pushLimit)
-        .field("push", &b2CollisionPlane::push)
-        .field("clipVelocity", &b2CollisionPlane::clipVelocity);
+    class_<b2CollisionPlane>("b2CollisionPlane")
+        .constructor()
+        .property("plane", &b2CollisionPlane::plane, return_value_policy::reference())
+        .property("pushLimit", &b2CollisionPlane::pushLimit)
+        .property("push", &b2CollisionPlane::push)
+        .property("clipVelocity", &b2CollisionPlane::clipVelocity);
+
+    class_<b2PlaneSolverResult>("b2PlaneSolverResult")
+        .constructor()
+        .property("position", &b2PlaneSolverResult::position, return_value_policy::reference())
+        .property("iterationCount", &b2PlaneSolverResult::iterationCount);
+
+    function("b2SolvePlanes", +[](const b2Vec2& position, const emscripten::val& collisionPlanes) -> b2PlaneSolverResult {
+        int length = collisionPlanes["length"].as<int>();
+        std::vector<b2CollisionPlane> planes(length);
+
+        for (int i = 0; i < length; ++i) {
+            auto collisionPlane = collisionPlanes[i];
+            auto plane = collisionPlane["plane"];
+            planes[i].plane.normal.x = plane["normal"]["x"].as<float>();
+            planes[i].plane.normal.y = plane["normal"]["y"].as<float>();
+            planes[i].plane.offset = plane["offset"].as<float>();
+            planes[i].pushLimit = collisionPlane["pushLimit"].as<float>();
+            planes[i].push = collisionPlane["push"].as<float>();
+            planes[i].clipVelocity = collisionPlane["clipVelocity"].as<float>();
+        }
+
+        return b2SolvePlanes(position, planes.data(), length);
+    });
+    function("b2ClipVector", +[](const b2Vec2& vector, const emscripten::val& collisionPlanes) -> b2Vec2 {
+        int length = collisionPlanes["length"].as<int>();
+        std::vector<b2CollisionPlane> planes(length);
+
+        for (int i = 0; i < length; ++i) {
+            auto collisionPlane = collisionPlanes[i];
+            auto plane = collisionPlane["plane"];
+            planes[i].plane.normal.x = plane["normal"]["x"].as<float>();
+            planes[i].plane.normal.y = plane["normal"]["y"].as<float>();
+            planes[i].plane.offset = plane["offset"].as<float>();
+            planes[i].pushLimit = collisionPlane["pushLimit"].as<float>();
+            planes[i].push = collisionPlane["push"].as<float>();
+            planes[i].clipVelocity = collisionPlane["clipVelocity"].as<float>();
+        }
+
+        return b2ClipVector(vector, planes.data(), length);
+    });
 
     function("b2World_OverlapAABB",
         +[](b2WorldId worldId, const b2AABB& aabb, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
@@ -1661,6 +1702,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_GetRotation", &b2Body_GetRotation);
     function("b2Body_GetTransform", &b2Body_GetTransform);
     function("b2Body_SetTransform", &b2Body_SetTransform);
+    function("b2Body_SetTargetTransform", &b2Body_SetTargetTransform);
     function("b2Body_GetLocalPoint", &b2Body_GetLocalPoint);
     function("b2Body_GetWorldPoint", &b2Body_GetWorldPoint);
     function("b2Body_GetLocalVector", &b2Body_GetLocalVector);
@@ -1940,10 +1982,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Length", &b2Length);
     function("b2Distance", &b2Distance);
     function("b2Normalize", &b2Normalize);
-    function("b2GetLengthAndNormalize", +[](b2Vec2 v) {
-        float length;
-        return b2GetLengthAndNormalize(&length, v);
-    });
     function("b2NormalizeRot", &b2NormalizeRot);
     function("b2IntegrateRotation", &b2IntegrateRotation);
     function("b2LengthSquared", &b2LengthSquared);
@@ -1967,8 +2005,10 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2MulTransforms", &b2MulTransforms);
     function("b2InvMulTransforms", &b2InvMulTransforms);
     function("b2MulMV", &b2MulMV);
+    function("b2MaxFloat", &b2MaxFloat);
     function("b2GetInverse22", &b2GetInverse22);
     function("b2Solve22", &b2Solve22);
+    function("b2IsValidPlane", &b2IsValidPlane);
     function("b2AABB_Contains", &b2AABB_Contains);
     function("b2AABB_Center", &b2AABB_Center);
     function("b2AABB_Extents", &b2AABB_Extents);

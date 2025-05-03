@@ -6,6 +6,13 @@ import settings from '../../settings.mjs';
 
 export default class Platformer extends Sample{
 	constructor(box2d, camera, debugDraw){
+		if(settings.workerCount > 1){
+			/*
+			In Emscripten with pthreads, WebAssembly worker threads cannot directly call JavaScript functions or access JS objects; callbacks must be proxied to the main thread.
+			*/
+			console.warn("PreSolve is not compatible with multiple workers");
+			settings.workerCount = 1;
+		}
 		super(box2d, camera, debugDraw);
 
 		camera.center = {x: 0.5, y: 7.5 };
@@ -350,6 +357,8 @@ export default class Platformer extends Sample{
 		m_textLine = DrawString( 5, m_textLine, `Platform contact count = ${contactCount}, point count = ${pointCount}`);
 		m_textLine = DrawString( 5, m_textLine, "Movement: A/D/Space" );
 		m_textLine = DrawString( 5, m_textLine, `Can jump = ${this.canJump ? "true" : "false"}`);
+
+		m_textLine = DrawString( 5, m_textLine, "*** Note: PreSolve is not compatible with workers, only single threaded. ***" );
 	}
 
 	Destroy(){
