@@ -95,12 +95,23 @@ case "$TARGET_TYPE" in
   
   Release)
     LIBARCHIVE="libbox2d.a"
+    # don't minify/mangle/dead-code-eliminate
+    # because we add functionality via awk text-replacement,
+    # which won't match on an uglified file.
+    # TODO: run closure ourselves, after running awk?
+    # MINIFICATION_OPTS=(
+    #   --closure 1
+    #   -s IGNORE_CLOSURE_COMPILER_ERRORS=1
+    # )
+    MINIFICATION_OPTS=(
+      --minify 0
+      --closure 0
+    )
     EMCC_OPTS=(
       ${EMCC_OPTS[@]}
       ${RELEASE_OPTS[@]}
+      ${MINIFICATION_OPTS[@]}
       -flto
-      --closure 1
-      -s IGNORE_CLOSURE_COMPILER_ERRORS=1
       -s EXPORTED_RUNTIME_METHODS=['stackSave','stackRestore','stackAlloc']
       -s STACK_OVERFLOW_CHECK=2
       )
