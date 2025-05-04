@@ -1,3 +1,13 @@
 #!/usr/bin/env bash
-node -p "require('../../box2d3-wasm/package.json').version"
-echo "nothing to see here"
+set -eo pipefail
+DIR="$(dirname "$(realpath "$0")")"
+CDN_DIR="$(realpath "$DIR/..")"
+REPO_ROOT="$(realpath "$CDN_DIR/..")"
+VERSION="$(node -p "require('$REPO_ROOT/box2d3-wasm/package.json').version")"
+WORKSPACE="$CDN_DIR/workspace"
+DIST="$CDN_DIR/dist"
+mkdir -p "$WORKSPACE" "$DIST"
+cd "$WORKSPACE"
+npm i "box2d3-wasm@$VERSION"
+cp -r "$WORKSPACE/node_modules/box2d3-wasm/build/dist/es" "$DIST/$VERSION/es"
+echo "Copied output to "$DIST/es"
