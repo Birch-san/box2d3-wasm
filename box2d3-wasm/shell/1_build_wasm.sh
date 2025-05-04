@@ -112,7 +112,7 @@ case "$TARGET_TYPE" in
       ${RELEASE_OPTS[@]}
       ${MINIFICATION_OPTS[@]}
       -flto
-      -s EXPORTED_RUNTIME_METHODS=['stackSave','stackRestore','stackAlloc']
+      -s EXPORTED_RUNTIME_METHODS=['HEAPU8','HEAPU16','HEAPU32','stackSave','stackRestore','stackAlloc']
       -s STACK_OVERFLOW_CHECK=2
       )
     ;;
