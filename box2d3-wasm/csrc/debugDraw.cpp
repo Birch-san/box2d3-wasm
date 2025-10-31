@@ -43,6 +43,7 @@ public:
         debugDraw.drawContactForces = false;
         debugDraw.drawFrictionForces = false;
         debugDraw.drawIslands = false;
+        debugDraw.drawingBounds = { { -1e30f, -1e30f }, { 1e30f, 1e30f } };
 
         debugDraw.DrawPolygonFcn = [](const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
