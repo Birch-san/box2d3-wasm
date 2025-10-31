@@ -832,7 +832,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("isEnabled", &b2BodyDef::isEnabled)
         .property("allowFastRotation", &b2BodyDef::allowFastRotation)
         .property("internalValue", &b2BodyDef::internalValue)
-        .property("motionLocks", &b2BodyDef::motionLocks)
+        .property("motionLocks", &b2BodyDef::motionLocks, return_value_policy::reference())
         ;
 
     class_<BasicBodyInterface<Body, false>>("BasicBodyInterface");
