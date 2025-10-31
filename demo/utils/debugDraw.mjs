@@ -229,8 +229,8 @@ export default class DebugDrawRenderer {
                 case DebugDrawCommandType.e_solidCapsule.value:
                     this.drawSolidCapsule(cmd);
                     break;
-                case DebugDrawCommandType.e_segment.value:
-                    this.drawSegment(cmd);
+                case DebugDrawCommandType.e_line.value:
+                    this.drawLine(cmd);
                     break;
                 case DebugDrawCommandType.e_transform.value:
                     this.drawTransform(cmd);
@@ -382,7 +382,7 @@ export default class DebugDrawRenderer {
         this.ctx.stroke();
     }
 
-    drawSegment(cmd) {
+    drawLine(cmd) {
         this.ctx.beginPath();
         this.ctx.moveTo(cmd.data[0], cmd.data[1]);
         this.ctx.lineTo(cmd.data[2], cmd.data[3]);
