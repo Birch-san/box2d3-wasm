@@ -6,8 +6,10 @@ export default class Sample{
 		this.debugDraw = debugDraw;
 		this.camera = camera;
 
-		this.m_groundBodyId = null;
+		this.m_mouseBodyId = null;
 		this.m_mouseJointId = null;
+		this.m_mouseForceScale = 100.0;
+		this.m_mousePoint = new box2d.b2Vec2(0, 0);
 
 		const {
 			b2DefaultWorldDef,
@@ -43,6 +45,11 @@ export default class Sample{
 			b2World_EnableWarmStarting,
 			b2World_EnableContinuous,
 			b2World_Step,
+			b2Joint_IsValid,
+			b2Transform,
+			b2Rot_identity,
+			b2Body_SetTargetTransform,
+			b2DestroyBody,
 		} = this.box2d;
 
 		let timeStep = settings.hertz > 0.0 ? 1.0 / settings.hertz : 0.0;
@@ -58,6 +65,29 @@ export default class Sample{
 				timeStep = 0.0;
 			}
 		}
+
+		if ( this.m_mouseJointId !== null && b2Joint_IsValid( this.m_mouseJointId ) == false )
+		{
+			// The world or attached body was destroyed.
+			this.m_mouseJointId = null;
+
+			if ( this.m_mouseBodyId !== null)
+			{
+				b2DestroyBody( this.m_mouseBodyId );
+				this.m_mouseBodyId = null;
+			}
+		}
+
+		if ( this.m_mouseBodyId !== null && timeStep > 0.0 )
+		{
+			const xf = new b2Transform();
+			xf.p = this.m_mousePoint;
+			xf.q = b2Rot_identity;
+			b2Body_SetTargetTransform( this.m_mouseBodyId, xf, timeStep );
+
+			xf.delete();
+		}
+
 
 		b2World_EnableSleeping( this.m_worldId, settings.enableSleep );
 		b2World_EnableWarmStarting( this.m_worldId, settings.enableWarmStarting );
@@ -110,16 +140,22 @@ export default class Sample{
 			b2DefaultQueryFilter,
 			b2DefaultBodyDef,
 			b2CreateBody,
-			b2DefaultMouseJointDef,
+			b2DefaultMotorJointDef,
 			b2Body_SetAwake,
-			b2CreateMouseJoint,
-			b2Body_GetMass,
+			b2Body_GetMassData,
+			b2Length,
+			b2World_GetGravity,
+			b2Body_GetLocalPoint,
+			b2CreateMotorJoint,
+			b2BodyType
 		} = this.box2d;
 
 		const box = new b2AABB();
 		const d = new b2Vec2(0.001, 0.001);
 		box.lowerBound.Copy(p).Sub(d);
 		box.upperBound.Copy(p).Add(d);
+
+		this.m_mousePoint.Copy(p);
 
 		const queryContext = { point: p, bodyId: null };
 
@@ -132,19 +168,38 @@ export default class Sample{
 
 		if(queryContext.bodyId){
 			const bodyDef = b2DefaultBodyDef();
-			this.m_groundBodyId = b2CreateBody( this.m_worldId, bodyDef );
+			bodyDef.type = b2BodyType.b2_kinematicBody;
+			bodyDef.position.Copy(this.m_mousePoint);
+			bodyDef.enableSleep = false;
+			this.m_mouseBodyId = b2CreateBody( this.m_worldId, bodyDef );
 
-			const mouseDef = b2DefaultMouseJointDef();
-			mouseDef.bodyIdA = this.m_groundBodyId;
-			mouseDef.bodyIdB = queryContext.bodyId;
-			mouseDef.target = queryContext.point;
-			mouseDef.hertz = 5.0;
-			mouseDef.dampingRatio = 0.7;
-			mouseDef.maxForce = 1000.0 * b2Body_GetMass( queryContext.bodyId );
-			this.m_mouseJointId = b2CreateMouseJoint( this.m_worldId, mouseDef );
+			const jointDef = b2DefaultMotorJointDef();
+			jointDef.base.bodyIdA = this.m_mouseBodyId;
+			jointDef.base.bodyIdB = queryContext.bodyId;
+			const localPointB = b2Body_GetLocalPoint( queryContext.bodyId, p )
+			jointDef.base.localFrameB.p.Copy( localPointB );
+			jointDef.linearHertz = 7.5;
+			jointDef.linearDampingRatio = 1.0;
+
+			const massData = b2Body_GetMassData( queryContext.bodyId );
+			const g = b2Length( b2World_GetGravity( this.m_worldId ) );
+			const mg = massData.mass * g;
+
+			jointDef.maxSpringForce = this.m_mouseForceScale * mg;
+
+
+			if ( massData.mass > 0.0 )
+			{
+				const lever = Math.sqrt( massData.rotationalInertia / massData.mass );
+				jointDef.maxVelocityTorque = 0.25 * lever * mg;
+			}
+
+			this.m_mouseJointId = b2CreateMotorJoint( this.m_worldId, jointDef );
 
 			bodyDef.delete();
-			mouseDef.delete();
+			jointDef.delete();
+			localPointB.delete();
+			massData.delete();
 
 			b2Body_SetAwake( queryContext.bodyId, true );
 			return true;
@@ -157,32 +212,26 @@ export default class Sample{
 		} = this.box2d;
 
 		if(this.m_mouseJointId){
-			b2DestroyJoint(this.m_mouseJointId);
+			b2DestroyJoint(this.m_mouseJointId, true);
 			this.m_mouseJointId = null;
 		}
 
-		if(this.m_groundBodyId){
-			b2DestroyBody(this.m_groundBodyId);
-			this.m_groundBodyId = null;
+		if(this.m_mouseBodyId){
+			b2DestroyBody(this.m_mouseBodyId);
+			this.m_mouseBodyId = null;
 		}
 	}
 	MouseMove(p){
 		const {
 			b2Joint_IsValid,
-			b2MouseJoint_SetTarget,
-			b2Joint_GetBodyB,
-			b2Body_SetAwake,
 		} = this.box2d;
 
 		if (this.m_mouseJointId !== null && b2Joint_IsValid( this.m_mouseJointId ) == false ) {
 			// The world or attached body was destroyed.
 			this.m_mouseJointId = null;
 		}
-		if (this.m_mouseJointId !== null) {
-			b2MouseJoint_SetTarget( this.m_mouseJointId, p );
-			const bodyIdB = b2Joint_GetBodyB( this.m_mouseJointId );
-			b2Body_SetAwake( bodyIdB, true );
-		}
+
+		this.m_mousePoint.Copy(p);
 	}
 
 	HandleProfile(DrawString, m_textLine){
@@ -303,6 +352,8 @@ export default class Sample{
 
 		this.m_taskSystem?.ClearTasks();
 		this.m_taskSystem?.delete();
+
+		this.m_mousePoint.delete();
 	}
 }
 
