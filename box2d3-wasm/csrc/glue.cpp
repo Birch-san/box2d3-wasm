@@ -807,6 +807,13 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .value("b2_bodyTypeCount", b2_bodyTypeCount)
         ;
 
+    class_<b2MotionLocks>("b2MotionLocks")
+        .constructor()
+        .property("linearX", &b2MotionLocks::linearX)
+        .property("linearY", &b2MotionLocks::linearY)
+        .property("angularZ", &b2MotionLocks::angularZ)
+    ;
+
     class_<b2BodyDef>("b2BodyDef")
         .constructor()
         .constructor<const b2BodyDef&>()
@@ -825,6 +832,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("isEnabled", &b2BodyDef::isEnabled)
         .property("allowFastRotation", &b2BodyDef::allowFastRotation)
         .property("internalValue", &b2BodyDef::internalValue)
+        .property("motionLocks", &b2BodyDef::motionLocks)
         ;
 
     class_<BasicBodyInterface<Body, false>>("BasicBodyInterface");
@@ -921,6 +929,12 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetWorldCenterOfMass", &Body::GetWorldCenterOfMass)
         .function("GetWorldPoint", &Body::GetWorldPoint)
         .function("GetWorldVector", &Body::GetWorldVector)
+        .function("SetName", +[](Body& body, const std::string& name) {
+            body.SetName(name.c_str());
+        })
+        .function("GetName", +[](const Body& body) -> std::string {
+            return std::string(body.GetName());
+        })
         ;
 
     // ------------------------------------------------------------------------
