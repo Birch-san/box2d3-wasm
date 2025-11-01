@@ -77,10 +77,10 @@ function CreateTumbler(box2d, worldId){
 		const motorSpeed = 25.0;
 
 		const jd = b2DefaultRevoluteJointDef();
-		jd.bodyIdA = groundId;
-		jd.bodyIdB = bodyId;
-		jd.localAnchorA.Set(0.0, 10.0);
-		jd.localAnchorB.Set(0.0, 0.0);
+		jd.base.bodyIdA = groundId;
+		jd.base.bodyIdB = bodyId;
+		jd.base.localFrameA.p.Set(0.0, 10.0);
+		jd.base.localFrameB.p.Set(0.0, 0.0);
 		jd.referenceAngle = 0.0;
 		jd.motorSpeed = ( B2_PI / 180.0 ) * motorSpeed;
 		jd.maxMotorTorque = 1e8;
