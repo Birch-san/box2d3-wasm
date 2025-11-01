@@ -72,19 +72,19 @@ function CreateJointGrid(box2d, worldId )
 
 			if ( i > 0 )
 			{
-				jd.bodyIdA = bodies[index - 1];
-				jd.bodyIdB = body;
-				jd.localAnchorA.Set(0.0, -0.5);
-				jd.localAnchorB.Set(0.0, 0.5);
+				jd.base.bodyIdA = bodies[index - 1];
+				jd.base.bodyIdB = body;
+				jd.base.localFrameA.p.Set(0.0, -0.5);
+				jd.base.localFrameB.p.Set(0.0, 0.5);
 				b2CreateRevoluteJoint( worldId, jd );
 			}
 
 			if ( k > 0 )
 			{
-				jd.bodyIdA = bodies[index - N];
-				jd.bodyIdB = body;
-				jd.localAnchorA.Set(0.5, 0.0 );
-				jd.localAnchorB.Set(-0.5, 0.0 );
+				jd.base.bodyIdA = bodies[index - N];
+				jd.base.bodyIdB = body;
+				jd.base.localFrameA.p.Set(0.5, 0.0 );
+				jd.base.localFrameB.p.Set(-0.5, 0.0 );
 				b2CreateRevoluteJoint( worldId, jd );
 			}
 
