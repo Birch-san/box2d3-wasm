@@ -244,7 +244,6 @@ export default class Sample{
 		this.m_totalProfile.pairs += profile.pairs;
 		this.m_totalProfile.collide += profile.collide;
 		this.m_totalProfile.solve += profile.solve;
-		this.m_totalProfile.mergeIslands += profile.mergeIslands;
 		this.m_totalProfile.prepareStages += profile.prepareStages;
 		this.m_totalProfile.solveConstraints += profile.solveConstraints;
 		this.m_totalProfile.prepareConstraints += profile.prepareConstraints;
@@ -255,8 +254,9 @@ export default class Sample{
 		this.m_totalProfile.relaxImpulses += profile.relaxImpulses;
 		this.m_totalProfile.applyRestitution += profile.applyRestitution;
 		this.m_totalProfile.storeImpulses += profile.storeImpulses;
-		this.m_totalProfile.transforms += profile.transforms;
 		this.m_totalProfile.splitIslands += profile.splitIslands;
+		this.m_totalProfile.transforms += profile.transforms;
+		this.m_totalProfile.jointEvents += profile.jointEvents;
 		this.m_totalProfile.hitEvents += profile.hitEvents;
 		this.m_totalProfile.refit += profile.refit;
 		this.m_totalProfile.bullets += profile.bullets;
@@ -267,7 +267,6 @@ export default class Sample{
 		this.m_maxProfile.pairs = Math.max(this.m_maxProfile.pairs, profile.pairs);
 		this.m_maxProfile.collide = Math.max(this.m_maxProfile.collide, profile.collide);
 		this.m_maxProfile.solve = Math.max(this.m_maxProfile.solve, profile.solve);
-		this.m_maxProfile.mergeIslands = Math.max(this.m_maxProfile.mergeIslands, profile.mergeIslands);
 		this.m_maxProfile.prepareStages = Math.max(this.m_maxProfile.prepareStages, profile.prepareStages);
 		this.m_maxProfile.solveConstraints = Math.max(this.m_maxProfile.solveConstraints, profile.solveConstraints);
 		this.m_maxProfile.prepareConstraints = Math.max(this.m_maxProfile.prepareConstraints, profile.prepareConstraints);
@@ -278,8 +277,9 @@ export default class Sample{
 		this.m_maxProfile.relaxImpulses = Math.max(this.m_maxProfile.relaxImpulses, profile.relaxImpulses);
 		this.m_maxProfile.applyRestitution = Math.max(this.m_maxProfile.applyRestitution, profile.applyRestitution);
 		this.m_maxProfile.storeImpulses = Math.max(this.m_maxProfile.storeImpulses, profile.storeImpulses);
-		this.m_maxProfile.transforms = Math.max(this.m_maxProfile.transforms, profile.transforms);
 		this.m_maxProfile.splitIslands = Math.max(this.m_maxProfile.splitIslands, profile.splitIslands);
+		this.m_maxProfile.transforms = Math.max(this.m_maxProfile.transforms, profile.transforms);
+		this.m_maxProfile.jointEvents = Math.max(this.m_maxProfile.jointEvents, profile.jointEvents);
 		this.m_maxProfile.hitEvents = Math.max(this.m_maxProfile.hitEvents, profile.hitEvents);
 		this.m_maxProfile.refit = Math.max(this.m_maxProfile.refit, profile.refit);
 		this.m_maxProfile.bullets = Math.max(this.m_maxProfile.bullets, profile.bullets);
@@ -291,7 +291,6 @@ export default class Sample{
 			this.m_aveProfile.pairs = this.m_totalProfile.pairs / this.m_stepCount;
 			this.m_aveProfile.collide = this.m_totalProfile.collide / this.m_stepCount;
 			this.m_aveProfile.solve = this.m_totalProfile.solve / this.m_stepCount;
-			this.m_aveProfile.mergeIslands = this.m_totalProfile.mergeIslands / this.m_stepCount;
 			this.m_aveProfile.prepareStages = this.m_totalProfile.prepareStages / this.m_stepCount;
 			this.m_aveProfile.solveConstraints = this.m_totalProfile.solveConstraints / this.m_stepCount;
 			this.m_aveProfile.prepareConstraints = this.m_totalProfile.prepareConstraints / this.m_stepCount;
@@ -302,8 +301,9 @@ export default class Sample{
 			this.m_aveProfile.relaxImpulses = this.m_totalProfile.relaxImpulses / this.m_stepCount;
 			this.m_aveProfile.applyRestitution = this.m_totalProfile.applyRestitution / this.m_stepCount;
 			this.m_aveProfile.storeImpulses = this.m_totalProfile.storeImpulses / this.m_stepCount;
-			this.m_aveProfile.transforms = this.m_totalProfile.transforms / this.m_stepCount;
 			this.m_aveProfile.splitIslands = this.m_totalProfile.splitIslands / this.m_stepCount;
+			this.m_aveProfile.transforms = this.m_totalProfile.transforms / this.m_stepCount;
+			this.m_aveProfile.jointEvents = this.m_totalProfile.jointEvents / this.m_stepCount;
 			this.m_aveProfile.hitEvents = this.m_totalProfile.hitEvents / this.m_stepCount;
 			this.m_aveProfile.refit = this.m_totalProfile.refit / this.m_stepCount;
 			this.m_aveProfile.bullets = this.m_totalProfile.bullets / this.m_stepCount;
@@ -314,7 +314,6 @@ export default class Sample{
 			m_textLine = DrawString(5, m_textLine, `pairs [ave] (max) = ${profile.pairs.toFixed(2)} [${this.m_aveProfile.pairs.toFixed(2)}] (${this.m_maxProfile.pairs.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `collide [ave] (max) = ${profile.collide.toFixed(2)} [${this.m_aveProfile.collide.toFixed(2)}] (${this.m_maxProfile.collide.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `solve [ave] (max) = ${profile.solve.toFixed(2)} [${this.m_aveProfile.solve.toFixed(2)}] (${this.m_maxProfile.solve.toFixed(2)})`);
-			m_textLine = DrawString(5, m_textLine, `merge islands [ave] (max) = ${profile.mergeIslands.toFixed(2)} [${this.m_aveProfile.mergeIslands.toFixed(2)}] (${this.m_maxProfile.mergeIslands.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `prepare tasks [ave] (max) = ${profile.prepareStages.toFixed(2)} [${this.m_aveProfile.prepareStages.toFixed(2)}] (${this.m_maxProfile.prepareStages.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `solve constraints [ave] (max) = ${profile.solveConstraints.toFixed(2)} [${this.m_aveProfile.solveConstraints.toFixed(2)}] (${this.m_maxProfile.solveConstraints.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `prepare constraints [ave] (max) = ${profile.prepareConstraints.toFixed(2)} [${this.m_aveProfile.prepareConstraints.toFixed(2)}] (${this.m_maxProfile.prepareConstraints.toFixed(2)})`);
@@ -327,6 +326,7 @@ export default class Sample{
 			m_textLine = DrawString(5, m_textLine, `store impulses [ave] (max) = ${profile.storeImpulses.toFixed(2)} [${this.m_aveProfile.storeImpulses.toFixed(2)}] (${this.m_maxProfile.storeImpulses.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `split islands [ave] (max) = ${profile.splitIslands.toFixed(2)} [${this.m_aveProfile.splitIslands.toFixed(2)}] (${this.m_maxProfile.splitIslands.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `update transforms [ave] (max) = ${profile.transforms.toFixed(2)} [${this.m_aveProfile.transforms.toFixed(2)}] (${this.m_maxProfile.transforms.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `joint events [ave] (max) = ${profile.jointEvents.toFixed(2)} [${this.m_aveProfile.jointEvents.toFixed(2)}] (${this.m_maxProfile.jointEvents.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `hit events [ave] (max) = ${profile.hitEvents.toFixed(2)} [${this.m_aveProfile.hitEvents.toFixed(2)}] (${this.m_maxProfile.hitEvents.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `refit BVH [ave] (max) = ${profile.refit.toFixed(2)} [${this.m_aveProfile.refit.toFixed(2)}] (${this.m_maxProfile.refit.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `sleep islands [ave] (max) = ${profile.sleepIslands.toFixed(2)} [${this.m_aveProfile.sleepIslands.toFixed(2)}] (${this.m_maxProfile.sleepIslands.toFixed(2)})`);
@@ -362,7 +362,6 @@ const profileInterface = {
 	pairs: 0,
 	collide: 0,
 	solve: 0,
-	mergeIslands: 0,
 	prepareStages: 0,
 	solveConstraints: 0,
 	prepareConstraints: 0,
@@ -373,8 +372,10 @@ const profileInterface = {
 	relaxImpulses: 0,
 	applyRestitution: 0,
 	storeImpulses: 0,
-	transforms: 0,
 	splitIslands: 0,
+	transforms: 0,
+	sensorHits: 0,
+	jointEvents: 0,
 	hitEvents: 0,
 	refit: 0,
 	bullets: 0,
