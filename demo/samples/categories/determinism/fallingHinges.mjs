@@ -70,8 +70,8 @@ export default class FallingHinges extends Sample{
 		jointDef.enableSpring = true;
 		jointDef.hertz = 0.5;
 		jointDef.dampingRatio = 0.5;
-		jointDef.localAnchorA.Set(h, h );
-		jointDef.localAnchorB.Set(offset, -h);
+		jointDef.base.localFrameA.p.Set(h, h );
+		jointDef.base.localFrameB.p.Set(offset, -h);
 		jointDef.drawSize = 0.1;
 
 		let bodyIndex = 0;
@@ -106,8 +106,8 @@ export default class FallingHinges extends Sample{
 				}
 				else
 				{
-					jointDef.bodyIdA = prevBodyId;
-					jointDef.bodyIdB = bodyId;
+					jointDef.base.bodyIdA = prevBodyId;
+					jointDef.base.bodyIdB = bodyId;
 					b2CreateRevoluteJoint( this.m_worldId, jointDef );
 					prevBodyId = null;
 				}
