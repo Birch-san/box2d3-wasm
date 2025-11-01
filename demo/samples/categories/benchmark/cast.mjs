@@ -345,7 +345,7 @@ export default class Cast extends Sample{
 				data: [p1.x, p1.y, p2.x, p2.y],
 				color: b2HexColor.b2_colorWhite,
 			};
-			this.debugDraw.drawSegment(drawSegmentCommand);
+			this.debugDraw.drawLine(drawSegmentCommand);
 
 			const drawPointCommand = {
 				data: [p1.x, p1.y, 5.0],
@@ -413,7 +413,7 @@ export default class Cast extends Sample{
 				data: [p1.x, p1.y, p2.x, p2.y],
 				color: b2HexColor.b2_colorWhite,
 			};
-			this.debugDraw.drawSegment(drawSegmentCommand);
+			this.debugDraw.drawLine(drawSegmentCommand);
 
 			const drawPointCommand = {
 				data: [p1.x, p1.y, 5.0],
