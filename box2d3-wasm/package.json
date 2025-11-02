@@ -6,7 +6,10 @@
   "type": "commonjs",
   "types": "build/dist/es/entry.d.ts",
   "exports": {
-    "import": "./build/dist/es/entry.mjs"
+    "import": {
+      "types": "./build/dist/es/entry.d.ts",
+      "default": "./build/dist/es/entry.mjs"
+    }
   },
   "module": "build/dist/es/entry.mjs",
   "files": [
