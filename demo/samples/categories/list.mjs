@@ -28,5 +28,8 @@ export default {
     "Platformer": "./categories/events/platformer.mjs",
     "Sensor Booked": "./categories/events/sensorBooked.mjs",
     "Sensor Funnel": "./categories/events/sensorFunnel.mjs"
+  },
+  "Shapes": {
+    "Wind": "./categories/shapes/wind.mjs"
   }
 }
