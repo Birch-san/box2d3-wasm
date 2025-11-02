@@ -1611,6 +1611,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_Explode", &b2World_Explode, allow_raw_pointers());
     function("b2World_RebuildStaticTree", &b2World_RebuildStaticTree);
     function("b2World_EnableSpeculative", &b2World_EnableSpeculative);
+    function("b2World_IsValid", &b2World_IsValid);
+
 
     // ------------------------------------------------------------------------
     // b2Shape
@@ -1771,6 +1773,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_GetWorld", &b2Body_GetWorld);
     function("b2Body_GetLocalPointVelocity", &b2Body_GetLocalPointVelocity);
     function("b2Body_GetWorldPointVelocity", &b2Body_GetWorldPointVelocity);
+    function("b2Body_IsValid", &b2Body_IsValid);
 
     // ------------------------------------------------------------------------
     // b2Joint
