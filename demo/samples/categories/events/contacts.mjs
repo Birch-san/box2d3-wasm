@@ -291,7 +291,7 @@ export default class Contacts extends Sample{
 							const offset = new b2Vec2().Copy(normal).MulSV(point.totalNormalImpulse);
 							const p2 = new b2Vec2().Copy(point.point).Add(offset);
 
-							this.debugDraw.drawSegment( {data: [p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorBlueViolet});
+							this.debugDraw.drawLine( {data: [p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorBlueViolet});
 							this.debugDraw.drawPoint( {data: [p1.x, p1.y, 100.0], color:b2HexColor.b2_colorWhite} );
 
 							point.delete();
@@ -331,7 +331,7 @@ export default class Contacts extends Sample{
 							const offset = new b2Vec2().Copy(normal).MulSV(point.totalNormalImpulse);
 							const p2 = new b2Vec2().Copy(point.point).Add(offset);
 
-							this.debugDraw.drawSegment( {data:[p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorYellowGreen} );
+							this.debugDraw.drawLine( {data:[p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorYellowGreen} );
 							this.debugDraw.drawPoint( {data: [p1.x, p1.y, 10.0], color: b2HexColor.b2_colorWhite} );
 
 							point.delete();

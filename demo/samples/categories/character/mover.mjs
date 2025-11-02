@@ -183,14 +183,14 @@ export default class Mover extends Sample {
 				b2CreatePolygonShape(bodyId, shapeDef, box);
 
 				const pivot = new b2Vec2(xBase + 1.0 * i, yBase);
-				jointDef.bodyIdA = prevBodyId;
-				jointDef.bodyIdB = bodyId;
+				jointDef.base.bodyIdA = prevBodyId;
+				jointDef.base.bodyIdB = bodyId;
 
-				let lp = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-				jointDef.localAnchorA.Copy(lp);
+				let lp = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+				jointDef.base.localFrameA.p.Copy(lp);
 				lp.delete();
-				lp = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
-				jointDef.localAnchorB.Copy(lp);
+				lp = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
+				jointDef.base.localFrameB.p.Copy(lp);
 				lp.delete();
 				b2CreateRevoluteJoint(this.m_worldId, jointDef);
 
@@ -201,13 +201,13 @@ export default class Mover extends Sample {
 			}
 
 			const pivot = new b2Vec2(xBase + 1.0 * count, yBase);
-			jointDef.bodyIdA = prevBodyId;
-			jointDef.bodyIdB = this.groundId2;
-			let lp = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-			jointDef.localAnchorA.Copy(lp);
+			jointDef.base.bodyIdA = prevBodyId;
+			jointDef.base.bodyIdB = this.groundId2;
+			let lp = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+			jointDef.base.localFrameA.p.Copy(lp);
 			lp.delete();
-			lp = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
-			jointDef.localAnchorB.Copy(lp);
+			lp = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
+			jointDef.base.localFrameB.p.Copy(lp);
 			lp.delete();
 			b2CreateRevoluteJoint(this.m_worldId, jointDef);
 
@@ -417,7 +417,7 @@ export default class Mover extends Sample {
 
 			const delta = translation;
 
-			this.debugDraw.drawSegment({
+			this.debugDraw.drawLine({
 				data: [
 					origin.x,
 					origin.y,
@@ -448,7 +448,7 @@ export default class Mover extends Sample {
 				});
 			}
 			else {
-				this.debugDraw.drawSegment({
+				this.debugDraw.drawLine({
 					data: [
 						segment.point1.x + delta.x,
 						segment.point1.y + delta.y,
@@ -471,7 +471,7 @@ export default class Mover extends Sample {
 				(1.0 + 2.0 * zeta * omegaH + omegaH * omegaH);
 
 			const delta = new b2Vec2().Copy(translation).MulSV(castResult.fraction);
-			this.debugDraw.drawSegment({
+			this.debugDraw.drawLine({
 				data: [
 					origin.x,
 					origin.y,
@@ -502,7 +502,7 @@ export default class Mover extends Sample {
 				});
 			}
 			else {
-				this.debugDraw.drawSegment({
+				this.debugDraw.drawLine({
 					data: [
 						segment.point1.x + delta.x,
 						segment.point1.y + delta.y,
@@ -561,7 +561,7 @@ export default class Mover extends Sample {
 
 			this.m_totalIterations += result.iterationCount;
 
-			const moverTranslation = new b2Vec2().Copy(result.position).Sub(this.m_transform.p);
+			const moverTranslation = new b2Vec2().Copy(result.translation).Sub(this.m_transform.p);
 
 			const fraction = b2World_CastMover(this.m_worldId, mover, moverTranslation, castFilter);
 
@@ -813,7 +813,7 @@ export default class Mover extends Sample {
 				color: b2HexColor.b2_colorYellow
 			});
 
-			this.debugDraw.drawSegment({
+			this.debugDraw.drawLine({
 				data: [
 					p1.x,
 					p1.y,
@@ -842,7 +842,7 @@ export default class Mover extends Sample {
 			color
 		});
 
-		this.debugDraw.drawSegment({
+		this.debugDraw.drawLine({
 			data: [
 				this.m_transform.p.x,
 				this.m_transform.p.y,

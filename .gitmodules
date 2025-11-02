@@ -4,8 +4,8 @@
 	branch = main
 [submodule "box2cpp"]
 	path = box2cpp
-	url = https://github.com/Birch-san/box2cpp.git
-	branch = birch
+	url = https://github.com/HolyBlackCat/box2cpp.git
+	branch = master
 [submodule "enkiTS"]
 	path = enkiTS
 	url = https://github.com/dougbinks/enkiTS.git

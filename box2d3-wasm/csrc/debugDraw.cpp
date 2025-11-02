@@ -9,7 +9,7 @@ enum DebugDrawCommandType {
     e_circle = 2,
     e_solidCircle = 3,
     e_solidCapsule = 4,
-    e_segment = 5,
+    e_line = 5,
     e_transform = 6,
     e_point = 7,
     e_string = 8,
@@ -35,12 +35,15 @@ public:
         debugDraw.drawJointExtras = false;
         debugDraw.drawBounds = false;
         debugDraw.drawMass = false;
-        debugDraw.drawContacts = false;
+        debugDraw.drawBodyNames = false;
+        debugDraw.drawContactPoints = false;
         debugDraw.drawGraphColors = false;
+        debugDraw.drawContactFeatures = false;
         debugDraw.drawContactNormals = false;
-        debugDraw.drawContactImpulses = false;
-        debugDraw.drawFrictionImpulses = false;
-        debugDraw.useDrawingBounds = false;
+        debugDraw.drawContactForces = false;
+        debugDraw.drawFrictionForces = false;
+        debugDraw.drawIslands = false;
+        debugDraw.drawingBounds = { { -1e30f, -1e30f }, { 1e30f, 1e30f } };
 
         debugDraw.DrawPolygonFcn = [](const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
@@ -133,12 +136,12 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSegmentFcn = [](b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context) {
+        debugDraw.DrawLineFcn = [](b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
             DebugDrawCommand cmd;
-            cmd.commandType = DebugDrawCommandType::e_segment;
+            cmd.commandType = DebugDrawCommandType::e_line;
             cmd.color = color;
             cmd.vertexCount = 2;
             cmd.data[0] = p1.x;
@@ -240,7 +243,7 @@ EMSCRIPTEN_BINDINGS(debug_draw_buffer) {
         .value("e_circle", DebugDrawCommandType::e_circle)
         .value("e_solidCircle", DebugDrawCommandType::e_solidCircle)
         .value("e_solidCapsule", DebugDrawCommandType::e_solidCapsule)
-        .value("e_segment", DebugDrawCommandType::e_segment)
+        .value("e_line", DebugDrawCommandType::e_line)
         .value("e_transform", DebugDrawCommandType::e_transform)
         .value("e_point", DebugDrawCommandType::e_point)
         .value("e_string", DebugDrawCommandType::e_string)

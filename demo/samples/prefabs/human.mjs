@@ -31,7 +31,7 @@ class Human {
 		for ( let i = 0; i < boneId_count; ++i )
 		{
 			if (this.bones[i].jointId){
-				this.box2d.b2DestroyJoint( this.bones[i].jointId );
+				this.box2d.b2DestroyJoint( this.bones[i].jointId, false );
 			}
 		}
 		for ( let i = 0; i < boneId_count; ++i )
@@ -214,6 +214,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		// bodyDef.position.Add(position);
 
 		bodyDef.linearDamping = 0.0;
+		bodyDef.name = "hip";
 		bone.bodyId = b2CreateBody( worldId, bodyDef );
 
 		if ( colorize )
@@ -238,6 +239,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bodyDef.position.Set(0.0, 1.2 * s).Add(position);
 		// bodyDef.position.Add(position);
 		bodyDef.linearDamping = 0.0;
+		bodyDef.name = "torso";
 		// bodyDef.type = b2BodyType.b2_staticBody;
 		bone.bodyId = b2CreateBody(worldId, bodyDef);
 		bone.frictionScale = 0.5;
@@ -256,14 +258,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		const pivot = new b2Vec2(0.0, 1.0 * s).Add(position);
 
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.25 * B2_PI;
 		jointDef.upperAngle = 0.0;
@@ -272,7 +274,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -291,6 +293,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		bodyDef.position.Set(0.0, 1.475 * s);
 		bodyDef.position.Add(position);
 		bodyDef.linearDamping = 0.1;
+		bodyDef.name = "head";
 
 		bone.bodyId = b2CreateBody(worldId, bodyDef);
 		bone.frictionScale = 0.25;
@@ -312,14 +315,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		const pivot = new b2Vec2(0.0, 1.4 * s);
 		pivot.Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.3 * B2_PI;
 		jointDef.upperAngle = 0.1 * B2_PI;
@@ -361,14 +364,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 0.9 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.05 * B2_PI;
 		jointDef.upperAngle = 0.4 * B2_PI;
@@ -428,14 +431,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 0.625 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.5 * B2_PI;
 		jointDef.upperAngle = -0.02 * B2_PI;
@@ -477,14 +480,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 0.9 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.05 * B2_PI;
 		jointDef.upperAngle = 0.4 * B2_PI;
@@ -529,14 +532,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 0.625 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.5 * B2_PI;
 		jointDef.upperAngle = -0.02 * B2_PI;
@@ -578,14 +581,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 1.35 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.1 * B2_PI;
 		jointDef.upperAngle = 0.8 * B2_PI;
@@ -627,14 +630,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 1.1 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.referenceAngle = 0.25 * B2_PI;
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.2 * B2_PI;
@@ -677,14 +680,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 1.35 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.1 * B2_PI;
 		jointDef.upperAngle = 0.8 * B2_PI;
@@ -726,14 +729,14 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		const pivot = new b2Vec2(0.0, 1.1 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
-		jointDef.bodyIdA = human.bones[bone.parentIndex].bodyId;
-		jointDef.bodyIdB = bone.bodyId;
+		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
+		jointDef.base.bodyIdB = bone.bodyId;
 
-		const localPosA = b2Body_GetLocalPoint(jointDef.bodyIdA, pivot);
-		const localPosB = b2Body_GetLocalPoint(jointDef.bodyIdB, pivot);
+		const localPosA = b2Body_GetLocalPoint(jointDef.base.bodyIdA, pivot);
+		const localPosB = b2Body_GetLocalPoint(jointDef.base.bodyIdB, pivot);
 
-		jointDef.localAnchorA.Copy(localPosA);
-		jointDef.localAnchorB.Copy(localPosB);
+		jointDef.base.localFrameA.p.Copy(localPosA);
+		jointDef.base.localFrameB.p.Copy(localPosB);
 		jointDef.referenceAngle = 0.25 * B2_PI;
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.2 * B2_PI;

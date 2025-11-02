@@ -6,8 +6,10 @@ export default class Sample{
 		this.debugDraw = debugDraw;
 		this.camera = camera;
 
-		this.m_groundBodyId = null;
+		this.m_mouseBodyId = null;
 		this.m_mouseJointId = null;
+		this.m_mouseForceScale = 100.0;
+		this.m_mousePoint = new box2d.b2Vec2(0, 0);
 
 		const {
 			b2DefaultWorldDef,
@@ -43,6 +45,11 @@ export default class Sample{
 			b2World_EnableWarmStarting,
 			b2World_EnableContinuous,
 			b2World_Step,
+			b2Joint_IsValid,
+			b2Transform,
+			b2Rot_identity,
+			b2Body_SetTargetTransform,
+			b2DestroyBody,
 		} = this.box2d;
 
 		let timeStep = settings.hertz > 0.0 ? 1.0 / settings.hertz : 0.0;
@@ -58,6 +65,29 @@ export default class Sample{
 				timeStep = 0.0;
 			}
 		}
+
+		if ( this.m_mouseJointId !== null && b2Joint_IsValid( this.m_mouseJointId ) == false )
+		{
+			// The world or attached body was destroyed.
+			this.m_mouseJointId = null;
+
+			if ( this.m_mouseBodyId !== null)
+			{
+				b2DestroyBody( this.m_mouseBodyId );
+				this.m_mouseBodyId = null;
+			}
+		}
+
+		if ( this.m_mouseBodyId !== null && timeStep > 0.0 )
+		{
+			const xf = new b2Transform();
+			xf.p = this.m_mousePoint;
+			xf.q = b2Rot_identity;
+			b2Body_SetTargetTransform( this.m_mouseBodyId, xf, timeStep );
+
+			xf.delete();
+		}
+
 
 		b2World_EnableSleeping( this.m_worldId, settings.enableSleep );
 		b2World_EnableWarmStarting( this.m_worldId, settings.enableWarmStarting );
@@ -110,16 +140,22 @@ export default class Sample{
 			b2DefaultQueryFilter,
 			b2DefaultBodyDef,
 			b2CreateBody,
-			b2DefaultMouseJointDef,
+			b2DefaultMotorJointDef,
 			b2Body_SetAwake,
-			b2CreateMouseJoint,
-			b2Body_GetMass,
+			b2Body_GetMassData,
+			b2Length,
+			b2World_GetGravity,
+			b2Body_GetLocalPoint,
+			b2CreateMotorJoint,
+			b2BodyType
 		} = this.box2d;
 
 		const box = new b2AABB();
 		const d = new b2Vec2(0.001, 0.001);
 		box.lowerBound.Copy(p).Sub(d);
 		box.upperBound.Copy(p).Add(d);
+
+		this.m_mousePoint.Copy(p);
 
 		const queryContext = { point: p, bodyId: null };
 
@@ -132,19 +168,38 @@ export default class Sample{
 
 		if(queryContext.bodyId){
 			const bodyDef = b2DefaultBodyDef();
-			this.m_groundBodyId = b2CreateBody( this.m_worldId, bodyDef );
+			bodyDef.type = b2BodyType.b2_kinematicBody;
+			bodyDef.position.Copy(this.m_mousePoint);
+			bodyDef.enableSleep = false;
+			this.m_mouseBodyId = b2CreateBody( this.m_worldId, bodyDef );
 
-			const mouseDef = b2DefaultMouseJointDef();
-			mouseDef.bodyIdA = this.m_groundBodyId;
-			mouseDef.bodyIdB = queryContext.bodyId;
-			mouseDef.target = queryContext.point;
-			mouseDef.hertz = 5.0;
-			mouseDef.dampingRatio = 0.7;
-			mouseDef.maxForce = 1000.0 * b2Body_GetMass( queryContext.bodyId );
-			this.m_mouseJointId = b2CreateMouseJoint( this.m_worldId, mouseDef );
+			const jointDef = b2DefaultMotorJointDef();
+			jointDef.base.bodyIdA = this.m_mouseBodyId;
+			jointDef.base.bodyIdB = queryContext.bodyId;
+			const localPointB = b2Body_GetLocalPoint( queryContext.bodyId, p )
+			jointDef.base.localFrameB.p.Copy( localPointB );
+			jointDef.linearHertz = 7.5;
+			jointDef.linearDampingRatio = 1.0;
+
+			const massData = b2Body_GetMassData( queryContext.bodyId );
+			const g = b2Length( b2World_GetGravity( this.m_worldId ) );
+			const mg = massData.mass * g;
+
+			jointDef.maxSpringForce = this.m_mouseForceScale * mg;
+
+
+			if ( massData.mass > 0.0 )
+			{
+				const lever = Math.sqrt( massData.rotationalInertia / massData.mass );
+				jointDef.maxVelocityTorque = 0.25 * lever * mg;
+			}
+
+			this.m_mouseJointId = b2CreateMotorJoint( this.m_worldId, jointDef );
 
 			bodyDef.delete();
-			mouseDef.delete();
+			jointDef.delete();
+			localPointB.delete();
+			massData.delete();
 
 			b2Body_SetAwake( queryContext.bodyId, true );
 			return true;
@@ -157,32 +212,26 @@ export default class Sample{
 		} = this.box2d;
 
 		if(this.m_mouseJointId){
-			b2DestroyJoint(this.m_mouseJointId);
+			b2DestroyJoint(this.m_mouseJointId, true);
 			this.m_mouseJointId = null;
 		}
 
-		if(this.m_groundBodyId){
-			b2DestroyBody(this.m_groundBodyId);
-			this.m_groundBodyId = null;
+		if(this.m_mouseBodyId){
+			b2DestroyBody(this.m_mouseBodyId);
+			this.m_mouseBodyId = null;
 		}
 	}
 	MouseMove(p){
 		const {
 			b2Joint_IsValid,
-			b2MouseJoint_SetTarget,
-			b2Joint_GetBodyB,
-			b2Body_SetAwake,
 		} = this.box2d;
 
 		if (this.m_mouseJointId !== null && b2Joint_IsValid( this.m_mouseJointId ) == false ) {
 			// The world or attached body was destroyed.
 			this.m_mouseJointId = null;
 		}
-		if (this.m_mouseJointId !== null) {
-			b2MouseJoint_SetTarget( this.m_mouseJointId, p );
-			const bodyIdB = b2Joint_GetBodyB( this.m_mouseJointId );
-			b2Body_SetAwake( bodyIdB, true );
-		}
+
+		this.m_mousePoint.Copy(p);
 	}
 
 	HandleProfile(DrawString, m_textLine){
@@ -195,7 +244,6 @@ export default class Sample{
 		this.m_totalProfile.pairs += profile.pairs;
 		this.m_totalProfile.collide += profile.collide;
 		this.m_totalProfile.solve += profile.solve;
-		this.m_totalProfile.mergeIslands += profile.mergeIslands;
 		this.m_totalProfile.prepareStages += profile.prepareStages;
 		this.m_totalProfile.solveConstraints += profile.solveConstraints;
 		this.m_totalProfile.prepareConstraints += profile.prepareConstraints;
@@ -206,8 +254,9 @@ export default class Sample{
 		this.m_totalProfile.relaxImpulses += profile.relaxImpulses;
 		this.m_totalProfile.applyRestitution += profile.applyRestitution;
 		this.m_totalProfile.storeImpulses += profile.storeImpulses;
-		this.m_totalProfile.transforms += profile.transforms;
 		this.m_totalProfile.splitIslands += profile.splitIslands;
+		this.m_totalProfile.transforms += profile.transforms;
+		this.m_totalProfile.jointEvents += profile.jointEvents;
 		this.m_totalProfile.hitEvents += profile.hitEvents;
 		this.m_totalProfile.refit += profile.refit;
 		this.m_totalProfile.bullets += profile.bullets;
@@ -218,7 +267,6 @@ export default class Sample{
 		this.m_maxProfile.pairs = Math.max(this.m_maxProfile.pairs, profile.pairs);
 		this.m_maxProfile.collide = Math.max(this.m_maxProfile.collide, profile.collide);
 		this.m_maxProfile.solve = Math.max(this.m_maxProfile.solve, profile.solve);
-		this.m_maxProfile.mergeIslands = Math.max(this.m_maxProfile.mergeIslands, profile.mergeIslands);
 		this.m_maxProfile.prepareStages = Math.max(this.m_maxProfile.prepareStages, profile.prepareStages);
 		this.m_maxProfile.solveConstraints = Math.max(this.m_maxProfile.solveConstraints, profile.solveConstraints);
 		this.m_maxProfile.prepareConstraints = Math.max(this.m_maxProfile.prepareConstraints, profile.prepareConstraints);
@@ -229,8 +277,9 @@ export default class Sample{
 		this.m_maxProfile.relaxImpulses = Math.max(this.m_maxProfile.relaxImpulses, profile.relaxImpulses);
 		this.m_maxProfile.applyRestitution = Math.max(this.m_maxProfile.applyRestitution, profile.applyRestitution);
 		this.m_maxProfile.storeImpulses = Math.max(this.m_maxProfile.storeImpulses, profile.storeImpulses);
-		this.m_maxProfile.transforms = Math.max(this.m_maxProfile.transforms, profile.transforms);
 		this.m_maxProfile.splitIslands = Math.max(this.m_maxProfile.splitIslands, profile.splitIslands);
+		this.m_maxProfile.transforms = Math.max(this.m_maxProfile.transforms, profile.transforms);
+		this.m_maxProfile.jointEvents = Math.max(this.m_maxProfile.jointEvents, profile.jointEvents);
 		this.m_maxProfile.hitEvents = Math.max(this.m_maxProfile.hitEvents, profile.hitEvents);
 		this.m_maxProfile.refit = Math.max(this.m_maxProfile.refit, profile.refit);
 		this.m_maxProfile.bullets = Math.max(this.m_maxProfile.bullets, profile.bullets);
@@ -242,7 +291,6 @@ export default class Sample{
 			this.m_aveProfile.pairs = this.m_totalProfile.pairs / this.m_stepCount;
 			this.m_aveProfile.collide = this.m_totalProfile.collide / this.m_stepCount;
 			this.m_aveProfile.solve = this.m_totalProfile.solve / this.m_stepCount;
-			this.m_aveProfile.mergeIslands = this.m_totalProfile.mergeIslands / this.m_stepCount;
 			this.m_aveProfile.prepareStages = this.m_totalProfile.prepareStages / this.m_stepCount;
 			this.m_aveProfile.solveConstraints = this.m_totalProfile.solveConstraints / this.m_stepCount;
 			this.m_aveProfile.prepareConstraints = this.m_totalProfile.prepareConstraints / this.m_stepCount;
@@ -253,8 +301,9 @@ export default class Sample{
 			this.m_aveProfile.relaxImpulses = this.m_totalProfile.relaxImpulses / this.m_stepCount;
 			this.m_aveProfile.applyRestitution = this.m_totalProfile.applyRestitution / this.m_stepCount;
 			this.m_aveProfile.storeImpulses = this.m_totalProfile.storeImpulses / this.m_stepCount;
-			this.m_aveProfile.transforms = this.m_totalProfile.transforms / this.m_stepCount;
 			this.m_aveProfile.splitIslands = this.m_totalProfile.splitIslands / this.m_stepCount;
+			this.m_aveProfile.transforms = this.m_totalProfile.transforms / this.m_stepCount;
+			this.m_aveProfile.jointEvents = this.m_totalProfile.jointEvents / this.m_stepCount;
 			this.m_aveProfile.hitEvents = this.m_totalProfile.hitEvents / this.m_stepCount;
 			this.m_aveProfile.refit = this.m_totalProfile.refit / this.m_stepCount;
 			this.m_aveProfile.bullets = this.m_totalProfile.bullets / this.m_stepCount;
@@ -265,7 +314,6 @@ export default class Sample{
 			m_textLine = DrawString(5, m_textLine, `pairs [ave] (max) = ${profile.pairs.toFixed(2)} [${this.m_aveProfile.pairs.toFixed(2)}] (${this.m_maxProfile.pairs.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `collide [ave] (max) = ${profile.collide.toFixed(2)} [${this.m_aveProfile.collide.toFixed(2)}] (${this.m_maxProfile.collide.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `solve [ave] (max) = ${profile.solve.toFixed(2)} [${this.m_aveProfile.solve.toFixed(2)}] (${this.m_maxProfile.solve.toFixed(2)})`);
-			m_textLine = DrawString(5, m_textLine, `merge islands [ave] (max) = ${profile.mergeIslands.toFixed(2)} [${this.m_aveProfile.mergeIslands.toFixed(2)}] (${this.m_maxProfile.mergeIslands.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `prepare tasks [ave] (max) = ${profile.prepareStages.toFixed(2)} [${this.m_aveProfile.prepareStages.toFixed(2)}] (${this.m_maxProfile.prepareStages.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `solve constraints [ave] (max) = ${profile.solveConstraints.toFixed(2)} [${this.m_aveProfile.solveConstraints.toFixed(2)}] (${this.m_maxProfile.solveConstraints.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `prepare constraints [ave] (max) = ${profile.prepareConstraints.toFixed(2)} [${this.m_aveProfile.prepareConstraints.toFixed(2)}] (${this.m_maxProfile.prepareConstraints.toFixed(2)})`);
@@ -278,6 +326,7 @@ export default class Sample{
 			m_textLine = DrawString(5, m_textLine, `store impulses [ave] (max) = ${profile.storeImpulses.toFixed(2)} [${this.m_aveProfile.storeImpulses.toFixed(2)}] (${this.m_maxProfile.storeImpulses.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `split islands [ave] (max) = ${profile.splitIslands.toFixed(2)} [${this.m_aveProfile.splitIslands.toFixed(2)}] (${this.m_maxProfile.splitIslands.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `update transforms [ave] (max) = ${profile.transforms.toFixed(2)} [${this.m_aveProfile.transforms.toFixed(2)}] (${this.m_maxProfile.transforms.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `joint events [ave] (max) = ${profile.jointEvents.toFixed(2)} [${this.m_aveProfile.jointEvents.toFixed(2)}] (${this.m_maxProfile.jointEvents.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `hit events [ave] (max) = ${profile.hitEvents.toFixed(2)} [${this.m_aveProfile.hitEvents.toFixed(2)}] (${this.m_maxProfile.hitEvents.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `refit BVH [ave] (max) = ${profile.refit.toFixed(2)} [${this.m_aveProfile.refit.toFixed(2)}] (${this.m_maxProfile.refit.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `sleep islands [ave] (max) = ${profile.sleepIslands.toFixed(2)} [${this.m_aveProfile.sleepIslands.toFixed(2)}] (${this.m_maxProfile.sleepIslands.toFixed(2)})`);
@@ -303,6 +352,8 @@ export default class Sample{
 
 		this.m_taskSystem?.ClearTasks();
 		this.m_taskSystem?.delete();
+
+		this.m_mousePoint.delete();
 	}
 }
 
@@ -311,7 +362,6 @@ const profileInterface = {
 	pairs: 0,
 	collide: 0,
 	solve: 0,
-	mergeIslands: 0,
 	prepareStages: 0,
 	solveConstraints: 0,
 	prepareConstraints: 0,
@@ -322,8 +372,10 @@ const profileInterface = {
 	relaxImpulses: 0,
 	applyRestitution: 0,
 	storeImpulses: 0,
-	transforms: 0,
 	splitIslands: 0,
+	transforms: 0,
+	sensorHits: 0,
+	jointEvents: 0,
 	hitEvents: 0,
 	refit: 0,
 	bullets: 0,

@@ -88,11 +88,12 @@ export default class Spinner extends Sample{
 			b2CreatePolygonShape( spinnerId, shapeDef, box );
 
 			const motorSpeed = 5.0;
-			const maxMotorTorque = 40000.0;
+			// const maxMotorTorque = 40000.0;
+			const maxMotorTorque = Number.MAX_VALUE;
 			const jointDef = b2DefaultRevoluteJointDef();
-			jointDef.bodyIdA = groundId;
-			jointDef.bodyIdB = spinnerId;
-			jointDef.localAnchorA.Copy(bodyDef.position);
+			jointDef.base.bodyIdA = groundId;
+			jointDef.base.bodyIdB = spinnerId;
+			jointDef.base.localFrameA.p.Copy(bodyDef.position);
 			jointDef.enableMotor = true;
 			jointDef.motorSpeed = motorSpeed;
 			jointDef.maxMotorTorque = maxMotorTorque;

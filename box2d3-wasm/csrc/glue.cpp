@@ -154,12 +154,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor<const b2WorldDef&>()
         .property("gravity", &b2WorldDef::gravity, return_value_policy::reference())
         .property("restitutionThreshold", &b2WorldDef::restitutionThreshold)
-        .property("maxContactPushSpeed", &b2WorldDef::maxContactPushSpeed)
         .property("hitEventThreshold", &b2WorldDef::hitEventThreshold)
         .property("contactHertz", &b2WorldDef::contactHertz)
         .property("contactDampingRatio", &b2WorldDef::contactDampingRatio)
-        .property("jointHertz", &b2WorldDef::jointHertz)
-        .property("jointDampingRatio", &b2WorldDef::jointDampingRatio)
         .property("maximumLinearSpeed", &b2WorldDef::maximumLinearSpeed)
         .property("enableSleep", &b2WorldDef::enableSleep)
         .property("enableContinuous", &b2WorldDef::enableContinuous)
@@ -308,7 +305,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<b2ContactBeginTouchEvent>("b2ContactBeginTouchEvent")
         .property("shapeIdA", &b2ContactBeginTouchEvent::shapeIdA)
         .property("shapeIdB", &b2ContactBeginTouchEvent::shapeIdB)
-        .property("manifold", &b2ContactBeginTouchEvent::manifold, return_value_policy::reference())
     ;
 
     class_<b2ContactData>("b2ContactData")
@@ -332,11 +328,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2Profile>("b2Profile")
         .constructor()
+        .property("step", &b2Profile::step)
         .property("pairs", &b2Profile::pairs)
         .property("collide", &b2Profile::collide)
-        .property("step", &b2Profile::step)
         .property("solve", &b2Profile::solve)
-        .property("mergeIslands", &b2Profile::mergeIslands)
         .property("prepareStages", &b2Profile::prepareStages)
         .property("solveConstraints", &b2Profile::solveConstraints)
         .property("prepareConstraints", &b2Profile::prepareConstraints)
@@ -349,6 +344,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("storeImpulses", &b2Profile::storeImpulses)
         .property("splitIslands", &b2Profile::splitIslands)
         .property("transforms", &b2Profile::transforms)
+        .property("sensorHits", &b2Profile::sensorHits)
+        .property("jointEvents", &b2Profile::jointEvents)
         .property("hitEvents", &b2Profile::hitEvents)
         .property("refit", &b2Profile::refit)
         .property("bullets", &b2Profile::bullets)
@@ -669,10 +666,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor<>()
         .function("Destroy", &Chain::Destroy)
         .function("IsValid", &Chain::IsValid)
-        .function("SetFriction", &Chain::SetFriction)
-        .function("GetFriction", &Chain::GetFriction)
-        .function("SetRestitution", &Chain::SetRestitution)
-        .function("GetRestitution", &Chain::GetRestitution)
         .function("GetSegmentCount", &Chain::GetSegmentCount)
         .function("GetSegments", +[](const Chain& self) {
             int count = self.GetSegmentCount();
@@ -770,8 +763,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("AreHitEventsEnabled", &Shape::AreHitEventsEnabled)
         .function("IsSensor", &Shape::IsSensor)
         .function("GetSensorCapacity", &Shape::GetSensorCapacity)
-        .function("GetSensorOverlaps", +[](const Shape& shape) {
-            return getArrayWrapper<b2ShapeId>(shape, &Shape::GetSensorCapacity, &Shape::GetSensorOverlaps);
+        .function("GetSensorData", +[](const Shape& shape) {
+            return getArrayWrapper<b2ShapeId>(shape, &Shape::GetSensorCapacity, &Shape::GetSensorData);
         })
         .function("EnablePreSolveEvents", &Shape::EnablePreSolveEvents)
         .function("ArePreSolveEventsEnabled", &Shape::ArePreSolveEventsEnabled)
@@ -816,6 +809,13 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .value("b2_bodyTypeCount", b2_bodyTypeCount)
         ;
 
+    class_<b2MotionLocks>("b2MotionLocks")
+        .constructor()
+        .property("linearX", &b2MotionLocks::linearX)
+        .property("linearY", &b2MotionLocks::linearY)
+        .property("angularZ", &b2MotionLocks::angularZ)
+    ;
+
     class_<b2BodyDef>("b2BodyDef")
         .constructor()
         .constructor<const b2BodyDef&>()
@@ -830,11 +830,11 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("sleepThreshold", &b2BodyDef::sleepThreshold)
         .property("enableSleep", &b2BodyDef::enableSleep)
         .property("isAwake", &b2BodyDef::isAwake)
-        .property("fixedRotation", &b2BodyDef::fixedRotation)
         .property("isBullet", &b2BodyDef::isBullet)
         .property("isEnabled", &b2BodyDef::isEnabled)
         .property("allowFastRotation", &b2BodyDef::allowFastRotation)
         .property("internalValue", &b2BodyDef::internalValue)
+        .property("motionLocks", &b2BodyDef::motionLocks, return_value_policy::reference())
         ;
 
     class_<BasicBodyInterface<Body, false>>("BasicBodyInterface");
@@ -900,8 +900,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             return getArrayWrapper<b2ContactData>(body, &Body::GetContactCapacity, &Body::GetContactData);
         })
         .function("EnableContactEvents", &Body::EnableContactEvents)
-        .function("SetFixedRotation", &Body::SetFixedRotation)
-        .function("IsFixedRotation", &Body::IsFixedRotation)
         .function("SetGravityScale", &Body::SetGravityScale)
         .function("GetGravityScale", &Body::GetGravityScale)
         .function("EnableHitEvents", &Body::EnableHitEvents)
@@ -933,6 +931,12 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetWorldCenterOfMass", &Body::GetWorldCenterOfMass)
         .function("GetWorldPoint", &Body::GetWorldPoint)
         .function("GetWorldVector", &Body::GetWorldVector)
+        .function("SetName", +[](Body& body, const std::string& name) {
+            body.SetName(name.c_str());
+        })
+        .function("GetName", +[](const Body& body) -> std::string {
+            return std::string(body.GetName());
+        })
         ;
 
     // ------------------------------------------------------------------------
@@ -941,7 +945,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     enum_<b2JointType>("b2JointType")
         .value("b2_distanceJoint", b2JointType::b2_distanceJoint)
         .value("b2_motorJoint", b2JointType::b2_motorJoint)
-        .value("b2_mouseJoint", b2JointType::b2_mouseJoint)
         .value("b2_filterJoint", b2JointType::b2_filterJoint)
         .value("b2_prismaticJoint", b2JointType::b2_prismaticJoint)
         .value("b2_revoluteJoint", b2JointType::b2_revoluteJoint)
@@ -955,6 +958,15 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<b2::MaybeConstChainRef<true>>("ChainConstRef");
     class_<BasicJointInterface<Joint, false>>("BasicJointInterface");
 
+    class_<b2JointDef>("b2JointDef")
+        .constructor()
+        .property("bodyIdA", &b2JointDef::bodyIdA)
+        .property("bodyIdB", &b2JointDef::bodyIdB)
+        .property("localFrameA", &b2JointDef::localFrameA, return_value_policy::reference())
+        .property("localFrameB", &b2JointDef::localFrameB, return_value_policy::reference())
+        .property("collideConnected", &b2JointDef::collideConnected)
+    ;
+
     class_<Joint, base<BasicJointInterface<Joint, false>>>("Joint")
         .constructor<>()
         .function("Destroy", &Joint::Destroy)
@@ -965,8 +977,12 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetCollideConnected", &Joint::GetCollideConnected)
         .function("GetConstraintForce", &Joint::GetConstraintForce)
         .function("GetConstraintTorque", &Joint::GetConstraintTorque)
-        .function("GetLocalAnchorA", &Joint::GetLocalAnchorA, return_value_policy::reference())
-        .function("GetLocalAnchorB", &Joint::GetLocalAnchorB, return_value_policy::reference())
+        .function("GetLocalFrameA", &Joint::GetLocalFrameA, return_value_policy::reference())
+        .function("GetLocalFrameB", &Joint::GetLocalFrameB, return_value_policy::reference())
+
+
+
+
         .function("GetType", &Joint::GetType)
         .function("WakeBodies", &Joint::WakeBodies)
         .function("GetWorld", select_overload<WorldRef()>(&Joint::GetWorld))
@@ -981,8 +997,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<b2::MaybeConstDistanceJointRef<true>>("DistanceJointConstRef");
     class_<b2::MaybeConstMotorJointRef<false>>("MotorJointRef");
     class_<b2::MaybeConstMotorJointRef<true>>("MotorJointConstRef");
-    class_<b2::MaybeConstMouseJointRef<false>>("MouseJointRef");
-    class_<b2::MaybeConstMouseJointRef<true>>("MouseJointConstRef");
     class_<b2::MaybeConstPrismaticJointRef<false>>("PrismaticJointRef");
     class_<b2::MaybeConstPrismaticJointRef<true>>("PrismaticJointConstRef");
     class_<b2::MaybeConstRevoluteJointRef<false>>("RevoluteJointRef");
@@ -994,7 +1008,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<BasicDistanceJointInterface<DistanceJoint, false>>("BasicDistanceJointInterface");
     class_<BasicMotorJointInterface<MotorJoint, false>>("BasicMotorJointInterface");
-    class_<BasicMouseJointInterface<MouseJoint, false>>("BasicMouseJointInterface");
     class_<BasicPrismaticJointInterface<PrismaticJoint, false>>("BasicPrismaticJointInterface");
     class_<BasicRevoluteJointInterface<RevoluteJoint, false>>("BasicRevoluteJointInterface");
     class_<BasicWeldJointInterface<WeldJoint, false>>("BasicWeldJointInterface");
@@ -1009,10 +1022,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<b2DistanceJointDef>("b2DistanceJointDef")
         .constructor()
         .constructor<const b2DistanceJointDef&>()
-        .property("bodyIdA", &b2DistanceJointDef::bodyIdA)
-        .property("bodyIdB", &b2DistanceJointDef::bodyIdB)
-        .property("localAnchorA", &b2DistanceJointDef::localAnchorA, return_value_policy::reference())
-        .property("localAnchorB", &b2DistanceJointDef::localAnchorB, return_value_policy::reference())
+        .property("base", &b2DistanceJointDef::base, return_value_policy::reference())
         .property("length", &b2DistanceJointDef::length)
         .property("enableSpring", &b2DistanceJointDef::enableSpring)
         .property("hertz", &b2DistanceJointDef::hertz)
@@ -1023,70 +1033,51 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("enableMotor", &b2DistanceJointDef::enableMotor)
         .property("maxMotorForce", &b2DistanceJointDef::maxMotorForce)
         .property("motorSpeed", &b2DistanceJointDef::motorSpeed)
-        .property("collideConnected", &b2DistanceJointDef::collideConnected)
     ;
 
     class_<b2MotorJointDef>("b2MotorJointDef")
         .constructor()
         .constructor<const b2MotorJointDef&>()
-        .property("bodyIdA", &b2MotorJointDef::bodyIdA)
-        .property("bodyIdB", &b2MotorJointDef::bodyIdB)
-        .property("linearOffset", &b2MotorJointDef::linearOffset)
-        .property("angularOffset", &b2MotorJointDef::angularOffset)
-        .property("maxForce", &b2MotorJointDef::maxForce)
-        .property("maxTorque", &b2MotorJointDef::maxTorque)
-        .property("correctionFactor", &b2MotorJointDef::correctionFactor)
-        .property("collideConnected", &b2MotorJointDef::collideConnected)
-    ;
-
-    class_<b2MouseJointDef>("b2MouseJointDef")
-        .constructor()
-        .constructor<const b2MouseJointDef&>()
-        .property("bodyIdA", &b2MouseJointDef::bodyIdA)
-        .property("bodyIdB", &b2MouseJointDef::bodyIdB)
-        .property("target", &b2MouseJointDef::target)
-        .property("hertz", &b2MouseJointDef::hertz)
-        .property("dampingRatio", &b2MouseJointDef::dampingRatio)
-        .property("maxForce", &b2MouseJointDef::maxForce)
-        .property("collideConnected", &b2MouseJointDef::collideConnected)
+        .property("base", &b2MotorJointDef::base, return_value_policy::reference())
+        .property("linearVelocity", &b2MotorJointDef::linearVelocity)
+        .property("maxVelocityForce", &b2MotorJointDef::maxVelocityForce)
+        .property("angularVelocity", &b2MotorJointDef::angularVelocity)
+        .property("maxVelocityTorque", &b2MotorJointDef::maxVelocityTorque)
+        .property("linearHertz", &b2MotorJointDef::linearHertz)
+        .property("linearDampingRatio", &b2MotorJointDef::linearDampingRatio)
+        .property("maxSpringForce", &b2MotorJointDef::maxSpringForce)
+        .property("angularHertz", &b2MotorJointDef::angularHertz)
+        .property("angularDampingRatio", &b2MotorJointDef::angularDampingRatio)
+        .property("maxSpringTorque", &b2MotorJointDef::maxSpringTorque)
     ;
 
     class_<b2FilterJointDef>("b2FilterJointDef")
         .constructor()
         .constructor<const b2FilterJointDef&>()
-        .property("bodyIdA", &b2FilterJointDef::bodyIdA)
-        .property("bodyIdB", &b2FilterJointDef::bodyIdB)
+        .property("base", &b2FilterJointDef::base, return_value_policy::reference())
     ;
 
     class_<b2PrismaticJointDef>("b2PrismaticJointDef")
         .constructor()
         .constructor<const b2PrismaticJointDef&>()
-        .property("bodyIdA", &b2PrismaticJointDef::bodyIdA)
-        .property("bodyIdB", &b2PrismaticJointDef::bodyIdB)
-        .property("localAnchorA", &b2PrismaticJointDef::localAnchorA, return_value_policy::reference())
-        .property("localAnchorB", &b2PrismaticJointDef::localAnchorB, return_value_policy::reference())
-        .property("localAxisA", &b2PrismaticJointDef::localAxisA)
-        .property("referenceAngle", &b2PrismaticJointDef::referenceAngle)
+        .property("base", &b2PrismaticJointDef::base, return_value_policy::reference())
         .property("enableSpring", &b2PrismaticJointDef::enableSpring)
         .property("hertz", &b2PrismaticJointDef::hertz)
         .property("dampingRatio", &b2PrismaticJointDef::dampingRatio)
+        .property("targetTranslation", &b2PrismaticJointDef::targetTranslation)
         .property("enableLimit", &b2PrismaticJointDef::enableLimit)
         .property("lowerTranslation", &b2PrismaticJointDef::lowerTranslation)
         .property("upperTranslation", &b2PrismaticJointDef::upperTranslation)
         .property("enableMotor", &b2PrismaticJointDef::enableMotor)
         .property("maxMotorForce", &b2PrismaticJointDef::maxMotorForce)
         .property("motorSpeed", &b2PrismaticJointDef::motorSpeed)
-        .property("collideConnected", &b2PrismaticJointDef::collideConnected)
     ;
 
     class_<b2RevoluteJointDef>("b2RevoluteJointDef")
         .constructor()
         .constructor<const b2RevoluteJointDef&>()
-        .property("bodyIdA", &b2RevoluteJointDef::bodyIdA)
-        .property("bodyIdB", &b2RevoluteJointDef::bodyIdB)
-        .property("localAnchorA", &b2RevoluteJointDef::localAnchorA, return_value_policy::reference())
-        .property("localAnchorB", &b2RevoluteJointDef::localAnchorB, return_value_policy::reference())
-        .property("referenceAngle", &b2RevoluteJointDef::referenceAngle)
+        .property("base", &b2RevoluteJointDef::base, return_value_policy::reference())
+        .property("targetAngle", &b2RevoluteJointDef::targetAngle)
         .property("enableSpring", &b2RevoluteJointDef::enableSpring)
         .property("hertz", &b2RevoluteJointDef::hertz)
         .property("dampingRatio", &b2RevoluteJointDef::dampingRatio)
@@ -1096,33 +1087,22 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("enableMotor", &b2RevoluteJointDef::enableMotor)
         .property("maxMotorTorque", &b2RevoluteJointDef::maxMotorTorque)
         .property("motorSpeed", &b2RevoluteJointDef::motorSpeed)
-        .property("drawSize", &b2RevoluteJointDef::drawSize)
-        .property("collideConnected", &b2RevoluteJointDef::collideConnected)
     ;
 
     class_<b2WeldJointDef>("b2WeldJointDef")
         .constructor()
         .constructor<const b2WeldJointDef&>()
-        .property("bodyIdA", &b2WeldJointDef::bodyIdA)
-        .property("bodyIdB", &b2WeldJointDef::bodyIdB)
-        .property("localAnchorA", &b2WeldJointDef::localAnchorA, return_value_policy::reference())
-        .property("localAnchorB", &b2WeldJointDef::localAnchorB, return_value_policy::reference())
-        .property("referenceAngle", &b2WeldJointDef::referenceAngle)
+        .property("base", &b2WeldJointDef::base, return_value_policy::reference())
         .property("linearHertz", &b2WeldJointDef::linearHertz)
         .property("angularHertz", &b2WeldJointDef::angularHertz)
         .property("linearDampingRatio", &b2WeldJointDef::linearDampingRatio)
         .property("angularDampingRatio", &b2WeldJointDef::angularDampingRatio)
-        .property("collideConnected", &b2WeldJointDef::collideConnected)
     ;
 
     class_<b2WheelJointDef>("b2WheelJointDef")
         .constructor()
         .constructor<const b2WheelJointDef&>()
-        .property("bodyIdA", &b2WheelJointDef::bodyIdA)
-        .property("bodyIdB", &b2WheelJointDef::bodyIdB)
-        .property("localAnchorA", &b2WheelJointDef::localAnchorA, return_value_policy::reference())
-        .property("localAnchorB", &b2WheelJointDef::localAnchorB, return_value_policy::reference())
-        .property("localAxisA", &b2WheelJointDef::localAxisA, return_value_policy::reference())
+        .property("base", &b2WheelJointDef::base, return_value_policy::reference())
         .property("enableSpring", &b2WheelJointDef::enableSpring)
         .property("hertz", &b2WheelJointDef::hertz)
         .property("dampingRatio", &b2WheelJointDef::dampingRatio)
@@ -1132,7 +1112,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("enableMotor", &b2WheelJointDef::enableMotor)
         .property("maxMotorTorque", &b2WheelJointDef::maxMotorTorque)
         .property("motorSpeed", &b2WheelJointDef::motorSpeed)
-        .property("collideConnected", &b2WheelJointDef::collideConnected)
     ;
 
     class_<DistanceJoint, base<BasicDistanceJointInterface<DistanceJoint, false>>>("DistanceJoint")
@@ -1161,27 +1140,27 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<MotorJoint, base<BasicMotorJointInterface<MotorJoint, false>>>("MotorJoint")
         .constructor<>()
-        .function("SetAngularOffset", &MotorJoint::SetAngularOffset)
-        .function("GetAngularOffset", &MotorJoint::GetAngularOffset)
-        .function("SetCorrectionFactor", &MotorJoint::SetCorrectionFactor)
-        .function("GetCorrectionFactor", &MotorJoint::GetCorrectionFactor)
-        .function("SetLinearOffset", &MotorJoint::SetLinearOffset)
-        .function("GetLinearOffset", &MotorJoint::GetLinearOffset)
-        .function("SetMaxForce", &MotorJoint::SetMaxForce)
-        .function("GetMaxForce", &MotorJoint::GetMaxForce)
-        .function("SetMaxTorque", &MotorJoint::SetMaxTorque)
-        .function("GetMaxTorque", &MotorJoint::GetMaxTorque);
-
-    class_<MouseJoint, base<BasicMouseJointInterface<MouseJoint, false>>>("MouseJoint")
-        .constructor<>()
-        .function("SetMaxForce", &MouseJoint::SetMaxForce)
-        .function("GetMaxForce", &MouseJoint::GetMaxForce)
-        .function("SetSpringDampingRatio", &MouseJoint::SetSpringDampingRatio)
-        .function("GetSpringDampingRatio", &MouseJoint::GetSpringDampingRatio)
-        .function("SetSpringHertz", &MouseJoint::SetSpringHertz)
-        .function("GetSpringHertz", &MouseJoint::GetSpringHertz)
-        .function("SetTarget", &MouseJoint::SetTarget)
-        .function("GetTarget", &MouseJoint::GetTarget);
+        .function("SetAngularDampingRatio", &MotorJoint::SetAngularDampingRatio)
+        .function("GetAngularDampingRatio", &MotorJoint::GetAngularDampingRatio)
+        .function("SetAngularHertz", &MotorJoint::SetAngularHertz)
+        .function("GetAngularHertz", &MotorJoint::GetAngularHertz)
+        .function("SetAngularVelocity", &MotorJoint::SetAngularVelocity)
+        .function("GetAngularVelocity", &MotorJoint::GetAngularVelocity)
+        .function("SetLinearDampingRatio", &MotorJoint::SetLinearDampingRatio)
+        .function("GetLinearDampingRatio", &MotorJoint::GetLinearDampingRatio)
+        .function("SetLinearHertz", &MotorJoint::SetLinearHertz)
+        .function("GetLinearHertz", &MotorJoint::GetLinearHertz)
+        .function("SetLinearVelocity", &MotorJoint::SetLinearVelocity)
+        .function("GetLinearVelocity", &MotorJoint::GetLinearVelocity)
+        .function("SetMaxSpringForce", &MotorJoint::SetMaxSpringForce)
+        .function("GetMaxSpringForce", &MotorJoint::GetMaxSpringForce)
+        .function("SetMaxSpringTorque", &MotorJoint::SetMaxSpringTorque)
+        .function("GetMaxSpringTorque", &MotorJoint::GetMaxSpringTorque)
+        .function("SetMaxVelocityForce", &MotorJoint::SetMaxVelocityForce)
+        .function("GetMaxVelocityForce", &MotorJoint::GetMaxVelocityForce)
+        .function("SetMaxVelocityTorque", &MotorJoint::SetMaxVelocityTorque)
+        .function("GetMaxVelocityTorque", &MotorJoint::GetMaxVelocityTorque)
+    ;
 
     class_<PrismaticJoint, base<BasicPrismaticJointInterface<PrismaticJoint, false>>>("PrismaticJoint")
         .constructor<>()
@@ -1238,8 +1217,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetLinearDampingRatio", &WeldJoint::GetLinearDampingRatio)
         .function("SetLinearHertz", &WeldJoint::SetLinearHertz)
         .function("GetLinearHertz", &WeldJoint::GetLinearHertz)
-        .function("SetReferenceAngle", &WeldJoint::SetReferenceAngle)
-        .function("GetReferenceAngle", &WeldJoint::GetReferenceAngle);
+    ;
 
     class_<WheelJoint, base<BasicWheelJointInterface<WheelJoint, false>>>("WheelJoint")
         .constructor<>()
@@ -1269,18 +1247,21 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<b2DebugDraw>("b2DebugDraw")
         .constructor()
         .constructor<const b2DebugDraw&>()
-        .property("drawingBounds", &b2DebugDraw::drawingBounds)
-        .property("useDrawingBounds", &b2DebugDraw::useDrawingBounds)
+        .property("forceScale", &b2DebugDraw::forceScale)
+        .property("jointScale", &b2DebugDraw::jointScale)
         .property("drawShapes", &b2DebugDraw::drawShapes)
         .property("drawJoints", &b2DebugDraw::drawJoints)
         .property("drawJointExtras", &b2DebugDraw::drawJointExtras)
         .property("drawBounds", &b2DebugDraw::drawBounds)
         .property("drawMass", &b2DebugDraw::drawMass)
-        .property("drawContacts", &b2DebugDraw::drawContacts)
+        .property("drawBodyNames", &b2DebugDraw::drawBodyNames)
+        .property("drawContactPoints", &b2DebugDraw::drawContactPoints)
         .property("drawGraphColors", &b2DebugDraw::drawGraphColors)
+        .property("drawContactFeatures", &b2DebugDraw::drawContactFeatures)
         .property("drawContactNormals", &b2DebugDraw::drawContactNormals)
-        .property("drawContactImpulses", &b2DebugDraw::drawContactImpulses)
-        .property("drawFrictionImpulses", &b2DebugDraw::drawFrictionImpulses)
+        .property("drawContactForces", &b2DebugDraw::drawContactForces)
+        .property("drawFrictionForces", &b2DebugDraw::drawFrictionForces)
+        .property("drawIslands", &b2DebugDraw::drawIslands)
     ;
 
     function("b2DefaultDebugDraw", &b2DefaultDebugDraw);
@@ -1444,7 +1425,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_SetHitEventThreshold", &b2World_SetHitEventThreshold);
     function("b2World_GetHitEventThreshold", &b2World_GetHitEventThreshold);
     function("b2World_SetContactTuning", &b2World_SetContactTuning);
-    function("b2World_SetJointTuning", &b2World_SetJointTuning);
     function("b2World_SetMaximumLinearSpeed", &b2World_SetMaximumLinearSpeed);
     function("b2World_GetMaximumLinearSpeed", &b2World_GetMaximumLinearSpeed);
     function("b2World_GetProfile", &b2World_GetProfile);
@@ -1455,7 +1435,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_SetFrictionCallback", +[](b2WorldId worldId, emscripten::val callback) {
         g_frictionCallback = std::make_unique<emscripten::val>(callback);
 
-        b2World_SetFrictionCallback(worldId, [](float frictionA, int userMaterialIdA, float frictionB, int userMaterialIdB) -> float {
+        b2World_SetFrictionCallback(worldId, [](float frictionA, uint64_t userMaterialIdA, float frictionB, uint64_t userMaterialIdB) -> float {
             return (*g_frictionCallback)(frictionA, userMaterialIdA, frictionB, userMaterialIdB).as<float>();
         });
     });
@@ -1463,7 +1443,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_SetRestitutionCallback", +[](b2WorldId worldId, emscripten::val callback) {
         g_restitutionCallback = std::make_unique<emscripten::val>(callback);
 
-        b2World_SetRestitutionCallback(worldId, [](float restitutionA, int userMaterialIdA, float restitutionB, int userMaterialIdB) -> float {
+        b2World_SetRestitutionCallback(worldId, [](float restitutionA, uint64_t userMaterialIdA, float restitutionB, uint64_t userMaterialIdB) -> float {
             return (*g_restitutionCallback)(restitutionA, userMaterialIdA, restitutionB, userMaterialIdB).as<float>();
         });
     });
@@ -1497,7 +1477,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
 
     class_<b2PlaneSolverResult>("b2PlaneSolverResult")
         .constructor()
-        .property("position", &b2PlaneSolverResult::position, return_value_policy::reference())
+        .property("translation", &b2PlaneSolverResult::translation, return_value_policy::reference())
         .property("iterationCount", &b2PlaneSolverResult::iterationCount);
 
     function("b2SolvePlanes", +[](const b2Vec2& position, const emscripten::val& collisionPlanes) -> b2PlaneSolverResult {
@@ -1604,12 +1584,16 @@ EMSCRIPTEN_BINDINGS(box2d) {
         +[](b2WorldId worldId, emscripten::val callback) {
             auto callbackPtr = new emscripten::val(callback);
             b2World_SetPreSolveCallback(worldId,
-                +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* userData) -> bool {
+                // The C++ lambda signature is updated here
+                +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Vec2 point, b2Vec2 normal, void* userData) -> bool {
                     auto callback = *reinterpret_cast<emscripten::val*>(userData);
+                    
+                    // The arguments passed to your JS callback are also updated
                     return callback(
                         emscripten::val(shapeIdA),
                         emscripten::val(shapeIdB),
-                        emscripten::val(manifold)
+                        emscripten::val(point),
+                        emscripten::val(normal)
                     ).as<bool>();
                 },
                 callbackPtr
@@ -1627,6 +1611,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_Explode", &b2World_Explode, allow_raw_pointers());
     function("b2World_RebuildStaticTree", &b2World_RebuildStaticTree);
     function("b2World_EnableSpeculative", &b2World_EnableSpeculative);
+    function("b2World_IsValid", &b2World_IsValid);
+
 
     // ------------------------------------------------------------------------
     // b2Shape
@@ -1678,9 +1664,9 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return result;
     }, allow_raw_pointers());
     function("b2Shape_GetSensorCapacity", &b2Shape_GetSensorCapacity);
-    function("b2Shape_GetSensorOverlaps", +[](b2ShapeId shapeId, int capacity) -> emscripten::val {
+    function("b2Shape_GetSensorData", +[](b2ShapeId shapeId, int capacity) -> emscripten::val {
         std::vector<b2ShapeId> overlappedShapes(capacity);
-        int count = b2Shape_GetSensorOverlaps(shapeId, overlappedShapes.data(), capacity);
+        int count = b2Shape_GetSensorData(shapeId, overlappedShapes.data(), capacity);
         auto result = emscripten::val::array();
         for (int i = 0; i < count; i++) {
             result.set(i, overlappedShapes[i]);
@@ -1688,7 +1674,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return result;
     }, allow_raw_pointers());
     function("b2Shape_GetAABB", &b2Shape_GetAABB);
-    function("b2Shape_GetMassData", &b2Shape_GetMassData);
+    function("b2Shape_ComputeMassData", &b2Shape_ComputeMassData);
     function("b2Shape_GetClosestPoint", &b2Shape_GetClosestPoint);
 
     // ------------------------------------------------------------------------
@@ -1741,8 +1727,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_EnableSleep", &b2Body_EnableSleep);
     function("b2Body_SetSleepThreshold", &b2Body_SetSleepThreshold);
     function("b2Body_GetSleepThreshold", &b2Body_GetSleepThreshold);
-    function("b2Body_SetFixedRotation", &b2Body_SetFixedRotation);
-    function("b2Body_IsFixedRotation", &b2Body_IsFixedRotation);
     function("b2Body_SetBullet", &b2Body_SetBullet);
     function("b2Body_IsBullet", &b2Body_IsBullet);
     function("b2Body_GetPointer", +[](b2BodyId bodyId) -> emscripten::val {
@@ -1789,6 +1773,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_GetWorld", &b2Body_GetWorld);
     function("b2Body_GetLocalPointVelocity", &b2Body_GetLocalPointVelocity);
     function("b2Body_GetWorldPointVelocity", &b2Body_GetWorldPointVelocity);
+    function("b2Body_IsValid", &b2Body_IsValid);
 
     // ------------------------------------------------------------------------
     // b2Joint
@@ -1798,8 +1783,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2CreateDistanceJoint", &b2CreateDistanceJoint, allow_raw_pointers());
     function("b2DefaultMotorJointDef", &b2DefaultMotorJointDef);
     function("b2CreateMotorJoint", &b2CreateMotorJoint, allow_raw_pointers());
-    function("b2DefaultMouseJointDef", &b2DefaultMouseJointDef);
-    function("b2CreateMouseJoint", &b2CreateMouseJoint, allow_raw_pointers());
     function("b2DefaultFilterJointDef", &b2DefaultFilterJointDef);
     function("b2CreateFilterJoint", &b2CreateFilterJoint, allow_raw_pointers());
     function("b2DefaultPrismaticJointDef", &b2DefaultPrismaticJointDef);
@@ -1816,8 +1799,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Joint_GetBodyA", &b2Joint_GetBodyA);
     function("b2Joint_GetBodyB", &b2Joint_GetBodyB);
     function("b2Joint_GetWorld", &b2Joint_GetWorld);
-    function("b2Joint_GetLocalAnchorA", &b2Joint_GetLocalAnchorA);
-    function("b2Joint_GetLocalAnchorB", &b2Joint_GetLocalAnchorB);
+    function("b2Joint_GetLocalFrameA", &b2Joint_GetLocalFrameA);
+    function("b2Joint_GetLocalFrameB", &b2Joint_GetLocalFrameB);
     function("b2Joint_SetCollideConnected", &b2Joint_SetCollideConnected);
     function("b2Joint_GetCollideConnected", &b2Joint_GetCollideConnected);
     function("b2Joint_GetPointer", +[](b2JointId jointId) -> emscripten::val {
@@ -1826,15 +1809,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Joint_WakeBodies", &b2Joint_WakeBodies);
     function("b2Joint_GetConstraintForce", &b2Joint_GetConstraintForce);
     function("b2Joint_GetConstraintTorque", &b2Joint_GetConstraintTorque);
-
-    function("b2MouseJoint_SetTarget", &b2MouseJoint_SetTarget);
-    function("b2MouseJoint_GetTarget", &b2MouseJoint_GetTarget);
-    function("b2MouseJoint_SetSpringHertz", &b2MouseJoint_SetSpringHertz);
-    function("b2MouseJoint_GetSpringHertz", &b2MouseJoint_GetSpringHertz);
-    function("b2MouseJoint_SetSpringDampingRatio", &b2MouseJoint_SetSpringDampingRatio);
-    function("b2MouseJoint_GetSpringDampingRatio", &b2MouseJoint_GetSpringDampingRatio);
-    function("b2MouseJoint_SetMaxForce", &b2MouseJoint_SetMaxForce);
-    function("b2MouseJoint_GetMaxForce", &b2MouseJoint_GetMaxForce);
 
     function("b2DistanceJoint_SetLength", &b2DistanceJoint_SetLength);
     function("b2DistanceJoint_GetLength", &b2DistanceJoint_GetLength);
@@ -1858,16 +1832,26 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2DistanceJoint_GetMaxMotorForce", &b2DistanceJoint_GetMaxMotorForce);
     function("b2DistanceJoint_GetMotorForce", &b2DistanceJoint_GetMotorForce);
 
-    function("b2MotorJoint_SetLinearOffset", &b2MotorJoint_SetLinearOffset);
-    function("b2MotorJoint_GetLinearOffset", &b2MotorJoint_GetLinearOffset);
-    function("b2MotorJoint_SetAngularOffset", &b2MotorJoint_SetAngularOffset);
-    function("b2MotorJoint_GetAngularOffset", &b2MotorJoint_GetAngularOffset);
-    function("b2MotorJoint_SetMaxForce", &b2MotorJoint_SetMaxForce);
-    function("b2MotorJoint_GetMaxForce", &b2MotorJoint_GetMaxForce);
-    function("b2MotorJoint_SetMaxTorque", &b2MotorJoint_SetMaxTorque);
-    function("b2MotorJoint_GetMaxTorque", &b2MotorJoint_GetMaxTorque);
-    function("b2MotorJoint_SetCorrectionFactor", &b2MotorJoint_SetCorrectionFactor);
-    function("b2MotorJoint_GetCorrectionFactor", &b2MotorJoint_GetCorrectionFactor);
+    function("b2MotorJoint_SetLinearVelocity", &b2MotorJoint_SetLinearVelocity);
+    function("b2MotorJoint_GetLinearVelocity", &b2MotorJoint_GetLinearVelocity);
+    function("b2MotorJoint_SetAngularVelocity", &b2MotorJoint_SetAngularVelocity);
+    function("b2MotorJoint_GetAngularVelocity", &b2MotorJoint_GetAngularVelocity);
+    function("b2MotorJoint_SetMaxVelocityForce", &b2MotorJoint_SetMaxVelocityForce);
+    function("b2MotorJoint_GetMaxVelocityForce", &b2MotorJoint_GetMaxVelocityForce);
+    function("b2MotorJoint_SetMaxVelocityTorque", &b2MotorJoint_SetMaxVelocityTorque);
+    function("b2MotorJoint_GetMaxVelocityTorque", &b2MotorJoint_GetMaxVelocityTorque);
+    function("b2MotorJoint_SetLinearHertz", &b2MotorJoint_SetLinearHertz);
+    function("b2MotorJoint_GetLinearHertz", &b2MotorJoint_GetLinearHertz);
+    function("b2MotorJoint_SetLinearDampingRatio", &b2MotorJoint_SetLinearDampingRatio);
+    function("b2MotorJoint_GetLinearDampingRatio", &b2MotorJoint_GetLinearDampingRatio);
+    function("b2MotorJoint_SetAngularHertz", &b2MotorJoint_SetAngularHertz);
+    function("b2MotorJoint_GetAngularHertz", &b2MotorJoint_GetAngularHertz);
+    function("b2MotorJoint_SetAngularDampingRatio", &b2MotorJoint_SetAngularDampingRatio);
+    function("b2MotorJoint_GetAngularDampingRatio", &b2MotorJoint_GetAngularDampingRatio);
+    function("b2MotorJoint_SetMaxSpringForce", &b2MotorJoint_SetMaxSpringForce);
+    function("b2MotorJoint_GetMaxSpringForce", &b2MotorJoint_GetMaxSpringForce);
+    function("b2MotorJoint_SetMaxSpringTorque", &b2MotorJoint_SetMaxSpringTorque);
+    function("b2MotorJoint_GetMaxSpringTorque", &b2MotorJoint_GetMaxSpringTorque);
 
     function("b2PrismaticJoint_EnableSpring", &b2PrismaticJoint_EnableSpring);
     function("b2PrismaticJoint_IsSpringEnabled", &b2PrismaticJoint_IsSpringEnabled);
@@ -1910,8 +1894,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2RevoluteJoint_SetMaxMotorTorque", &b2RevoluteJoint_SetMaxMotorTorque);
     function("b2RevoluteJoint_GetMaxMotorTorque", &b2RevoluteJoint_GetMaxMotorTorque);
 
-    function("b2WeldJoint_GetReferenceAngle", &b2WeldJoint_GetReferenceAngle);
-    function("b2WeldJoint_SetReferenceAngle", &b2WeldJoint_SetReferenceAngle);
     function("b2WeldJoint_SetLinearHertz", &b2WeldJoint_SetLinearHertz);
     function("b2WeldJoint_GetLinearHertz", &b2WeldJoint_GetLinearHertz);
     function("b2WeldJoint_SetLinearDampingRatio", &b2WeldJoint_SetLinearDampingRatio);
@@ -1997,7 +1979,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2InvMulRot", &b2InvMulRot);
     function("b2RelativeAngle", &b2RelativeAngle);
     function("b2UnwindAngle", &b2UnwindAngle);
-    function("b2UnwindLargeAngle", &b2UnwindLargeAngle);
     function("b2RotateVector", &b2RotateVector);
     function("b2InvRotateVector", &b2InvRotateVector);
     function("b2TransformPoint", &b2TransformPoint);

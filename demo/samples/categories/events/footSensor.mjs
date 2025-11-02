@@ -61,7 +61,7 @@ export default class FootSensor extends Sample{
 		{
 			const bodyDef = b2DefaultBodyDef();
 			bodyDef.type = b2BodyType.b2_dynamicBody;
-			bodyDef.fixedRotation = true;
+			bodyDef.motionLocks.angularZ = true;
 			bodyDef.position.Set(0.0, 1.0);
 			this.m_playerId = b2CreateBody( this.m_worldId, bodyDef );
 			const shapeDef = b2DefaultShapeDef();
@@ -112,7 +112,7 @@ export default class FootSensor extends Sample{
 			b2World_GetSensorEvents,
 			b2Vec2,
 			b2Shape_GetSensorCapacity,
-			b2Shape_GetSensorOverlaps,
+			b2Shape_GetSensorData,
 			B2_ID_EQUALS,
 			b2Shape_GetAABB,
 			b2AABB_Center,
@@ -161,7 +161,7 @@ export default class FootSensor extends Sample{
 
 
 		const capacity = b2Shape_GetSensorCapacity( this.m_sensorId );
-		const overlaps = b2Shape_GetSensorOverlaps( this.m_sensorId, capacity );
+		const overlaps = b2Shape_GetSensorData( this.m_sensorId, capacity );
 
 		this.m_overlapPoints.forEach(overlap => overlap.delete());
 		this.m_overlapPoints.length = 0;

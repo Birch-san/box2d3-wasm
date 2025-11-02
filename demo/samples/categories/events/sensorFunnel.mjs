@@ -80,10 +80,10 @@ export default class SensorFunnel extends Sample{
 				b2CreatePolygonShape( bodyId, shapeDef, box );
 
 				const revoluteDef = b2DefaultRevoluteJointDef();
-				revoluteDef.bodyIdA = groundId;
-				revoluteDef.bodyIdB = bodyId;
-				revoluteDef.localAnchorA = bodyDef.position;
-				revoluteDef.localAnchorB = b2Vec2_zero;
+				revoluteDef.base.bodyIdA = groundId;
+				revoluteDef.base.bodyIdB = bodyId;
+				revoluteDef.base.localAnchorA = bodyDef.position;
+				revoluteDef.base.localAnchorB = b2Vec2_zero;
 				revoluteDef.maxMotorTorque = 200.0;
 				revoluteDef.motorSpeed = 2.0 * sign;
 				revoluteDef.enableMotor = true;

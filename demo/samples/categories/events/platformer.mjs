@@ -105,7 +105,7 @@ export default class Platformer extends Sample{
 		{
 			const bodyDef = b2DefaultBodyDef();
 			bodyDef.type = b2BodyType.b2_dynamicBody;
-			bodyDef.fixedRotation = true;
+			bodyDef.motionLocks.angularZ = true;
 			bodyDef.linearDamping = 0.5;
 			bodyDef.position.Set(0.0, 1.0);
 			this.m_playerId = b2CreateBody( this.m_worldId, bodyDef );
@@ -135,7 +135,7 @@ export default class Platformer extends Sample{
 		this.CreateUI();
 	}
 
-	PreSolve = ( shapeIdA, shapeIdB, manifold ) =>
+	PreSolve = ( shapeIdA, shapeIdB, point, normal ) =>
 	{
 
 		const {
@@ -161,24 +161,8 @@ export default class Platformer extends Sample{
 			return true;
 		}
 
-		const normal = manifold.normal;
 		if ( sign * normal.y > 0.95 )
 		{
-			return true;
-		}
-
-		let separation = 0.0;
-		for ( let i = 0; i < manifold.pointCount; i++ )
-		{
-			const point = manifold.GetPoint(i);
-			const s = point.separation;
-			separation = separation < s ? separation : s;
-			point.delete();
-		}
-
-		if ( separation > 0.1 * this.m_radius )
-		{
-			// shallow overlap
 			return true;
 		}
 

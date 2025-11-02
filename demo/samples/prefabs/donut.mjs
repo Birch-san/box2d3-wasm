@@ -18,7 +18,7 @@ export default class Donut {
 			b2Capsule,
 			b2MakeRot,
 			b2Body_GetRotation,
-			b2RelativeAngle,
+			b2InvMulRot,
 			b2CreateWeldJoint,
 			b2CreateBody,
 			b2CreateCapsuleShape,
@@ -71,24 +71,25 @@ export default class Donut {
 		const weldDef = b2DefaultWeldJointDef();
 		weldDef.angularHertz = 5.0;
 		weldDef.angularDampingRatio = 0.0;
-		weldDef.localAnchorA.Set(0.0, 0.5 * length);
-		weldDef.localAnchorB.Set(0.0, -0.5 * length);
+		weldDef.base.localFrameA.p.Set(0.0, 0.5 * length);
+		weldDef.base.localFrameB.p.Set(0.0, -0.5 * length);
 
 		let prevBodyId = this.m_bodyIds[e_sides - 1];
 		for ( let i = 0; i < e_sides; i++ )
 		{
-			weldDef.bodyIdA = prevBodyId;
-			weldDef.bodyIdB = this.m_bodyIds[i];
+			weldDef.base.bodyIdA = prevBodyId;
+			weldDef.base.bodyIdB = this.m_bodyIds[i];
 			const rotA = b2Body_GetRotation( prevBodyId );
 			const rotB = b2Body_GetRotation( this.m_bodyIds[i] );
 
-			const relativeAngle = b2RelativeAngle( rotB, rotA );
-			weldDef.referenceAngle = relativeAngle;
+			const relativeAngle = b2InvMulRot( rotA, rotB );
+			weldDef.base.localFrameA.q.SetAngle(relativeAngle.GetAngle());
 			const weldJoint = b2CreateWeldJoint( worldId, weldDef );
-			prevBodyId = weldDef.bodyIdB;
+			prevBodyId = weldDef.base.bodyIdB;
 
 			rotA.delete();
 			rotB.delete();
+			relativeAngle.delete();
 		}
 
 		this.m_isSpawned = true;
