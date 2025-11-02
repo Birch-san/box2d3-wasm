@@ -1,11 +1,9 @@
 #!/usr/bin/env awk -f
 
 BEGIN { found1=0; found2=0; found3=0; found4=0; found5=0 }
-!found1 && $0 ~ /^async function\(moduleArg = \{\}\) \{$/ {
+!found1 && $0 ~ /^async function Box2D\(moduleArg = \{\}\) \{$/ {
   print $0
-  while ((getline line < module_arg_template) > 0) {
-    print line
-  }
+  while ((getline line < module_arg_template) > 0) { print line }
   close(module_arg_template)
   found1=1
   next
@@ -28,9 +26,7 @@ BEGIN { found1=0; found2=0; found3=0; found4=0; found5=0 }
   next
 }
 !found5 && /^[[:space:]]*allocateUnusedWorker\(\) \{$/ {
-  while ((getline line < allocate_unused_worker_template) > 0) {
-    print line
-  }
+  while ((getline line < allocate_unused_worker_template) > 0) { print line }
   close(allocate_unused_worker_template)
   sub(/allocateUnusedWorker/, "allocateUnusedWorkerDirect")
   print
@@ -38,4 +34,13 @@ BEGIN { found1=0; found2=0; found3=0; found4=0; found5=0 }
   next
 }
 { print }
-END { exit !(found1 && found2 && found3 && found4) }
+
+END {
+  missing = 0
+  if (!found1) { print "awk patch: did not find: async function(moduleArg = {}) {" > "/dev/stderr"; missing++ }
+  if (!found2) { print "awk patch: did not find: var pthreadPoolSize = _emscripten_num_logical_cores();" > "/dev/stderr"; missing++ }
+  if (!found3) { print "awk patch: did not find: \"shared\": true" > "/dev/stderr"; missing++ }
+  if (!found4) { print "awk patch: did not find: PThread.init();" > "/dev/stderr"; missing++ }
+  if (!found5) { print "awk patch: did not find: allocateUnusedWorker() {" > "/dev/stderr"; missing++ }
+  exit (missing == 0 ? 0 : 1)
+}

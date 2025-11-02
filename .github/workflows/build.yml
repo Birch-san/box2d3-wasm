@@ -32,7 +32,7 @@ on:
           - patch
 
 env:
-  EM_VERSION: 4.0.8
+  EM_VERSION: 4.0.18
   EM_CACHE_FOLDER: 'emsdk-cache'
 
 jobs:
