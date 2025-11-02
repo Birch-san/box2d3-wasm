@@ -1676,6 +1676,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Shape_GetAABB", &b2Shape_GetAABB);
     function("b2Shape_ComputeMassData", &b2Shape_ComputeMassData);
     function("b2Shape_GetClosestPoint", &b2Shape_GetClosestPoint);
+    function("b2Shape_ApplyWind", &b2Shape_ApplyWind);
 
     // ------------------------------------------------------------------------
     // b2Body

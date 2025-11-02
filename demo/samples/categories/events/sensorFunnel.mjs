@@ -66,6 +66,7 @@ export default class SensorFunnel extends Sample{
 			let y = 14.0;
 			for ( let i = 0; i < 3; i++ )
 			{
+				console.log('Creating rotating platform at y = ' + y);
 				bodyDef.position.Set(0.0, y);
 				bodyDef.type = b2BodyType.b2_dynamicBody;
 
@@ -82,8 +83,8 @@ export default class SensorFunnel extends Sample{
 				const revoluteDef = b2DefaultRevoluteJointDef();
 				revoluteDef.base.bodyIdA = groundId;
 				revoluteDef.base.bodyIdB = bodyId;
-				revoluteDef.base.localAnchorA = bodyDef.position;
-				revoluteDef.base.localAnchorB = b2Vec2_zero;
+				revoluteDef.base.localFrameA.p.Copy(bodyDef.position);
+				revoluteDef.base.localFrameB.p.Copy(b2Vec2_zero);
 				revoluteDef.maxMotorTorque = 200.0;
 				revoluteDef.motorSpeed = 2.0 * sign;
 				revoluteDef.enableMotor = true;
