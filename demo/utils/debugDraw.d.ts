@@ -1,3 +1,5 @@
+import Camera from "./camera.mjs";
+
 export interface DebugDrawOptions {
     pixelToMeters?: number;
     autoHD?: boolean;
@@ -50,4 +52,6 @@ export default class DebugDrawRenderer {
     drawMemoryUsage(): void;
     colorToHTML(color: number, alpha?: number): string;
     transformPoint(xf: Transform, v: Point): Point;
+    SetFlags(flags: number): void;
+    Draw(worldId: any, camera?: Camera): void;
 }
