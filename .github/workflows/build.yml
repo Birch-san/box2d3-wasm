@@ -113,6 +113,13 @@ jobs:
         env:
           FLAVOUR: compat
           TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
+      - name: copy demo utils to build output
+        run: |
+          mkdir -p box2d3-wasm/build/dist/es/utils
+          cp demo/utils/*.mjs box2d3-wasm/build/dist/es/utils/
+          cp demo/utils/*.d.ts box2d3-wasm/build/dist/es/utils/
+          echo "Copied demo utils to build/dist/es/utils:"
+          ls -la box2d3-wasm/build/dist/es/utils/
       # Pack mode: Create prerelease version without git tags
       - name: version for pack
         id: pack_version
