@@ -509,6 +509,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("material", &b2ShapeDef::material, return_value_policy::reference())
         .property("density", &b2ShapeDef::density)
         .property("filter", &b2ShapeDef::filter, return_value_policy::reference())
+		.property("enableCustomFiltering", &b2ShapeDef::enableCustomFiltering)
         .property("isSensor", &b2ShapeDef::isSensor)
         .property("enableSensorEvents", &b2ShapeDef::enableSensorEvents)
         .property("enableContactEvents", &b2ShapeDef::enableContactEvents)
