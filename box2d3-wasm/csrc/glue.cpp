@@ -1633,6 +1633,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Shape_GetFriction", &b2Shape_GetFriction);
     function("b2Shape_SetRestitution", &b2Shape_SetRestitution);
     function("b2Shape_GetRestitution", &b2Shape_GetRestitution);
+	function("b2Shape_GetSurfaceMaterial", &b2Shape_GetSurfaceMaterial);
+    function("b2Shape_SetSurfaceMaterial", &b2Shape_SetSurfaceMaterial, allow_raw_pointers());
     function("b2Shape_GetFilter", &b2Shape_GetFilter);
     function("b2Shape_SetFilter", &b2Shape_SetFilter);
     function("b2Shape_EnableSensorEvents", &b2Shape_EnableSensorEvents);
