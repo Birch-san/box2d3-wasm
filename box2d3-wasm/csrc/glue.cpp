@@ -1805,6 +1805,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Joint_GetWorld", &b2Joint_GetWorld);
     function("b2Joint_GetLocalFrameA", &b2Joint_GetLocalFrameA);
     function("b2Joint_GetLocalFrameB", &b2Joint_GetLocalFrameB);
+	function("b2Joint_SetLocalFrameA", &b2Joint_SetLocalFrameA);
+    function("b2Joint_SetLocalFrameB", &b2Joint_SetLocalFrameB);
     function("b2Joint_SetCollideConnected", &b2Joint_SetCollideConnected);
     function("b2Joint_GetCollideConnected", &b2Joint_GetCollideConnected);
     function("b2Joint_GetPointer", +[](b2JointId jointId) -> emscripten::val {
