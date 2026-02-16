@@ -587,7 +587,23 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .class_function("GetMaxVertices", +[]() { return B2_MAX_POLYGON_VERTICES; })
     ;
 
+    // ------------------------------------------------------------------------
+    // b2Chain
+    // ------------------------------------------------------------------------
+    
+    function("b2Chain_IsValid", &b2Chain_IsValid);
     function("b2DefaultChainDef", &b2DefaultChainDef);
+    function("b2Chain_GetSegmentCount", &b2Chain_GetSegmentCount);
+    function("b2Chain_GetSegments", +[](b2ChainId chainId, int capacity) -> emscripten::val {
+        std::vector<b2ShapeId> segments(capacity);
+        int count = b2Chain_GetSegments(chainId, segments.data(), capacity);
+
+        auto result = emscripten::val::array();
+        for (int i = 0; i < count; i++) {
+            result.set(i, segments[i]);
+        }
+        return result;
+    });
 
     class_<b2ChainDef>("b2ChainDef")
         .constructor<>()
@@ -997,10 +1013,6 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetTorqueThreshold", &Joint::GetTorqueThreshold)
         .function("GetLocalFrameA", &Joint::GetLocalFrameA, return_value_policy::reference())
         .function("GetLocalFrameB", &Joint::GetLocalFrameB, return_value_policy::reference())
-
-
-
-
         .function("GetType", &Joint::GetType)
         .function("WakeBodies", &Joint::WakeBodies)
         .function("GetWorld", select_overload<WorldRef()>(&Joint::GetWorld))
