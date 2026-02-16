@@ -326,6 +326,18 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("approachSpeed", &b2ContactHitEvent::approachSpeed)
         ;
 
+    class_<b2JointEvent>("b2JointEvent")
+        .property("jointId", &b2JointEvent::jointId)
+        ;
+
+    class_<b2JointEvents>("b2JointEvents")
+        .constructor()
+        .function("GetJointEvent", +[](const b2JointEvents& events, int index) {
+            return events.jointEvents[index];
+        })
+        .property("count", &b2JointEvents::count)
+        ;
+
     class_<b2Profile>("b2Profile")
         .constructor()
         .property("step", &b2Profile::step)
@@ -442,6 +454,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetCounters", &b2::World::GetCounters)
         .function("GetProfile", &b2::World::GetProfile)
         .function("GetSensorEvents", &b2::World::GetSensorEvents)
+        .function("GetJointEvents", &b2::World::GetJointEvents)
         .function("GetPointer", +[](const World& self) -> emscripten::val {
             return emscripten::val(self.Handle().index1);
         })
@@ -574,7 +587,23 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .class_function("GetMaxVertices", +[]() { return B2_MAX_POLYGON_VERTICES; })
     ;
 
+    // ------------------------------------------------------------------------
+    // b2Chain
+    // ------------------------------------------------------------------------
+    
+    function("b2Chain_IsValid", &b2Chain_IsValid);
     function("b2DefaultChainDef", &b2DefaultChainDef);
+    function("b2Chain_GetSegmentCount", &b2Chain_GetSegmentCount);
+    function("b2Chain_GetSegments", +[](b2ChainId chainId, int capacity) -> emscripten::val {
+        std::vector<b2ShapeId> segments(capacity);
+        int count = b2Chain_GetSegments(chainId, segments.data(), capacity);
+
+        auto result = emscripten::val::array();
+        for (int i = 0; i < count; i++) {
+            result.set(i, segments[i]);
+        }
+        return result;
+    });
 
     class_<b2ChainDef>("b2ChainDef")
         .constructor<>()
@@ -978,12 +1007,12 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetCollideConnected", &Joint::GetCollideConnected)
         .function("GetConstraintForce", &Joint::GetConstraintForce)
         .function("GetConstraintTorque", &Joint::GetConstraintTorque)
+        .function("SetForceThreshold", &Joint::SetForceThreshold)
+        .function("GetForceThreshold", &Joint::GetForceThreshold)
+        .function("SetTorqueThreshold", &Joint::SetTorqueThreshold)
+        .function("GetTorqueThreshold", &Joint::GetTorqueThreshold)
         .function("GetLocalFrameA", &Joint::GetLocalFrameA, return_value_policy::reference())
         .function("GetLocalFrameB", &Joint::GetLocalFrameB, return_value_policy::reference())
-
-
-
-
         .function("GetType", &Joint::GetType)
         .function("WakeBodies", &Joint::WakeBodies)
         .function("GetWorld", select_overload<WorldRef()>(&Joint::GetWorld))
@@ -1414,6 +1443,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_GetBodyEvents", &b2World_GetBodyEvents);
     function("b2World_GetSensorEvents", &b2World_GetSensorEvents);
     function("b2World_GetContactEvents", &b2World_GetContactEvents);
+    function("b2World_GetJointEvents", &b2World_GetJointEvents);
     function("b2World_EnableSleeping", &b2World_EnableSleeping);
     function("b2World_IsSleepingEnabled", &b2World_IsSleepingEnabled);
     function("b2World_EnableWarmStarting", &b2World_EnableWarmStarting);
@@ -1733,6 +1763,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_GetSleepThreshold", &b2Body_GetSleepThreshold);
     function("b2Body_SetBullet", &b2Body_SetBullet);
     function("b2Body_IsBullet", &b2Body_IsBullet);
+    function("b2Body_SetMotionLocks", &b2Body_SetMotionLocks);
+    function("b2Body_GetMotionLocks", &b2Body_GetMotionLocks);
     function("b2Body_GetPointer", +[](b2BodyId bodyId) -> emscripten::val {
         return emscripten::val(bodyId.index1);
     });
@@ -1805,6 +1837,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Joint_GetWorld", &b2Joint_GetWorld);
     function("b2Joint_GetLocalFrameA", &b2Joint_GetLocalFrameA);
     function("b2Joint_GetLocalFrameB", &b2Joint_GetLocalFrameB);
+    function("b2Joint_SetLocalFrameA", &b2Joint_SetLocalFrameA);
+    function("b2Joint_SetLocalFrameB", &b2Joint_SetLocalFrameB);
     function("b2Joint_SetCollideConnected", &b2Joint_SetCollideConnected);
     function("b2Joint_GetCollideConnected", &b2Joint_GetCollideConnected);
     function("b2Joint_GetPointer", +[](b2JointId jointId) -> emscripten::val {
@@ -1813,6 +1847,10 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Joint_WakeBodies", &b2Joint_WakeBodies);
     function("b2Joint_GetConstraintForce", &b2Joint_GetConstraintForce);
     function("b2Joint_GetConstraintTorque", &b2Joint_GetConstraintTorque);
+    function("b2Joint_SetForceThreshold", &b2Joint_SetForceThreshold);
+    function("b2Joint_GetForceThreshold", &b2Joint_GetForceThreshold);
+    function("b2Joint_SetTorqueThreshold", &b2Joint_SetTorqueThreshold);
+    function("b2Joint_GetTorqueThreshold", &b2Joint_GetTorqueThreshold);
 
     function("b2DistanceJoint_SetLength", &b2DistanceJoint_SetLength);
     function("b2DistanceJoint_GetLength", &b2DistanceJoint_GetLength);
