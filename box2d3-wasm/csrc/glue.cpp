@@ -1497,6 +1497,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
 
     value_object<b2PlaneResult>("b2PlaneResult")
         .field("plane", &b2PlaneResult::plane)
+        .field("point", &b2PlaneResult::point)
         .field("hit", &b2PlaneResult::hit);
 
     class_<b2CollisionPlane>("b2CollisionPlane")
