@@ -13,6 +13,17 @@
 
 See the [pyramid drop demo code](demo/modern/demo.js) for an example of how to use box2d3-wasm in a Web browser. You'll need to serve the assets correctly in order to access performance features such as threading. See the [Serving Requirements](#serving-requirements) section below.
 
+### Choosing a build
+
+The default entry picks a build at run time: the `deluxe` build (SIMD + threads) when the page is cross-origin isolated (or under NodeJS), the `compat` build otherwise. To pick one yourself, import it directly:
+
+```js
+import Box2DFactory from "box2d3-wasm/compat"; // single-threaded, no SIMD, no COOP/COEP headers needed
+import Box2DFactory from "box2d3-wasm/deluxe"; // SIMD + threads; needs cross-origin isolation
+```
+
+Importing `compat` directly also keeps the threaded build and its worker out of your bundle.
+
 ### NodeJS Usage
 
 See the [integration test code](integration-test/index.mjs) for an example of how to use box2d3-wasm via NodeJS. There'll be no graphics; you probably only want the NodeJS approach if you're building server-side physics or you intend to build your own native GUI.

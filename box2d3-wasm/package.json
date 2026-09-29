@@ -17,6 +17,18 @@
         "types": "./build/dist/es/utils/*.d.ts",
         "default": "./build/dist/es/utils/*.mjs"
       }
+    },
+    "./compat": {
+      "import": {
+        "types": "./build/dist/es/compat/Box2D.compat.d.ts",
+        "default": "./build/dist/es/compat/Box2D.compat.mjs"
+      }
+    },
+    "./deluxe": {
+      "import": {
+        "types": "./build/dist/es/deluxe/Box2D.deluxe.d.ts",
+        "default": "./build/dist/es/deluxe/Box2D.deluxe.mjs"
+      }
     }
   },
   "module": "build/dist/es/entry.mjs",
