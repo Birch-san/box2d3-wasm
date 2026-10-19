@@ -3,6 +3,7 @@
 set -eo pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 BOX2D_DIR="$(realpath "$DIR/../../box2d")"
+CMAKE_WRAPPER_DIR="$(realpath "$DIR/../cmake")"
 
 # This script just does what the README says, except with some extra validation and interactivity.
 # If you're more interested in going through step-by-step, and avoiding rebuilds of files you've 
@@ -61,9 +62,7 @@ CXXFLAGS="${CXXFLAGS[@]}" \
 emcmake cmake \
 -DCMAKE_BUILD_TYPE="$TARGET_TYPE" \
 -B"cmake-build-$FLAVOUR" \
--S"$BOX2D_DIR" \
+-S"$CMAKE_WRAPPER_DIR" \
+-DBOX2D_DIR="$BOX2D_DIR" \
 "${CMAKE_OPTS[@]}" \
--DBOX2D_VALIDATE=OFF \
--DBOX2D_SAMPLES=OFF \
--DBOX2D_UNIT_TESTS=OFF \
--DBOX2D_DOCS=OFF
+-DBOX2D_VALIDATE=OFF

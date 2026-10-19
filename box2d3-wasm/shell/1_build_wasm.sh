@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# FLAVOUR=simd TARGET_TYPE=Debug ./shell/1_build_wasm.sh
+# FLAVOUR=deluxe TARGET_TYPE=Debug ./shell/1_build_wasm.sh
 set -eo pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 B2D_WASM_DIR="$(realpath "$DIR/..")"
 MONOREPO_DIR="$(realpath "$B2D_WASM_DIR/..")"
 BOX2D_DIR="$(realpath "$MONOREPO_DIR/box2d")"
-B2CPP_DIR="$(realpath "$MONOREPO_DIR/box2cpp")"
 ENKITS_DIR="$(realpath "$MONOREPO_DIR/enkiTS")"
 CMAKEBUILD_DIR="$(realpath "$B2D_WASM_DIR/cmake-build-$FLAVOUR")"
 BUILD_DIR="$(realpath "$B2D_WASM_DIR/build")"
@@ -111,6 +110,9 @@ case "$TARGET_TYPE" in
       ${EMCC_OPTS[@]}
       ${RELEASE_OPTS[@]}
       ${MINIFICATION_OPTS[@]}
+      # match the Release libbox2d.a, which is built without asserts (Box2D's inline header
+      # functions would otherwise reference b2InternalAssert, which that library doesn't contain)
+      -DNDEBUG
       -flto
       -s EXPORTED_RUNTIME_METHODS=['HEAPU8','HEAPU16','HEAPU32','stackSave','stackRestore','stackAlloc']
       -s STACK_OVERFLOW_CHECK=2
@@ -139,10 +141,10 @@ emcc -lembind \
 "$CSRC_DIR/threading.cpp" \
 "$CSRC_DIR/debugDraw.cpp" \
 "$ENKITS_DIR/src/TaskScheduler.cpp" \
-"$CMAKEBUILD_DIR/src/$LIBARCHIVE" \
+"$CMAKEBUILD_DIR/box2d/src/$LIBARCHIVE" \
 -I "$BOX2D_DIR/include" \
 -I "$ENKITS_DIR/src" \
--I "$B2CPP_DIR/include" \
+-I "$CSRC_DIR/generated" \
 "${EMCC_OPTS[@]}" \
 -o "$ES_FILE" \
 --emit-tsd "$ES_TSD"

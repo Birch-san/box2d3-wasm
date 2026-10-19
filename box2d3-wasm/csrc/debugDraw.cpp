@@ -2,6 +2,9 @@
 #include <emscripten/bind.h>
 #include <vector>
 #include <box2d/box2d.h>
+#include <box2d/math_functions.h>
+#include <algorithm>
+#include <string_view>
 
 enum DebugDrawCommandType {
     e_polygon = 0,
@@ -27,25 +30,16 @@ struct DebugDrawCommand {
 class DebugDrawCommandBuffer {
 public:
     DebugDrawCommandBuffer(size_t maxCommands = 10000) : maxCommands(maxCommands) {
+        // Box2D v3.2 always clips against drawingBounds, so start from its defaults (unbounded).
+        debugDraw = b2DefaultDebugDraw();
         debugDraw.context = this;
         commands.reserve(maxCommands);
 
         debugDraw.drawShapes = true;
         debugDraw.drawJoints = true;
-        debugDraw.drawJointExtras = false;
-        debugDraw.drawBounds = false;
-        debugDraw.drawMass = false;
-        debugDraw.drawBodyNames = false;
-        debugDraw.drawContactPoints = false;
-        debugDraw.drawGraphColors = false;
-        debugDraw.drawContactFeatures = false;
-        debugDraw.drawContactNormals = false;
-        debugDraw.drawContactForces = false;
-        debugDraw.drawFrictionForces = false;
-        debugDraw.drawIslands = false;
-        debugDraw.drawingBounds = { { -1e30f, -1e30f }, { 1e30f, 1e30f } };
 
-        debugDraw.DrawPolygonFcn = [](const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context) {
+        // Polygon outlines arrive in local space; emit world space vertices so the renderer stays simple.
+        debugDraw.DrawPolygonFcn = [](b2WorldTransform transform, const b2Vec2* vertices, int vertexCount, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -55,14 +49,15 @@ public:
             cmd.vertexCount = std::min((uint16_t)vertexCount, (uint16_t)(COMMAND_DATA_SIZE / 2));
 
             for (int i = 0; i < cmd.vertexCount; i++) {
-                cmd.data[i*2] = vertices[i].x;
-                cmd.data[i*2+1] = vertices[i].y;
+                b2Pos p = b2TransformWorldPoint(transform, vertices[i]);
+                cmd.data[i*2] = p.x;
+                cmd.data[i*2+1] = p.y;
             }
 
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSolidPolygonFcn = [](b2Transform transform, const b2Vec2* vertices, int vertexCount, float radius, b2HexColor color, void* context) {
+        debugDraw.DrawSolidPolygonFcn = [](b2WorldTransform transform, const b2Vec2* vertices, int vertexCount, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -87,7 +82,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawCircleFcn = [](b2Vec2 center, float radius, b2HexColor color, void* context) {
+        debugDraw.DrawCircleFcn = [](b2Pos center, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -102,16 +97,19 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSolidCircleFcn = [](b2Transform transform, float radius, b2HexColor color, void* context) {
+        // The circle center is local to the transform; emit it in world space with the body rotation.
+        debugDraw.DrawSolidCircleFcn = [](b2WorldTransform transform, b2Vec2 center, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
+
+            b2Pos worldCenter = b2TransformWorldPoint(transform, center);
 
             DebugDrawCommand cmd;
             cmd.commandType = DebugDrawCommandType::e_solidCircle;
             cmd.color = color;
             cmd.vertexCount = 1;
-            cmd.data[0] = transform.p.x;
-            cmd.data[1] = transform.p.y;
+            cmd.data[0] = worldCenter.x;
+            cmd.data[1] = worldCenter.y;
             cmd.data[2] = transform.q.s;
             cmd.data[3] = transform.q.c;
             cmd.data[4] = radius;
@@ -119,7 +117,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawSolidCapsuleFcn = [](b2Vec2 p1, b2Vec2 p2, float radius, b2HexColor color, void* context) {
+        debugDraw.DrawSolidCapsuleFcn = [](b2Pos p1, b2Pos p2, float radius, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -136,7 +134,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawLineFcn = [](b2Vec2 p1, b2Vec2 p2, b2HexColor color, void* context) {
+        debugDraw.DrawLineFcn = [](b2Pos p1, b2Pos p2, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -152,7 +150,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawTransformFcn = [](b2Transform transform, void* context) {
+        debugDraw.DrawTransformFcn = [](b2WorldTransform transform, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -167,7 +165,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawPointFcn = [](b2Vec2 p, float size, b2HexColor color, void* context) {
+        debugDraw.DrawPointFcn = [](b2Pos p, float size, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -182,7 +180,7 @@ public:
             self->commands.push_back(cmd);
         };
 
-        debugDraw.DrawStringFcn = [](b2Vec2 p, const char* s, b2HexColor color, void* context) {
+        debugDraw.DrawStringFcn = [](b2Pos p, const char* s, b2HexColor color, void* context) {
             auto* self = static_cast<DebugDrawCommandBuffer*>(context);
             if (self->commands.size() >= self->maxCommands) return;
 
@@ -199,6 +197,27 @@ public:
                                    sv.begin() + std::min(sv.length(), size_t(COMMAND_DATA_SIZE - 2)),
                                    cmd.data + 2,
                                    [](char c) { return static_cast<float>(std::byte(c)); });
+
+            self->commands.push_back(cmd);
+        };
+
+        // Bounds are drawn as a closed polygon outline.
+        debugDraw.DrawBoundsFcn = [](b2AABB aabb, b2HexColor color, void* context) {
+            auto* self = static_cast<DebugDrawCommandBuffer*>(context);
+            if (self->commands.size() >= self->maxCommands) return;
+
+            DebugDrawCommand cmd;
+            cmd.commandType = DebugDrawCommandType::e_polygon;
+            cmd.color = color;
+            cmd.vertexCount = 4;
+            cmd.data[0] = aabb.lowerBound.x;
+            cmd.data[1] = aabb.lowerBound.y;
+            cmd.data[2] = aabb.upperBound.x;
+            cmd.data[3] = aabb.lowerBound.y;
+            cmd.data[4] = aabb.upperBound.x;
+            cmd.data[5] = aabb.upperBound.y;
+            cmd.data[6] = aabb.lowerBound.x;
+            cmd.data[7] = aabb.upperBound.y;
 
             self->commands.push_back(cmd);
         };
