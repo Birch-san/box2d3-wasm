@@ -193,12 +193,12 @@ export default class ManyTumblers extends Sample{
 		});
 
 		const PARAMS = {
-			rowCount: this.m_rowCount,
-			columnCount: this.m_columnCount,
-			speed: this.m_angularSpeed,
+			'Row Count': this.m_rowCount,
+			'Column Count': this.m_columnCount,
+			'Speed': this.m_angularSpeed,
 		};
 
-		this.pane.addBinding(PARAMS, 'rowCount', {
+		this.pane.addBinding(PARAMS, 'Row Count', {
 			step: 1,
 			min: 1,
 			max: 32,
@@ -208,7 +208,7 @@ export default class ManyTumblers extends Sample{
 			this.Spawn();
 		});
 
-		this.pane.addBinding(PARAMS, 'rowCount', {
+		this.pane.addBinding(PARAMS, 'Column Count', {
 			step: 1,
 			min: 1,
 			max: 32,
@@ -218,7 +218,7 @@ export default class ManyTumblers extends Sample{
 			this.Spawn();
 		});
 
-		this.pane.addBinding(PARAMS, 'speed', {
+		this.pane.addBinding(PARAMS, 'Speed', {
 			step: 1,
 			min: 0,
 			max: 100,

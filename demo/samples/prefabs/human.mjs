@@ -31,7 +31,7 @@ class Human {
 		for ( let i = 0; i < boneId_count; ++i )
 		{
 			if (this.bones[i].jointId){
-				this.box2d.b2DestroyJoint( this.bones[i].jointId, false );
+				this.box2d.b2DestroyJoint( this.bones[i].jointId );
 			}
 		}
 		for ( let i = 0; i < boneId_count; ++i )

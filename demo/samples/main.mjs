@@ -55,13 +55,14 @@ async function loadSample(url) {
 
 	const module = await import(url);
 	sample = new module.default(box2d, camera, debugDraw);
+	// samples may change the draw flags in settings (e.g. settings.drawJoints = false), like upstream samples do
 	updateDebugDrawFlags();
 	addUI();
 
 	sampleLoading = false;
 }
 
-const debugDrawFlagKeys = ['drawShapes', 'drawJoints', 'drawJointExtras', 'drawAABBs', 'drawMass', 'drawContacts', 'drawGraphColors', 'drawContactNormals', 'drawContactImpulses', 'drawFrictionImpulses'];
+const debugDrawFlagKeys = ['drawShapes', 'drawJoints', 'drawJointExtras', 'drawBounds', 'drawMass', 'drawBodyNames', 'drawContacts', 'drawGraphColors', 'drawContactFeatures', 'drawContactNormals', 'drawContactForces', 'drawFrictionForces', 'drawIslands'];
 function updateDebugDrawFlags(){
 	const debugDrawFlags = {};
 	debugDrawFlagKeys.forEach((key) => {
@@ -102,6 +103,8 @@ function addUI(){
 	PARAMS.sleep = settings.enableSleep,
 	PARAMS['warm starting'] = settings.enableWarmStarting,
 	PARAMS.continuous = settings.enableContinuous,
+	PARAMS['bounce iters'] = settings.restitutionIterations,
+	PARAMS['bounce propagation'] = settings.enableRestitutionPropagation,
 	PARAMS.profile = settings.profile,
 	PARAMS['wasm memory'] = settings.debugWASMMemory,
 	PARAMS.workers = settings.workerCount
@@ -142,6 +145,18 @@ function addUI(){
 
 	main.addBinding(PARAMS, 'continuous').on('change', (event) => {
 		settings.enableContinuous = event.value;
+	});
+
+	main.addBinding(PARAMS, 'bounce iters', {
+		step: 1,
+		min: 0,
+		max: 8,
+	}).on('change', (event) => {
+		settings.restitutionIterations = event.value;
+	});
+
+	main.addBinding(PARAMS, 'bounce propagation').on('change', (event) => {
+		settings.enableRestitutionPropagation = event.value;
 	});
 
 	main.addBinding(PARAMS, 'profile').on('change', (event) => {

@@ -4,6 +4,10 @@ import Sample from "../../sample.mjs";
 import Keyboard, { Key } from '../../../utils/keyboard.mjs';
 import settings from '../../settings.mjs';
 
+// Shows how to make a rigid body character mover and use the pre-solve callback. In this
+// case the platform should get the pre-solve event, not the player.
+// Upstream removed this sample in v3.2 (the Dynamic Mover sample took over its role), it is kept here
+// as a small example of one-way platforms with the manifold based pre-solve callback.
 export default class Platformer extends Sample{
 	constructor(box2d, camera, debugDraw){
 		if(settings.workerCount > 1){
@@ -41,7 +45,9 @@ export default class Platformer extends Sample{
 			b2Capsule
 		} = this.box2d;
 
-		this.m_callback = b2World_SetPreSolveCallback( this.m_worldId, this.PreSolve);
+		// The pre-solve callback can disable a contact by editing the manifold. Continuous collision
+		// has its own callback, it only gets the point and normal of the time of impact event.
+		this.m_callback = b2World_SetPreSolveCallback( this.m_worldId, this.PreSolve, this.PreContinuous );
 
 		// Ground
 		{
@@ -112,8 +118,8 @@ export default class Platformer extends Sample{
 
 			this.m_radius = 0.5;
 			const capsule = new b2Capsule();
-			capsule.center1.Set( 0.0, -0.5 );
-			capsule.center2.Set( 0.0, 0.5 );
+			capsule.center1.Set( 0.0, 0.0 );
+			capsule.center2.Set( 0.0, 1.0 );
 			capsule.radius = this.m_radius;
 			const shapeDef = b2DefaultShapeDef();
 			shapeDef.material.friction = 0.1;
@@ -130,21 +136,21 @@ export default class Platformer extends Sample{
 		this.m_jumpDelay = 0.25;
 		this.m_jumping = false;
 		this.canJump = false;
-		this.platformContactData = null;
+		this.m_platformContactCount = 0;
+		this.m_platformPointCount = 0;
+		this.m_touchKeyboard = false;
 
 		this.CreateUI();
 	}
 
-	PreSolve = ( shapeIdA, shapeIdB, point, normal ) =>
+	// Returns true if the contact between the player and a platform should be solid. This is
+	// the case if the normal points up from the platform to the player.
+	// Shape ids are compared by value, so this does not touch the world.
+	IsSolid( shapeIdA, shapeIdB, normalY )
 	{
-
 		const {
-			b2Shape_IsValid,
 			B2_ID_EQUALS,
 		} = this.box2d;
-
-		console.assert( b2Shape_IsValid( shapeIdA ) );
-		console.assert( b2Shape_IsValid( shapeIdB ) );
 
 		let sign = 0.0;
 		if ( B2_ID_EQUALS( shapeIdA, this.m_playerShapeId ) )
@@ -161,13 +167,38 @@ export default class Platformer extends Sample{
 			return true;
 		}
 
-		if ( sign * normal.y > 0.95 )
-		{
-			return true;
-		}
+		// the normal points from shape A to shape B
+		return sign * normalY > 0.95;
+	}
 
-		// normal points down, disable contact
-		return false;
+	// Called after the contact manifold is updated. The manifold is the live b2Manifold, it can be
+	// edited in place. Setting the point count to zero disables the contact for this step.
+	PreSolve = ( shapeIdA, shapeIdB, manifold ) =>
+	{
+		const {
+			b2Shape_IsValid,
+		} = this.box2d;
+
+		console.assert( b2Shape_IsValid( shapeIdA ) );
+		console.assert( b2Shape_IsValid( shapeIdB ) );
+
+		if ( this.IsSolid( shapeIdA, shapeIdB, manifold.normal.y ) == false )
+		{
+			// normal points down, disable contact
+			manifold.pointCount = 0;
+		}
+	}
+
+	// Called for continuous collision (time of impact) events. Return false to skip the event.
+	// This tests pre-solve with continuous collision on the static platform.
+	PreContinuous = ( shapeIdA, shapeIdB, point, normal ) =>
+	{
+		const solid = this.IsSolid( shapeIdA, shapeIdB, normal.y );
+
+		point.delete();
+		normal.delete();
+
+		return solid;
 	}
 
 	Despawn(){
@@ -216,16 +247,14 @@ export default class Platformer extends Sample{
 					sign = 1.0;
 				}
 
-				const shouldBeAbleToJump = sign * contactData[i].manifold.normal.y > 0.9;
-
-				contactData[i].delete();
-
-				if ( shouldBeAbleToJump )
+				if ( sign * contactData[i].manifold.normal.y > 0.9 )
 				{
 					canJump = true;
 					break;
 				}
 			}
+
+			contactData.forEach( data => data.delete() );
 		}
 		velocity.delete();
 
@@ -273,7 +302,10 @@ export default class Platformer extends Sample{
 
 		super.Step();
 
-		this.platformContactData = b2Body_GetContactData( this.m_movingPlatformId, 1 );
+		const platformContactData = b2Body_GetContactData( this.m_movingPlatformId, 1 );
+		this.m_platformContactCount = platformContactData.length;
+		this.m_platformPointCount = platformContactData.length > 0 ? platformContactData[0].manifold.pointCount : 0;
+		platformContactData.forEach( data => data.delete() );
 		this.canJump = canJump;
 
 		if ( settings.hertz > 0.0 )
@@ -334,15 +366,12 @@ export default class Platformer extends Sample{
 	UpdateUI(DrawString, m_textLine){
 		m_textLine = super.UpdateUI(DrawString, m_textLine);
 
-		const contactCount = this.platformContactData?.length;
-		const pointCount = this.platformContactData?.[0]?.manifold?.pointCount || 0;
-		this.platformContactData?.[0]?.delete();
-
-		m_textLine = DrawString( 5, m_textLine, `Platform contact count = ${contactCount}, point count = ${pointCount}`);
+		m_textLine = DrawString( 5, m_textLine, `Platform contact count = ${this.m_platformContactCount}, point count = ${this.m_platformPointCount}`);
 		m_textLine = DrawString( 5, m_textLine, "Movement: A/D/Space" );
 		m_textLine = DrawString( 5, m_textLine, `Can jump = ${this.canJump ? "true" : "false"}`);
 
 		m_textLine = DrawString( 5, m_textLine, "*** Note: PreSolve is not compatible with workers, only single threaded. ***" );
+		return m_textLine;
 	}
 
 	Destroy(){

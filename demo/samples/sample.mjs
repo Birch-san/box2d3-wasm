@@ -15,11 +15,19 @@ export default class Sample{
 			b2DefaultWorldDef,
 			b2CreateWorld,
 			b2CreateThreadedWorld,
+			b2World_SetContactRecycleDistance,
 			TaskSystem
 		} = box2d;
 
 		const worldDef = b2DefaultWorldDef();
 		worldDef.enableSleep = settings.enableSleep;
+
+		// Samples may declare `static GetCapacity(box2d)` returning a b2Capacity to pre-size the world
+		const capacity = this.constructor.GetCapacity?.(box2d);
+		if(capacity){
+			worldDef.capacity = capacity;
+			capacity.delete();
+		}
 
 		if(settings.workerCount > 1){
 			this.m_taskSystem = new TaskSystem(settings.workerCount);
@@ -27,6 +35,8 @@ export default class Sample{
 		} else {
 			this.m_worldId = b2CreateWorld(worldDef);
 		}
+
+		b2World_SetContactRecycleDistance(this.m_worldId, settings.recycleDistance);
 
 		this.m_stepCount = 0;
 
@@ -44,6 +54,8 @@ export default class Sample{
 			b2World_EnableSleeping,
 			b2World_EnableWarmStarting,
 			b2World_EnableContinuous,
+			b2World_SetRestitutionIterations,
+			b2World_EnableRestitutionPropagation,
 			b2World_Step,
 			b2Joint_IsValid,
 			b2Transform,
@@ -83,7 +95,7 @@ export default class Sample{
 			const xf = new b2Transform();
 			xf.p = this.m_mousePoint;
 			xf.q = b2Rot_identity;
-			b2Body_SetTargetTransform( this.m_mouseBodyId, xf, timeStep );
+			b2Body_SetTargetTransform( this.m_mouseBodyId, xf, timeStep, true );
 
 			xf.delete();
 		}
@@ -92,6 +104,8 @@ export default class Sample{
 		b2World_EnableSleeping( this.m_worldId, settings.enableSleep );
 		b2World_EnableWarmStarting( this.m_worldId, settings.enableWarmStarting );
 		b2World_EnableContinuous( this.m_worldId, settings.enableContinuous );
+		b2World_SetRestitutionIterations( this.m_worldId, settings.restitutionIterations );
+		b2World_EnableRestitutionPropagation( this.m_worldId, settings.enableRestitutionPropagation );
 
 		for ( let i = 0; i < 1; ++i )
 		{
@@ -150,17 +164,18 @@ export default class Sample{
 			b2BodyType
 		} = this.box2d;
 
+		// A tiny box around the click point, relative to the click point as the query origin
 		const box = new b2AABB();
 		const d = new b2Vec2(0.001, 0.001);
-		box.lowerBound.Copy(p).Sub(d);
-		box.upperBound.Copy(p).Add(d);
+		box.lowerBound.Set(-d.x, -d.y);
+		box.upperBound.Copy(d);
 
 		this.m_mousePoint.Copy(p);
 
 		const queryContext = { point: p, bodyId: null };
 
 		const filter = b2DefaultQueryFilter();
-		b2World_OverlapAABB( this.m_worldId, box, filter, (overlapCallbackResult) => this.QueryCallback(overlapCallbackResult, queryContext));
+		b2World_OverlapAABB( this.m_worldId, p, box, filter, (overlapCallbackResult) => this.QueryCallback(overlapCallbackResult, queryContext));
 		filter.delete();
 
 		box.delete();
@@ -212,7 +227,7 @@ export default class Sample{
 		} = this.box2d;
 
 		if(this.m_mouseJointId){
-			b2DestroyJoint(this.m_mouseJointId, true);
+			b2DestroyJoint(this.m_mouseJointId);
 			this.m_mouseJointId = null;
 		}
 
@@ -244,15 +259,15 @@ export default class Sample{
 		this.m_totalProfile.pairs += profile.pairs;
 		this.m_totalProfile.collide += profile.collide;
 		this.m_totalProfile.solve += profile.solve;
-		this.m_totalProfile.prepareStages += profile.prepareStages;
-		this.m_totalProfile.solveConstraints += profile.solveConstraints;
+		this.m_totalProfile.solverSetup += profile.solverSetup;
+		this.m_totalProfile.constraints += profile.constraints;
 		this.m_totalProfile.prepareConstraints += profile.prepareConstraints;
 		this.m_totalProfile.integrateVelocities += profile.integrateVelocities;
 		this.m_totalProfile.warmStart += profile.warmStart;
 		this.m_totalProfile.solveImpulses += profile.solveImpulses;
 		this.m_totalProfile.integratePositions += profile.integratePositions;
 		this.m_totalProfile.relaxImpulses += profile.relaxImpulses;
-		this.m_totalProfile.applyRestitution += profile.applyRestitution;
+		this.m_totalProfile.restitution += profile.restitution;
 		this.m_totalProfile.storeImpulses += profile.storeImpulses;
 		this.m_totalProfile.splitIslands += profile.splitIslands;
 		this.m_totalProfile.transforms += profile.transforms;
@@ -267,15 +282,15 @@ export default class Sample{
 		this.m_maxProfile.pairs = Math.max(this.m_maxProfile.pairs, profile.pairs);
 		this.m_maxProfile.collide = Math.max(this.m_maxProfile.collide, profile.collide);
 		this.m_maxProfile.solve = Math.max(this.m_maxProfile.solve, profile.solve);
-		this.m_maxProfile.prepareStages = Math.max(this.m_maxProfile.prepareStages, profile.prepareStages);
-		this.m_maxProfile.solveConstraints = Math.max(this.m_maxProfile.solveConstraints, profile.solveConstraints);
+		this.m_maxProfile.solverSetup = Math.max(this.m_maxProfile.solverSetup, profile.solverSetup);
+		this.m_maxProfile.constraints = Math.max(this.m_maxProfile.constraints, profile.constraints);
 		this.m_maxProfile.prepareConstraints = Math.max(this.m_maxProfile.prepareConstraints, profile.prepareConstraints);
 		this.m_maxProfile.integrateVelocities = Math.max(this.m_maxProfile.integrateVelocities, profile.integrateVelocities);
 		this.m_maxProfile.warmStart = Math.max(this.m_maxProfile.warmStart, profile.warmStart);
 		this.m_maxProfile.solveImpulses = Math.max(this.m_maxProfile.solveImpulses, profile.solveImpulses);
 		this.m_maxProfile.integratePositions = Math.max(this.m_maxProfile.integratePositions, profile.integratePositions);
 		this.m_maxProfile.relaxImpulses = Math.max(this.m_maxProfile.relaxImpulses, profile.relaxImpulses);
-		this.m_maxProfile.applyRestitution = Math.max(this.m_maxProfile.applyRestitution, profile.applyRestitution);
+		this.m_maxProfile.restitution = Math.max(this.m_maxProfile.restitution, profile.restitution);
 		this.m_maxProfile.storeImpulses = Math.max(this.m_maxProfile.storeImpulses, profile.storeImpulses);
 		this.m_maxProfile.splitIslands = Math.max(this.m_maxProfile.splitIslands, profile.splitIslands);
 		this.m_maxProfile.transforms = Math.max(this.m_maxProfile.transforms, profile.transforms);
@@ -291,15 +306,15 @@ export default class Sample{
 			this.m_aveProfile.pairs = this.m_totalProfile.pairs / this.m_stepCount;
 			this.m_aveProfile.collide = this.m_totalProfile.collide / this.m_stepCount;
 			this.m_aveProfile.solve = this.m_totalProfile.solve / this.m_stepCount;
-			this.m_aveProfile.prepareStages = this.m_totalProfile.prepareStages / this.m_stepCount;
-			this.m_aveProfile.solveConstraints = this.m_totalProfile.solveConstraints / this.m_stepCount;
+			this.m_aveProfile.solverSetup = this.m_totalProfile.solverSetup / this.m_stepCount;
+			this.m_aveProfile.constraints = this.m_totalProfile.constraints / this.m_stepCount;
 			this.m_aveProfile.prepareConstraints = this.m_totalProfile.prepareConstraints / this.m_stepCount;
 			this.m_aveProfile.integrateVelocities = this.m_totalProfile.integrateVelocities / this.m_stepCount;
 			this.m_aveProfile.warmStart = this.m_totalProfile.warmStart / this.m_stepCount;
 			this.m_aveProfile.solveImpulses = this.m_totalProfile.solveImpulses / this.m_stepCount;
 			this.m_aveProfile.integratePositions = this.m_totalProfile.integratePositions / this.m_stepCount;
 			this.m_aveProfile.relaxImpulses = this.m_totalProfile.relaxImpulses / this.m_stepCount;
-			this.m_aveProfile.applyRestitution = this.m_totalProfile.applyRestitution / this.m_stepCount;
+			this.m_aveProfile.restitution = this.m_totalProfile.restitution / this.m_stepCount;
 			this.m_aveProfile.storeImpulses = this.m_totalProfile.storeImpulses / this.m_stepCount;
 			this.m_aveProfile.splitIslands = this.m_totalProfile.splitIslands / this.m_stepCount;
 			this.m_aveProfile.transforms = this.m_totalProfile.transforms / this.m_stepCount;
@@ -314,15 +329,15 @@ export default class Sample{
 			m_textLine = DrawString(5, m_textLine, `pairs [ave] (max) = ${profile.pairs.toFixed(2)} [${this.m_aveProfile.pairs.toFixed(2)}] (${this.m_maxProfile.pairs.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `collide [ave] (max) = ${profile.collide.toFixed(2)} [${this.m_aveProfile.collide.toFixed(2)}] (${this.m_maxProfile.collide.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `solve [ave] (max) = ${profile.solve.toFixed(2)} [${this.m_aveProfile.solve.toFixed(2)}] (${this.m_maxProfile.solve.toFixed(2)})`);
-			m_textLine = DrawString(5, m_textLine, `prepare tasks [ave] (max) = ${profile.prepareStages.toFixed(2)} [${this.m_aveProfile.prepareStages.toFixed(2)}] (${this.m_maxProfile.prepareStages.toFixed(2)})`);
-			m_textLine = DrawString(5, m_textLine, `solve constraints [ave] (max) = ${profile.solveConstraints.toFixed(2)} [${this.m_aveProfile.solveConstraints.toFixed(2)}] (${this.m_maxProfile.solveConstraints.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `solver setup [ave] (max) = ${profile.solverSetup.toFixed(2)} [${this.m_aveProfile.solverSetup.toFixed(2)}] (${this.m_maxProfile.solverSetup.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `constraints [ave] (max) = ${profile.constraints.toFixed(2)} [${this.m_aveProfile.constraints.toFixed(2)}] (${this.m_maxProfile.constraints.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `prepare constraints [ave] (max) = ${profile.prepareConstraints.toFixed(2)} [${this.m_aveProfile.prepareConstraints.toFixed(2)}] (${this.m_maxProfile.prepareConstraints.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `integrate velocities [ave] (max) = ${profile.integrateVelocities.toFixed(2)} [${this.m_aveProfile.integrateVelocities.toFixed(2)}] (${this.m_maxProfile.integrateVelocities.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `warm start [ave] (max) = ${profile.warmStart.toFixed(2)} [${this.m_aveProfile.warmStart.toFixed(2)}] (${this.m_maxProfile.warmStart.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `solve impulses [ave] (max) = ${profile.solveImpulses.toFixed(2)} [${this.m_aveProfile.solveImpulses.toFixed(2)}] (${this.m_maxProfile.solveImpulses.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `integrate positions [ave] (max) = ${profile.integratePositions.toFixed(2)} [${this.m_aveProfile.integratePositions.toFixed(2)}] (${this.m_maxProfile.integratePositions.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `relax impulses [ave] (max) = ${profile.relaxImpulses.toFixed(2)} [${this.m_aveProfile.relaxImpulses.toFixed(2)}] (${this.m_maxProfile.relaxImpulses.toFixed(2)})`);
-			m_textLine = DrawString(5, m_textLine, `apply restitution [ave] (max) = ${profile.applyRestitution.toFixed(2)} [${this.m_aveProfile.applyRestitution.toFixed(2)}] (${this.m_maxProfile.applyRestitution.toFixed(2)})`);
+			m_textLine = DrawString(5, m_textLine, `restitution [ave] (max) = ${profile.restitution.toFixed(2)} [${this.m_aveProfile.restitution.toFixed(2)}] (${this.m_maxProfile.restitution.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `store impulses [ave] (max) = ${profile.storeImpulses.toFixed(2)} [${this.m_aveProfile.storeImpulses.toFixed(2)}] (${this.m_maxProfile.storeImpulses.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `split islands [ave] (max) = ${profile.splitIslands.toFixed(2)} [${this.m_aveProfile.splitIslands.toFixed(2)}] (${this.m_maxProfile.splitIslands.toFixed(2)})`);
 			m_textLine = DrawString(5, m_textLine, `update transforms [ave] (max) = ${profile.transforms.toFixed(2)} [${this.m_aveProfile.transforms.toFixed(2)}] (${this.m_maxProfile.transforms.toFixed(2)})`);
@@ -362,15 +377,15 @@ const profileInterface = {
 	pairs: 0,
 	collide: 0,
 	solve: 0,
-	prepareStages: 0,
-	solveConstraints: 0,
+	solverSetup: 0,
+	constraints: 0,
 	prepareConstraints: 0,
 	integrateVelocities: 0,
 	warmStart: 0,
 	solveImpulses: 0,
 	integratePositions: 0,
 	relaxImpulses: 0,
-	applyRestitution: 0,
+	restitution: 0,
 	storeImpulses: 0,
 	splitIslands: 0,
 	transforms: 0,

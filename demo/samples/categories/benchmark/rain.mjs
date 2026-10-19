@@ -28,9 +28,20 @@ export default class Rain extends Sample{
 		CreateRain(box2d, this.m_worldId);
 	}
 
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.staticShapeCount = 2800;
+		capacity.dynamicShapeCount = 15000;
+		capacity.staticBodyCount = 1;
+		capacity.dynamicBodyCount = 13000;
+		capacity.contactCount = 29000;
+		capacity.arenaByteCount = 1900 * 1024;
+		return capacity;
+	}
+
 	Step()
 	{
-		if (settings.pause == false || settings.singleStep == true)
+		if (settings.pause == false || settings.singleStep)
 		{
 			StepRain(this.box2d, this.m_worldId, this.m_stepCount );
 		}
@@ -64,6 +75,9 @@ function CreateRain(box2d, worldId){
 		b2Rot_identity,
 		b2CreatePolygonShape
 	} = box2d;
+
+	// the humans of a previous run belong to a destroyed world
+	g_rainData.groups.forEach(group => group.fill(null));
 
 	g_rainData.gridSize = 0.5;
 	g_rainData.gridCount = 500;

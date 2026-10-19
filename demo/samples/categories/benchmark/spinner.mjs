@@ -5,6 +5,9 @@ import Keyboard from '../../../utils/keyboard.mjs';
 
 const SPINNER_POINT_COUNT = 360;
 
+// Largest finite float. Number.MAX_VALUE overflows to infinity in a float field.
+const FLT_MAX = 3.4028234663852886e38;
+
 const e_shapes = {
 	e_capsule: 0,
 	e_circle: 1,
@@ -37,6 +40,7 @@ export default class Spinner extends Sample{
 			b2CreatePolygonShape,
 			b2DefaultRevoluteJointDef,
 			b2CreateRevoluteJoint,
+			b2Body_GetLocalPoint,
 			B2_PI,
 			b2BodyType
 		} = this.box2d;
@@ -89,11 +93,13 @@ export default class Spinner extends Sample{
 
 			const motorSpeed = 5.0;
 			// const maxMotorTorque = 40000.0;
-			const maxMotorTorque = Number.MAX_VALUE;
+			const maxMotorTorque = FLT_MAX;
 			const jointDef = b2DefaultRevoluteJointDef();
 			jointDef.base.bodyIdA = groundId;
 			jointDef.base.bodyIdB = spinnerId;
-			jointDef.base.localFrameA.p.Copy(bodyDef.position);
+			const localPoint = b2Body_GetLocalPoint( groundId, bodyDef.position );
+			jointDef.base.localFrameA.p.Copy(localPoint);
+			localPoint.delete();
 			jointDef.enableMotor = true;
 			jointDef.motorSpeed = motorSpeed;
 			jointDef.maxMotorTorque = maxMotorTorque;
@@ -109,6 +115,17 @@ export default class Spinner extends Sample{
 		this.Spawn();
 
 		this.CreateUI();
+	}
+
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.staticShapeCount = 400;
+		capacity.dynamicShapeCount = 6700;
+		capacity.staticBodyCount = 1;
+		capacity.dynamicBodyCount = 6700;
+		capacity.contactCount = 41000;
+		capacity.arenaByteCount = 4600 * 1024;
+		return capacity;
 	}
 
 	Spawn(){

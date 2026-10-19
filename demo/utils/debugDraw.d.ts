@@ -23,6 +23,24 @@ export interface Color {
     b: number;
 }
 
+/** b2DebugDraw boolean options that can be toggled with SetFlags */
+export type DebugDrawFlag =
+    | 'drawShapes'
+    | 'drawJoints'
+    | 'drawJointExtras'
+    | 'drawBounds'
+    | 'drawMass'
+    | 'drawBodyNames'
+    | 'drawContacts'
+    | 'drawAnchorA'
+    | 'drawChainNormals'
+    | 'drawGraphColors'
+    | 'drawContactFeatures'
+    | 'drawContactNormals'
+    | 'drawContactForces'
+    | 'drawFrictionForces'
+    | 'drawIslands';
+
 export default class DebugDrawRenderer {
     Module: any;
     ctx: CanvasRenderingContext2D;
@@ -52,6 +70,6 @@ export default class DebugDrawRenderer {
     drawMemoryUsage(): void;
     colorToHTML(color: number, alpha?: number): string;
     transformPoint(xf: Transform, v: Point): Point;
-    SetFlags(flags: number): void;
+    SetFlags(flags: Partial<Record<DebugDrawFlag, boolean>>): void;
     Draw(worldId: any, camera?: Camera): void;
 }

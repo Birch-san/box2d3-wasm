@@ -541,6 +541,15 @@ export default class DebugDrawRenderer {
             this.finalScale = this.baseScale * this.dpr;
             this.offset.x = transform.offset.x;
             this.offset.y = transform.offset.y;
+
+            // Only draw what the camera sees (Box2D culls against drawingBounds, which must be a valid box)
+            const extentX = camera.zoom * (camera.width / camera.height);
+            const extentY = camera.zoom;
+            if (extentX > 0 && extentY > 0 && Number.isFinite(extentX) && Number.isFinite(extentY)) {
+                const drawingBounds = this.debugDrawCommandBuffer.GetDebugDraw().drawingBounds;
+                drawingBounds.lowerBound.Set(camera.center.x - extentX, camera.center.y - extentY);
+                drawingBounds.upperBound.Set(camera.center.x + extentX, camera.center.y + extentY);
+            }
         } else {
             const clientWidth = this.ctx.canvas.clientWidth;
             const clientHeight = this.ctx.canvas.clientHeight;

@@ -1,5 +1,4 @@
 import Sample from "../../sample.mjs";
-import settings from "../../settings.mjs";
 
 const e_maxBaseCount = 100;
 const e_maxBodyCount = e_maxBaseCount * ( e_maxBaseCount + 1 ) / 2;
@@ -30,6 +29,9 @@ export default class CreateDestroy extends Sample{
 
 		this.m_bodies = new Array(e_maxBodyCount).fill(null);
 
+		this.m_createTime = 0.0;
+		this.m_destroyTime = 0.0;
+
 		this.m_baseCount = 100;
 		this.m_iterations = 10;
 		this.m_bodyCount = 0;
@@ -37,11 +39,9 @@ export default class CreateDestroy extends Sample{
 		bodyDef.delete();
 		box.delete();
 		shapeDef.delete();
-
-		this.Spawn();
 	}
 
-	Spawn(){
+	CreateScene(){
 		const {
 			b2DefaultBodyDef,
 			b2CreateBody,
@@ -49,8 +49,11 @@ export default class CreateDestroy extends Sample{
 			b2DefaultShapeDef,
 			b2CreatePolygonShape,
 			b2MakeRoundedBox,
+			b2World_Step,
 			b2BodyType
 		} = this.box2d;
+
+		let ticks = performance.now();
 
 		for ( let i = 0; i < e_maxBodyCount; i++ )
 		{
@@ -60,6 +63,10 @@ export default class CreateDestroy extends Sample{
 				this.m_bodies[i] = null;
 			}
 		}
+
+		const now = performance.now();
+		this.m_destroyTime += now - ticks;
+		ticks = now;
 
 		const count = this.m_baseCount;
 		const rad = 0.5;
@@ -96,35 +103,47 @@ export default class CreateDestroy extends Sample{
 			}
 		}
 
+		this.m_createTime += performance.now() - ticks;
+
 		this.m_bodyCount = index;
 
 		bodyDef.delete();
 		shapeDef.delete();
 		box.delete();
+
+		b2World_Step( this.m_worldId, 1.0 / 60.0, 4 );
+		this.m_taskSystem?.ClearTasks();
 	}
 
 	Step(){
-		const start = performance.now();
+		this.m_createTime = 0.0;
+		this.m_destroyTime = 0.0;
 
 		for ( let i = 0; i < this.m_iterations; i++ )
 		{
-			this.Spawn();
+			this.CreateScene();
 		}
-
-		const end = performance.now();
-		this.m_deltaTime = end - start;
 
 		super.Step();
 	}
 
 	UpdateUI(DrawString, m_textLine){
 		m_textLine = super.UpdateUI(DrawString, m_textLine);
-		DrawString(5, m_textLine, `milliseconds=${this.m_deltaTime.toFixed(2)}`);
+
+		m_textLine = DrawString( 5, m_textLine, `total: create = ${this.m_createTime.toFixed(3)} ms, destroy = ${this.m_destroyTime.toFixed(3)} ms` );
+
+		if ( this.m_bodyCount > 0 )
+		{
+			const createPerBody = 1000.0 * this.m_createTime / this.m_iterations / this.m_bodyCount;
+			const destroyPerBody = 1000.0 * this.m_destroyTime / this.m_iterations / this.m_bodyCount;
+			m_textLine = DrawString( 5, m_textLine, `body: create = ${createPerBody.toFixed(3)} us, destroy = ${destroyPerBody.toFixed(3)} us` );
+		}
+
+		return m_textLine;
 	}
 
 	Destroy(){
 		super.Destroy();
-		this.Despawn();
 
 		if (this.pane){
 			this.pane.dispose();

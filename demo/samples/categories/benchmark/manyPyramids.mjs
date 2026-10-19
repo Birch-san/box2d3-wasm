@@ -6,11 +6,22 @@ export default class ManyPyramids extends Sample{
 	constructor(box2d, camera, debugDraw){
 		super(box2d, camera, debugDraw);
 
-		camera.center = {x: 16.0, y: 110.0 };
-		camera.zoom = 25.0 * 5;
+		camera.center = {x: 23.0, y: 72.5 };
+		camera.zoom = 165.0;
 		settings.enableSleep = false;
 
 		this.Spawn();
+	}
+
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.staticShapeCount = 22;
+		capacity.dynamicShapeCount = 25000;
+		capacity.staticBodyCount = 1;
+		capacity.dynamicBodyCount = 25000;
+		capacity.contactCount = 73000;
+		capacity.arenaByteCount = 11000 * 1024;
+		return capacity;
 	}
 
 	Spawn(){
@@ -95,8 +106,8 @@ function CreateManyPyramids( box2d, worldId )
 	for ( let i = 0; i < rowCount; i++ )
 	{
 		const segment = new b2Segment();
-		segment.point1.Set( -0.5 * 2.0 * groundWidth, groundY );
-		segment.point2.Set( 0.5 * 2.0 * groundWidth, groundY );
+		segment.point1.Set( -0.5 * groundWidth, groundY );
+		segment.point2.Set( 0.5 * groundWidth, groundY );
 		b2CreateSegmentShape( groundId, shapeDef, segment );
 		groundY += groundDeltaY;
 
@@ -110,7 +121,7 @@ function CreateManyPyramids( box2d, worldId )
 	{
 		for ( let j = 0; j < columnCount; j++ )
 		{
-			const centerX = -0.5 * groundWidth + j * ( baseWidth + 2.0 * extent ) + extent;
+			const centerX = -0.5 * groundWidth + j * ( baseWidth + 2.0 * extent ) + 2.0 * extent;
 			CreateSmallPyramid(box2d, worldId, baseCount, extent, centerX, baseY );
 		}
 
