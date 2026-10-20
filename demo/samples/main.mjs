@@ -1,6 +1,7 @@
 import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js';
 
 import Box2DFactory from 'box2d3-wasm';
+import Box2DDoubleFactory from 'box2d3-wasm/double';
 import Camera from '../utils/camera.mjs';
 import DebugDrawRenderer from '../utils/debugDraw.mjs';
 import Keyboard, { Key } from '../utils/keyboard.mjs';
@@ -15,7 +16,11 @@ const state = {
 	mouseJoint: null,
 }
 
+// Box2D module and debug draw renderer of the current sample. Samples run on the single precision
+// build unless they declare `static precision = 'double'` (large worlds), each module loads on first use.
 let box2d = null;
+let debugDraw = null;
+const runtimes = {};
 let sample = null;
 let sampleLoading = false;
 let sampleUrl = './categories/events/sensorFunnel.mjs';
@@ -36,7 +41,22 @@ const canvas = document.getElementById("demo-canvas");
 const ctx = canvas.getContext("2d");
 
 const camera = new Camera({autoResize: true, controls: true, canvas});
-let debugDraw = null;
+
+function getRuntime(precision){
+	runtimes[precision] ??= (async () => {
+		const factory = precision === 'double' ? Box2DDoubleFactory : Box2DFactory;
+		const module = await factory({
+			pthreadCount: navigator.hardwareConcurrency || 4,
+		});
+		const renderer = new DebugDrawRenderer(module, ctx, {
+			pixelToMeters: settings.ptm,
+			maxDebugDrawCommands: settings.maxDebugDrawCommands,
+			debugMemory: settings.debugWASMMemory,
+		});
+		return { box2d: module, debugDraw: renderer };
+	})();
+	return runtimes[precision];
+}
 
 async function loadSample(url) {
 	if(sampleLoading){
@@ -54,6 +74,11 @@ async function loadSample(url) {
 	window.history.pushState({}, sampleName, `?sample=${sampleName}`);
 
 	const module = await import(url);
+	const runtime = await getRuntime(module.default.precision ?? 'single');
+	box2d = runtime.box2d;
+	debugDraw = runtime.debugDraw;
+	debugDraw.debugMemory = settings.debugWASMMemory;
+
 	sample = new module.default(box2d, camera, debugDraw);
 	// samples may change the draw flags in settings (e.g. settings.drawJoints = false), like upstream samples do
 	updateDebugDrawFlags();
@@ -74,17 +99,9 @@ function updateDebugDrawFlags(){
 async function initialize(){
 	const maxThreads = navigator.hardwareConcurrency || 4;
 
-	box2d = await Box2DFactory({
-		pthreadCount: maxThreads,
-	});
-
 	settings.workerCount = Math.min(4, maxThreads);
 
-	debugDraw = new DebugDrawRenderer(box2d, ctx, {
-		pixelToMeters: settings.ptm,
-		maxDebugDrawCommands: settings.maxDebugDrawCommands,
-		debugMemory: settings.debugWASMMemory,
-	});
+	await getRuntime('single');
 
 	requestAnimationFrame(update);
 
@@ -165,7 +182,7 @@ function addUI(){
 
 	main.addBinding(PARAMS, 'wasm memory').on('change', (event) => {
 		settings.debugWASMMemory = event.value;
-		debugDraw.debugMemory = event.value;
+		if (debugDraw) debugDraw.debugMemory = event.value;
 		document.body.style.setProperty('--wasm-memory', `${event.value ? 1 : 0}`);
 	});
 
@@ -251,7 +268,7 @@ function onPointerDown(event){
 			&& Math.abs(state.mousePos.y - state.mouseDownPos.y) < maxMovementForClick
 		) {
 			const p = camera.convertScreenToWorld(state.mousePos);
-			const worldPos = new box2d.b2Vec2(p.x, p.y);
+			const worldPos = new box2d.b2Pos(p.x, p.y);
 			const interacting = sample?.MouseDown(worldPos);
 			worldPos.delete();
 			// block camera controls if interacting with the sample
@@ -263,7 +280,7 @@ function onPointerDown(event){
 function onPointerMove(event){
 	state.mousePos = {x: event.clientX, y: event.clientY};
 	const p = camera.convertScreenToWorld(state.mousePos);
-	const worldPos = new box2d.b2Vec2(p.x, p.y);
+	const worldPos = new box2d.b2Pos(p.x, p.y);
 	sample?.MouseMove(worldPos);
 	worldPos.delete();
 }

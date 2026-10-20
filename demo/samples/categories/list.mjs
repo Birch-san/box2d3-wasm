@@ -59,6 +59,9 @@ export default {
     "Wind": "./categories/shapes/wind.mjs"
   },
   "World": {
+    "Far Gate": "./categories/world/farGate.mjs",
+    "Far Pyramid": "./categories/world/farPyramid.mjs",
+    "Far Ragdolls": "./categories/world/farRagdolls.mjs",
     "Tiles": "./categories/world/tiles.mjs"
   }
 }

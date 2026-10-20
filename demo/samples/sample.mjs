@@ -9,7 +9,8 @@ export default class Sample{
 		this.m_mouseBodyId = null;
 		this.m_mouseJointId = null;
 		this.m_mouseForceScale = 100.0;
-		this.m_mousePoint = new box2d.b2Vec2(0, 0);
+		// world positions are b2Pos (an alias of b2Vec2 unless this is the double precision build)
+		this.m_mousePoint = new box2d.b2Pos(0, 0);
 
 		const {
 			b2DefaultWorldDef,
@@ -58,7 +59,7 @@ export default class Sample{
 			b2World_EnableRestitutionPropagation,
 			b2World_Step,
 			b2Joint_IsValid,
-			b2Transform,
+			b2WorldTransform,
 			b2Rot_identity,
 			b2Body_SetTargetTransform,
 			b2DestroyBody,
@@ -92,7 +93,7 @@ export default class Sample{
 
 		if ( this.m_mouseBodyId !== null && timeStep > 0.0 )
 		{
-			const xf = new b2Transform();
+			const xf = new b2WorldTransform();
 			xf.p = this.m_mousePoint;
 			xf.q = b2Rot_identity;
 			b2Body_SetTargetTransform( this.m_mouseBodyId, xf, timeStep, true );

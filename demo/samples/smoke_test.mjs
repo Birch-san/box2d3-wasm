@@ -96,7 +96,10 @@ globalThis.window = Object.setPrototypeOf({
 globalThis.document = stub;
 globalThis.requestAnimationFrame = () => 0;
 
-const { default: Box2DFactory } = await import('../../box2d3-wasm/build/dist/es/entry.mjs');
+const { default: SampleClass } = await import(new URL(single, pathToFileURL(fileURLToPath(new URL('./', import.meta.url)))).href);
+// samples declare `static precision = 'double'` to run on the large world build
+const entry = SampleClass.precision === 'double' ? 'entry-double.mjs' : 'entry.mjs';
+const { default: Box2DFactory } = await import(`../../box2d3-wasm/build/dist/es/${entry}`);
 const { default: Camera } = await import('../utils/camera.mjs');
 const { default: DebugDrawRenderer } = await import('../utils/debugDraw.mjs');
 const { default: settings, DEFAULT_SETTINGS } = await import('./settings.mjs');
@@ -107,22 +110,20 @@ Object.assign(settings, DEFAULT_SETTINGS, { workerCount: workers, debugWASMMemor
 const ctx = Object.setPrototypeOf({ canvas: { width: 1280, height: 800, clientWidth: 1280, clientHeight: 800, style: {} } }, stub);
 const camera = new Camera({ autoResize: false, controls: false, canvas: null });
 const debugDraw = new DebugDrawRenderer(box2d, ctx, { maxDebugDrawCommands: settings.maxDebugDrawCommands });
-// drawJointExtras stays off: Box2D v3.2.0 asserts in b2GetJointConstraintTorque for mover and pogo joints
-debugDraw.SetFlags({ drawShapes: true, drawJoints: true, drawJointExtras: false, drawBounds: true, drawMass: true, drawContacts: true, drawContactNormals: true, drawContactForces: true, drawFrictionForces: true });
+debugDraw.SetFlags({ drawShapes: true, drawJoints: true, drawJointExtras: true, drawBounds: true, drawMass: true, drawContacts: true, drawContactNormals: true, drawContactForces: true, drawFrictionForces: true });
 
-const { default: SampleClass } = await import(new URL(single, pathToFileURL(fileURLToPath(new URL('./', import.meta.url)))).href);
 const sample = new SampleClass(box2d, camera, debugDraw);
 const drawString = (x, y) => y + 16;
 
 let maxCommands = 0;
 for (let i = 0; i < steps; ++i) {
 	if (i === Math.floor(steps / 3)) {
-		const p = new box2d.b2Vec2(camera.center.x, camera.center.y);
+		const p = new box2d.b2Pos(camera.center.x, camera.center.y);
 		sample.MouseDown(p);
 		p.delete();
 	}
 	if (i > steps / 3 && i < steps / 2) {
-		const p = new box2d.b2Vec2(camera.center.x + 0.01 * (i - steps / 3), camera.center.y);
+		const p = new box2d.b2Pos(camera.center.x + 0.01 * (i - steps / 3), camera.center.y);
 		sample.MouseMove(p);
 		p.delete();
 	}
