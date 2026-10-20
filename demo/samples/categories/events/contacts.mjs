@@ -71,7 +71,6 @@ export default class Contacts extends Sample{
 		}
 
 		this.m_debrisIds = new Array(e_count);
-		this.m_bodyUserData = {};
 		for ( let i = 0; i < e_count; i++ )
 		{
 			this.m_debrisIds[i] = null;
@@ -101,7 +100,6 @@ export default class Contacts extends Sample{
 			b2Capsule,
 			RandomFloatRange,
 			B2_PI,
-			b2Body_GetPointer,
 		} = this.box2d;
 
 		let index = -1;
@@ -129,12 +127,9 @@ export default class Contacts extends Sample{
 		bodyDef.linearVelocity.Set(RandomFloatRange( -5.0, 5.0 ), RandomFloatRange( -5.0, 5.0 ));
 		bodyDef.angularVelocity = RandomFloatRange( -1.0, 1.0 );
 		bodyDef.gravityScale = 0.0;
-
+		// user data is an integer, 0 means no user data, so store the debris index + 1
+		bodyDef.userData = index + 1;
 		this.m_debrisIds[index] = b2CreateBody( this.m_worldId, bodyDef );
-
-		// store userdata
-		const bodyPointer = b2Body_GetPointer( this.m_debrisIds[index] );
-		this.m_bodyUserData[bodyPointer] = index;
 
 		const shapeDef = b2DefaultShapeDef();
 		shapeDef.material.restitution = 0.8;
@@ -188,12 +183,14 @@ export default class Contacts extends Sample{
 			b2Shape_GetContactData,
 			b2Length,
 			B2_ID_EQUALS,
-			b2Body_GetPointer,
+			b2Body_GetUserData,
+			b2Body_GetWorldCenter,
+			b2Body_IsValid,
 			b2DestroyBody,
 			b2DestroyShape,
-			b2Body_ApplyMassFromShapes,
+			b2Body_UpdateMassFromShapes,
 			b2Body_GetShapes,
-			b2InvMulTransforms,
+			b2InvMulWorldTransforms,
 			b2TransformPoint,
 			b2Shape_GetType,
 			b2Shape_GetCircle,
@@ -282,21 +279,22 @@ export default class Contacts extends Sample{
 						const manifold = contactData[j].manifold;
 						const normal = manifold.normal;
 						console.assert( Math.abs( b2Length( normal ) - 1.0 ) < 4.0 * FLT_EPSILON );
+						const bidA = b2Shape_GetBody( idA );
 
 						for ( let k = 0; k < manifold.pointCount; k++ )
 						{
 							const point = manifold.GetPoint(k);
 
-							const p1 = point.point;
-							const offset = new b2Vec2().Copy(normal).MulSV(point.totalNormalImpulse);
-							const p2 = new b2Vec2().Copy(point.point).Add(offset);
+							// manifold points are anchors relative to the body center of mass
+							const posA = b2Body_GetWorldCenter( bidA );
+							const p1 = { x: posA.x + point.anchorA.x, y: posA.y + point.anchorA.y };
+							const p2 = { x: p1.x + point.totalNormalImpulse * normal.x, y: p1.y + point.totalNormalImpulse * normal.y };
 
 							this.debugDraw.drawLine( {data: [p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorBlueViolet});
-							this.debugDraw.drawPoint( {data: [p1.x, p1.y, 100.0], color:b2HexColor.b2_colorWhite} );
+							this.debugDraw.drawPoint( {data: [p1.x, p1.y, 10.0], color:b2HexColor.b2_colorWhite} );
 
 							point.delete();
-							offset.delete();
-							p2.delete();
+							posA.delete();
 						}
 					}
 
@@ -308,6 +306,8 @@ export default class Contacts extends Sample{
 				// The count may be less than the capacity
 				const contactData = b2Shape_GetContactData( event.shapeIdB, capacityB );
 				const countB = contactData.length;
+
+				console.assert( countB >= 1 );
 
 				for ( let j = 0; j < countB; j++ )
 				{
@@ -322,21 +322,22 @@ export default class Contacts extends Sample{
 						const manifold = contactData[j].manifold;
 						const normal = manifold.normal;
 						console.assert( Math.abs( b2Length( normal ) - 1.0 ) < 4.0 * FLT_EPSILON );
+						const bidA = b2Shape_GetBody( idA );
 
 						for ( let k = 0; k < manifold.pointCount; k++ )
 						{
 							const point = manifold.GetPoint(k);
 
-							const p1 = point.point;
-							const offset = new b2Vec2().Copy(normal).MulSV(point.totalNormalImpulse);
-							const p2 = new b2Vec2().Copy(point.point).Add(offset);
+							// manifold points are anchors relative to the body center of mass
+							const posA = b2Body_GetWorldCenter( bidA );
+							const p1 = { x: posA.x + point.anchorA.x, y: posA.y + point.anchorA.y };
+							const p2 = { x: p1.x + point.totalNormalImpulse * normal.x, y: p1.y + point.totalNormalImpulse * normal.y };
 
 							this.debugDraw.drawLine( {data:[p1.x, p1.y, p2.x, p2.y], color: b2HexColor.b2_colorYellowGreen} );
 							this.debugDraw.drawPoint( {data: [p1.x, p1.y, 10.0], color: b2HexColor.b2_colorWhite} );
 
 							point.delete();
-							offset.delete();
-							p2.delete();
+							posA.delete();
 						}
 					}
 
@@ -346,8 +347,8 @@ export default class Contacts extends Sample{
 
 			if ( B2_ID_EQUALS( bodyIdA, this.m_playerId ) )
 			{
-				const userDataB = this.m_bodyUserData[b2Body_GetPointer( bodyIdB )];
-				if ( userDataB === undefined )
+				const userDataB = b2Body_GetUserData( bodyIdB );
+				if ( userDataB === 0 )
 				{
 					if ( B2_ID_EQUALS( event.shapeIdA, this.m_coreShapeId ) == false && destroyCount < e_count )
 					{
@@ -373,7 +374,7 @@ export default class Contacts extends Sample{
 				}
 				else if ( attachCount < e_count )
 				{
-					debrisToAttach[attachCount] = userDataB;
+					debrisToAttach[attachCount] = userDataB - 1;
 					attachCount += 1;
 				}
 			}
@@ -381,8 +382,8 @@ export default class Contacts extends Sample{
 			{
 				// Only expect events for the player
 				console.assert( B2_ID_EQUALS( bodyIdB, this.m_playerId ) );
-				const userDataA = this.m_bodyUserData[b2Body_GetPointer( bodyIdA )];
-				if ( userDataA === undefined )
+				const userDataA = b2Body_GetUserData( bodyIdA );
+				if ( userDataA === 0 )
 				{
 					if ( B2_ID_EQUALS( event.shapeIdB, this.m_coreShapeId ) == false && destroyCount < e_count )
 					{
@@ -408,7 +409,7 @@ export default class Contacts extends Sample{
 				}
 				else if ( attachCount < e_count )
 				{
-					debrisToAttach[attachCount] = userDataA;
+					debrisToAttach[attachCount] = userDataA - 1;
 					attachCount += 1;
 				}
 			}
@@ -423,20 +424,20 @@ export default class Contacts extends Sample{
 			let index = debrisToAttach[i];
 
 			const debrisId = this.m_debrisIds[index];
-			if ( debrisId == null )
+			if ( debrisId == null || b2Body_IsValid( debrisId ) == false )
 			{
 				continue;
 			}
-
-			const playerTransform = b2Body_GetTransform( this.m_playerId );
-			const debrisTransform = b2Body_GetTransform( debrisId );
-			const relativeTransform = b2InvMulTransforms( playerTransform, debrisTransform );
 
 			const shapeCount = b2Body_GetShapeCount( debrisId );
 			if ( shapeCount == 0 )
 			{
 				continue;
 			}
+
+			const playerTransform = b2Body_GetTransform( this.m_playerId );
+			const debrisTransform = b2Body_GetTransform( debrisId );
+			const relativeTransform = b2InvMulWorldTransforms( playerTransform, debrisTransform );
 
 			let shapeId;
 			const shapes = b2Body_GetShapes( debrisId, 1 );
@@ -497,7 +498,6 @@ export default class Contacts extends Sample{
 			debrisTransform.delete();
 			relativeTransform.delete();
 
-			delete this.m_bodyUserData[b2Body_GetPointer( debrisId )];
 			b2DestroyBody( debrisId );
 			this.m_debrisIds[index] = null;
 		}
@@ -511,11 +511,11 @@ export default class Contacts extends Sample{
 		if ( destroyCount > 0 )
 		{
 			// Update mass just once
-			b2Body_ApplyMassFromShapes( this.m_playerId );
+			b2Body_UpdateMassFromShapes( this.m_playerId );
 		}
 
 
-		if ( settings.hertz > 0.0 )
+		if ( settings.hertz > 0.0 && settings.pause == false )
 		{
 			this.m_wait -= 1.0 / settings.hertz;
 			if ( this.m_wait < 0.0 )
@@ -571,8 +571,8 @@ export default class Contacts extends Sample{
 	UpdateUI(DrawString, m_textLine){
 		m_textLine = super.UpdateUI(DrawString, m_textLine);
 
-		DrawString(5, m_textLine, 'move using WASD');
-
+		m_textLine = DrawString(5, m_textLine, 'move using WASD');
+		return m_textLine;
 	}
 
 	Destroy(){

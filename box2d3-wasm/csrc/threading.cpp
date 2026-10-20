@@ -1,6 +1,5 @@
 // TaskSystem.cpp
 #include <box2d/box2d.h>
-#include <box2cpp/box2cpp.h>
 #include <emscripten.h>
 #include <emscripten/bind.h>
 #include "threading.h"
@@ -8,17 +7,16 @@
 
 using namespace emscripten;
 using namespace enki;
-using namespace b2;
 
-static void* SchedulePhysicsTask(b2TaskCallback* task, int32_t itemCount, int32_t minRange, void* taskContext, void* userContext)
+static void* SchedulePhysicsTask(b2TaskCallbackFcn* task, void* taskContext, void* userContext)
 {
     TaskSystem* system = static_cast<TaskSystem*>(userContext);
 
     if (system->activeTaskCount < TaskSystem::MAX_TASKS)
     {
         PhysicsTask& physicsTask = system->tasks[system->activeTaskCount];
-        physicsTask.m_SetSize = itemCount;
-        physicsTask.m_MinRange = minRange;
+        physicsTask.m_SetSize = 1;
+        physicsTask.m_MinRange = 1;
         physicsTask.taskCallback = task;
         physicsTask.taskData = taskContext;
 
@@ -28,7 +26,8 @@ static void* SchedulePhysicsTask(b2TaskCallback* task, int32_t itemCount, int32_
     }
     else
     {
-        task(0, itemCount, 0, taskContext);
+        // Returning nullptr tells Box2D the work already ran serially.
+        task(taskContext);
         return nullptr;
     }
 }

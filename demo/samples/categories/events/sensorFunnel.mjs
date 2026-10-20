@@ -66,7 +66,6 @@ export default class SensorFunnel extends Sample{
 			let y = 14.0;
 			for ( let i = 0; i < 3; i++ )
 			{
-				console.log('Creating rotating platform at y = ' + y);
 				bodyDef.position.Set(0.0, y);
 				bodyDef.type = b2BodyType.b2_dynamicBody;
 
@@ -210,25 +209,27 @@ export default class SensorFunnel extends Sample{
 			const bodyId = b2Shape_GetBody( visitorId );
 
 
-			if(this.m_type == e_donut){
-				const elementId = Donut_GetUserData(this.box2d, bodyId );
-				deferredDestructions.add(elementId);
-			} else {
-				const elementId = Human_GetUserData(this.box2d, bodyId );
+			const elementId = this.m_type == e_donut ? Donut_GetUserData(this.box2d, bodyId ) : Human_GetUserData(this.box2d, bodyId );
+			if ( elementId !== undefined )
+			{
+				// Defer destruction to avoid double destruction and event invalidation (orphaned shape ids)
 				deferredDestructions.add(elementId);
 			}
 		}
 
+		// Safely destroy elements that hit the bottom sensor
 		deferredDestructions.forEach( elementId => {
 			this.DestroyElement(elementId);
 		});
 
-		this.m_wait -= 1.0 / settings.hertz;
-
-		if ( this.m_wait <= 0.0 )
+		if ( settings.hertz > 0.0 && settings.pause == false )
 		{
-			this.CreateElement();
-			this.m_wait += e_wait;
+			this.m_wait -= 1.0 / settings.hertz;
+			if ( this.m_wait < 0.0 )
+			{
+				this.CreateElement();
+				this.m_wait += e_wait;
+			}
 		}
 
 		sensorEvents.delete();
@@ -240,7 +241,7 @@ export default class SensorFunnel extends Sample{
 		super.CreateUI();
 
 		const PARAMS = {
-			shape: e_human,
+			shape: this.m_type,
 		};
 		this.pane = new Pane({
 			title: 'Sample Settings',

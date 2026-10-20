@@ -23,11 +23,35 @@ export interface Color {
     b: number;
 }
 
+/** b2DebugDraw boolean options that can be toggled with SetFlags */
+export type DebugDrawFlag =
+    | 'drawShapes'
+    | 'drawJoints'
+    | 'drawJointExtras'
+    | 'drawBounds'
+    | 'drawMass'
+    | 'drawBodyNames'
+    | 'drawContacts'
+    | 'drawAnchorA'
+    | 'drawChainNormals'
+    | 'drawGraphColors'
+    | 'drawContactFeatures'
+    | 'drawContactNormals'
+    | 'drawContactForces'
+    | 'drawFrictionForces'
+    | 'drawIslands';
+
 export default class DebugDrawRenderer {
     Module: any;
     ctx: CanvasRenderingContext2D;
     baseScale: number;
+    /** canvas offset for absolute world coordinates */
     offset: Point;
+    /** Box2D's draw commands are relative to this origin (the camera center), for large world precision */
+    origin: Point;
+    /** canvas offset for the origin relative draw commands */
+    commandOffset: Point;
+    activeOffset: Point;
     autoHD: boolean;
     dpr: number;
     finalScale: number;
@@ -37,7 +61,7 @@ export default class DebugDrawRenderer {
 
     constructor(Module: any, context: CanvasRenderingContext2D, options?: DebugDrawOptions);
     initializeColorCache(alpha?: number): Record<number, string>;
-    prepareCanvas(): void;
+    prepareCanvas(relative?: boolean): void;
     restoreCanvas(): void;
     processCommands(ptr: number, size: number, stride: number): void;
     drawPolygon(cmd: any): void;
@@ -52,6 +76,6 @@ export default class DebugDrawRenderer {
     drawMemoryUsage(): void;
     colorToHTML(color: number, alpha?: number): string;
     transformPoint(xf: Transform, v: Point): Point;
-    SetFlags(flags: number): void;
+    SetFlags(flags: Partial<Record<DebugDrawFlag, boolean>>): void;
     Draw(worldId: any, camera?: Camera): void;
 }

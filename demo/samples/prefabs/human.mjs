@@ -31,7 +31,7 @@ class Human {
 		for ( let i = 0; i < boneId_count; ++i )
 		{
 			if (this.bones[i].jointId){
-				this.box2d.b2DestroyJoint( this.bones[i].jointId, false );
+				this.box2d.b2DestroyJoint( this.bones[i].jointId );
 			}
 		}
 		for ( let i = 0; i < boneId_count; ++i )
@@ -139,6 +139,7 @@ class Bone {
 	}
 }
 
+// position is a world position: a b2Pos (an alias of b2Vec2 unless box2d is the double precision build)
 export default function CreateHuman(box2d, worldId, position, scale, frictionTorque, hertz, dampingRatio, groupIndex, userData, colorize )
 {
 	const {
@@ -155,6 +156,8 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		b2MakePolygon,
 		b2CreatePolygonShape,
 		b2Vec2,
+		b2Pos,
+		b2MakeRot,
 		B2_PI
 	} = box2d;
 
@@ -255,7 +258,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		capsule.radius = 0.09 * s;
 		b2CreateCapsuleShape(bone.bodyId, shapeDef, capsule);
 
-		const pivot = new b2Vec2(0.0, 1.0 * s).Add(position);
+		const pivot = new b2Pos(0.0, 1.0 * s).Add(position);
 
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
@@ -312,7 +315,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		// capsule = { { 0.0f, -0.12f * s }, { 0.0f, -0.08f * s }, 0.05f * s };
 		// b2CreateCapsuleShape( bone->bodyId, &shapeDef, &capsule );
 
-		const pivot = new b2Vec2(0.0, 1.4 * s);
+		const pivot = new b2Pos(0.0, 1.4 * s);
 		pivot.Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
@@ -331,7 +334,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -362,7 +365,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		capsule.radius = 0.06 * s;
 		b2CreateCapsuleShape(bone.bodyId, shapeDef, capsule);
 
-		const pivot = new b2Vec2(0.0, 0.9 * s).Add(position);
+		const pivot = new b2Pos(0.0, 0.9 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -380,7 +383,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -429,7 +432,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		b2CreatePolygonShape(bone.bodyId, footShapeDef, footPolygon);
 
-		const pivot = new b2Vec2(0.0, 0.625 * s).Add(position);
+		const pivot = new b2Pos(0.0, 0.625 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -447,7 +450,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -478,7 +481,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		capsule.radius = 0.06 * s;
 		b2CreateCapsuleShape(bone.bodyId, shapeDef, capsule);
 
-		const pivot = new b2Vec2(0.0, 0.9 * s).Add(position);
+		const pivot = new b2Pos(0.0, 0.9 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -496,7 +499,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -530,7 +533,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		// Add foot polygon
 		b2CreatePolygonShape(bone.bodyId, footShapeDef, footPolygon);
 
-		const pivot = new b2Vec2(0.0, 0.625 * s).Add(position);
+		const pivot = new b2Pos(0.0, 0.625 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -548,7 +551,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -579,7 +582,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		capsule.radius = 0.035 * s;
 		b2CreateCapsuleShape(bone.bodyId, shapeDef, capsule);
 
-		const pivot = new b2Vec2(0.0, 1.35 * s).Add(position);
+		const pivot = new b2Pos(0.0, 1.35 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -597,7 +600,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -628,7 +631,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		capsule.radius = 0.03 * s;
 		b2CreateCapsuleShape(bone.bodyId, shapeDef, capsule);
 
-		const pivot = new b2Vec2(0.0, 1.1 * s).Add(position);
+		const pivot = new b2Pos(0.0, 1.1 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -638,7 +641,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		jointDef.base.localFrameA.p.Copy(localPosA);
 		jointDef.base.localFrameB.p.Copy(localPosB);
-		jointDef.referenceAngle = 0.25 * B2_PI;
+		jointDef.base.localFrameA.q = b2MakeRot( 0.25 * B2_PI );
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.2 * B2_PI;
 		jointDef.upperAngle = 0.3 * B2_PI;
@@ -647,7 +650,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -678,7 +681,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		capsule.radius = 0.035 * s;
 		b2CreateCapsuleShape(bone.bodyId, shapeDef, capsule);
 
-		const pivot = new b2Vec2(0.0, 1.35 * s).Add(position);
+		const pivot = new b2Pos(0.0, 1.35 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -696,7 +699,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 
@@ -727,7 +730,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		capsule.radius = 0.03 * s;
 		b2CreateCapsuleShape(bone.bodyId, shapeDef, capsule);
 
-		const pivot = new b2Vec2(0.0, 1.1 * s).Add(position);
+		const pivot = new b2Pos(0.0, 1.1 * s).Add(position);
 		const jointDef = b2DefaultRevoluteJointDef();
 		jointDef.base.bodyIdA = human.bones[bone.parentIndex].bodyId;
 		jointDef.base.bodyIdB = bone.bodyId;
@@ -737,7 +740,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 
 		jointDef.base.localFrameA.p.Copy(localPosA);
 		jointDef.base.localFrameB.p.Copy(localPosB);
-		jointDef.referenceAngle = 0.25 * B2_PI;
+		jointDef.base.localFrameA.q = b2MakeRot( 0.25 * B2_PI );
 		jointDef.enableLimit = enableLimit;
 		jointDef.lowerAngle = -0.2 * B2_PI;
 		jointDef.upperAngle = 0.3 * B2_PI;
@@ -746,7 +749,7 @@ export default function CreateHuman(box2d, worldId, position, scale, frictionTor
 		jointDef.enableSpring = hertz > 0.0;
 		jointDef.hertz = hertz;
 		jointDef.dampingRatio = dampingRatio;
-		jointDef.drawSize = drawSize;
+		jointDef.base.drawScale = drawSize;
 
 		bone.jointId = b2CreateRevoluteJoint(worldId, jointDef);
 

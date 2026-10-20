@@ -37,16 +37,19 @@ export default class FootSensor extends Sample{
 			const bodyDef = b2DefaultBodyDef();
 			const groundId = b2CreateBody( this.m_worldId, bodyDef );
 
-			const points = new Array(20);
-			let x = 10.0;
-			for ( let i = 0; i < 20; i++ )
+			const points = new Array(18);
+			let x = 9.0;
+			for ( let i = 0; i < 18; i++ )
 			{
 				points[i] = { x, y: 0.0 };
 				x -= 1.0;
 			}
 
+			// Open chains need ghost points, every segment of an open chain collides
 			const chainDef = b2DefaultChainDef();
 			chainDef.SetPoints( points );
+			chainDef.ghost1.Set( 10.0, 0.0 );
+			chainDef.ghost2.Set( -9.0, 0.0 );
 			chainDef.isLoop = false;
 			chainDef.filter.categoryBits = GROUND;
 			chainDef.filter.maskBits = FOOT | PLAYER;
@@ -114,7 +117,7 @@ export default class FootSensor extends Sample{
 			b2Shape_GetSensorCapacity,
 			b2Shape_GetSensorData,
 			B2_ID_EQUALS,
-			b2Shape_GetAABB,
+			b2Shape_GetBounds,
 			b2AABB_Center,
 		} = this.box2d;
 
@@ -169,7 +172,7 @@ export default class FootSensor extends Sample{
 		for ( let i = 0; i < overlaps.length; i++ )
 		{
 			const shapeId = overlaps[i];
-			const aabb = b2Shape_GetAABB( shapeId );
+			const aabb = b2Shape_GetBounds( shapeId );
 			const point = b2AABB_Center( aabb );
 			aabb.delete();
 			this.m_overlapPoints.push(point);

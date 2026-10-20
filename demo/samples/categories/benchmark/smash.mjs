@@ -12,6 +12,15 @@ export default class Smash extends Sample{
 		this.Spawn();
 	}
 
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.dynamicShapeCount = 11000;
+		capacity.dynamicBodyCount = 11000;
+		capacity.contactCount = 55000;
+		capacity.arenaByteCount = 4900 * 1024;
+		return capacity;
+	}
+
 	Spawn(){
 		CreateSmash(this.box2d, this.m_worldId);
 	}

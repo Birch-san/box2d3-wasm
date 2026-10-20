@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <cassert>
 
+// Box2D v3.2 hands us whole tasks: each enqueued task must run exactly once, on one thread.
+// Box2D splits the work across workers itself, so the task set has a size of one.
 class PhysicsTask : public enki::ITaskSet
 {
 public:
@@ -14,19 +16,22 @@ public:
 
     void ExecuteRange(enki::TaskSetPartition range, uint32_t threadIndex) override
     {
+        (void)range;
+        (void)threadIndex;
         if (taskCallback)
         {
-            taskCallback(range.start, range.end, threadIndex, taskData);
+            taskCallback(taskData);
         }
     }
 
-    b2TaskCallback* taskCallback = nullptr;
+    b2TaskCallbackFcn* taskCallback = nullptr;
     void* taskData = nullptr;
 };
 
 struct TaskSystem
 {
-    static constexpr int MAX_TASKS = 128;
+    // Box2D never enqueues more than B2_MAX_TASKS tasks per world step.
+    static constexpr int MAX_TASKS = B2_MAX_TASKS;
 
     enki::TaskScheduler* taskScheduler = nullptr;
     PhysicsTask* tasks = nullptr;

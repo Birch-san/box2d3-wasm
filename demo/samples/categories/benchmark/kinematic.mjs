@@ -1,5 +1,4 @@
 import Sample from "../../sample.mjs";
-import settings from "../../settings.mjs";
 
 
 export default class Kinematic extends Sample{
@@ -18,7 +17,7 @@ export default class Kinematic extends Sample{
 			b2MakeOffsetBox,
 			b2Rot_identity,
 			b2BodyType,
-			b2Body_ApplyMassFromShapes
+			b2Body_UpdateMassFromShapes
 		} = this.box2d;
 
 		const grid = 1.0;
@@ -38,25 +37,25 @@ export default class Kinematic extends Sample{
 
 		const bodyId = b2CreateBody( this.m_worldId, bodyDef );
 
+		const p = new b2Vec2();
 		for ( let i = -span; i < span; i++ )
 		{
 			const y = i * grid;
 			for ( let j = -span; j < span; j++ )
 			{
 				const x = j * grid;
-				const p = new b2Vec2(x, y);
-				const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, p, b2Rot_identity );
+				const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, p.Set(x, y), b2Rot_identity );
 				b2CreatePolygonShape( bodyId, shapeDef, square );
 
-				p.delete();
 				square.delete();
 			}
 		}
 
+		p.delete();
 		bodyDef.delete();
 		shapeDef.delete();
 
 		// All shapes have been added so I can efficiently compute the mass properties.
-		b2Body_ApplyMassFromShapes( bodyId );
+		b2Body_UpdateMassFromShapes( bodyId );
 	}
 }

@@ -1,5 +1,6 @@
 import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js';
 import Sample from "../../sample.mjs";
+import settings from "../../settings.mjs";
 
 import CreateHuman from "../../prefabs/human.mjs";
 
@@ -22,6 +23,7 @@ export default class Barrel extends Sample{
 		camera.center = {x: 8.0, y: 53.0 };
 		camera.zoom = 25.0 * 2.35;
 
+		settings.drawJoints = false;
 
 		const {
 			b2DefaultBodyDef,
@@ -48,7 +50,7 @@ export default class Barrel extends Sample{
 			let x = -40.0 * gridSize;
 			for ( let i = 0; i < 81; ++i )
 			{
-				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, p.Set(x, y), b2Rot_identity );
+				const box = b2MakeOffsetBox( 0.55 * gridSize, 0.5 * gridSize, p.Set(x, y), b2Rot_identity );
 				b2CreatePolygonShape( groundId, shapeDef, box );
 				box.delete();
 				x += gridSize;
@@ -58,7 +60,7 @@ export default class Barrel extends Sample{
 			x = -40.0 * gridSize;
 			for ( let i = 0; i < 100; ++i )
 			{
-				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, p.Set(x, y), b2Rot_identity );
+				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.55 * gridSize, p.Set(x, y), b2Rot_identity );
 				b2CreatePolygonShape( groundId, shapeDef, box );
 				box.delete();
 				y += gridSize;
@@ -68,7 +70,7 @@ export default class Barrel extends Sample{
 			x = 40.0 * gridSize;
 			for ( let i = 0; i < 100; ++i )
 			{
-				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.5 * gridSize, p.Set(x, y), b2Rot_identity );
+				const box = b2MakeOffsetBox( 0.5 * gridSize, 0.55 * gridSize, p.Set(x, y), b2Rot_identity );
 				b2CreatePolygonShape( groundId, shapeDef, box );
 				box.delete();
 				y += gridSize;
@@ -108,8 +110,12 @@ export default class Barrel extends Sample{
 			b2MakeBox,
 			b2CreatePolygonShape,
 			b2DefaultShapeDef,
-			RandomFloatRange
+			RandomFloatRange,
+			SetRandomSeed
 		} = this.box2d;
+
+		// reset the random seed so a reset rebuilds the same scene, like upstream
+		SetRandomSeed( 42 );
 
 		let m_columnCount = e_maxColumns;
 		let m_rowCount = e_maxRows;
@@ -143,9 +149,9 @@ export default class Barrel extends Sample{
 		shapeDef.material.friction = 0.5;
 
 		const capsule = new b2Capsule();
-		capsule.center1.Set(-0.25, 0.0);
-		capsule.center2.Set(0.25, 0.0);
-		capsule.radius = 0.25;
+		capsule.center1.Set(0.0, -0.25);
+		capsule.center2.Set(0.0, 0.25);
+		capsule.radius = rad;
 
 		const circle = new b2Circle();
 		circle.center.Set(0.0, 0.0);
@@ -208,6 +214,7 @@ export default class Barrel extends Sample{
 				{
 					this.m_bodies[index] = b2CreateBody( this.m_worldId, bodyDef );
 					circle.radius = RandomFloatRange( 0.25, 0.75 );
+					shapeDef.material.rollingResistance = 0.2;
 					b2CreateCircleShape( this.m_bodies[index], shapeDef, circle );
 				}
 				else if ( this.m_shapeType == e_shapes.e_capsuleShape )
@@ -217,6 +224,7 @@ export default class Barrel extends Sample{
 					const length = RandomFloatRange( 0.25, 1.0 );
 					capsule.center1.Set(0.0, -0.5 * length );
 					capsule.center2.Set(0.0, 0.5 * length );
+					shapeDef.material.rollingResistance = 0.2;
 					b2CreateCapsuleShape( this.m_bodies[index], shapeDef, capsule );
 				}
 				else if ( this.m_shapeType == e_shapes.e_mixShape )

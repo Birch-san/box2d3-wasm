@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# FLAVOUR=simd TARGET_TYPE=Debug ./shell/1_build_wasm.sh
+# FLAVOUR=deluxe TARGET_TYPE=Debug ./shell/1_build_wasm.sh
+# PRECISION=double links the large world build from cmake-build-$FLAVOUR-double into build/dist/es/$FLAVOUR-double
 set -eo pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 B2D_WASM_DIR="$(realpath "$DIR/..")"
 MONOREPO_DIR="$(realpath "$B2D_WASM_DIR/..")"
-BOX2D_DIR="$(realpath "$MONOREPO_DIR/box2d")"
-B2CPP_DIR="$(realpath "$MONOREPO_DIR/box2cpp")"
 ENKITS_DIR="$(realpath "$MONOREPO_DIR/enkiTS")"
-CMAKEBUILD_DIR="$(realpath "$B2D_WASM_DIR/cmake-build-$FLAVOUR")"
 BUILD_DIR="$(realpath "$B2D_WASM_DIR/build")"
+# the patched copy of the box2d sources made by 0_build_makefile.sh
+BOX2D_DIR="$BUILD_DIR/box2d-src"
 CSRC_DIR="$(realpath "$B2D_WASM_DIR/csrc")"
 
 Red='\033[0;31m'
@@ -17,7 +17,24 @@ Blue='\033[0;34m'
 Purple='\033[0;35m'
 NC='\033[0m' # No Color
 
-BASENAME="Box2D.$FLAVOUR"
+BUILD_NAME="$FLAVOUR"
+PRECISION_OPTS=()
+case "${PRECISION:-single}" in
+  single)
+    ;;
+  double)
+    BUILD_NAME="$FLAVOUR-double"
+    # must match the library, the define changes the layout of positions and transforms
+    PRECISION_OPTS=(-DBOX2D_DOUBLE_PRECISION)
+    ;;
+  *)
+    >&2 echo -e "${Red}PRECISION must be 'single' or 'double'.${NC}"
+    exit 1
+    ;;
+esac
+CMAKEBUILD_DIR="$(realpath "$B2D_WASM_DIR/cmake-build-$BUILD_NAME")"
+
+BASENAME="Box2D.$BUILD_NAME"
 FLAVOUR_EMCC_OPTS=()
 FLAVOUR_LINK_OPTS=()
 case "$FLAVOUR" in
@@ -62,6 +79,7 @@ EMCC_OPTS=(
   -s EXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU16,HEAPU32
   -s ALLOW_MEMORY_GROWTH=1
   -s EXPORT_ES6=1
+  ${PRECISION_OPTS[@]}
   ${FLAVOUR_EMCC_OPTS[@]}
   ${FLAVOUR_LINK_OPTS[@]}
   )
@@ -111,6 +129,9 @@ case "$TARGET_TYPE" in
       ${EMCC_OPTS[@]}
       ${RELEASE_OPTS[@]}
       ${MINIFICATION_OPTS[@]}
+      # match the Release libbox2d.a, which is built without asserts (Box2D's inline header
+      # functions would otherwise reference b2InternalAssert, which that library doesn't contain)
+      -DNDEBUG
       -flto
       -s EXPORTED_RUNTIME_METHODS=['HEAPU8','HEAPU16','HEAPU32','stackSave','stackRestore','stackAlloc']
       -s STACK_OVERFLOW_CHECK=2
@@ -126,7 +147,7 @@ case "$TARGET_TYPE" in
 esac
 >&2 echo -e "TARGET_TYPE is $TARGET_TYPE"
 
-ES_DIR="$BUILD_DIR/dist/es/$FLAVOUR"
+ES_DIR="$BUILD_DIR/dist/es/$BUILD_NAME"
 ES_FILE="$ES_DIR/$BASENAME.mjs"
 ES_TSD="$ES_DIR/$BASENAME.d.ts"
 
@@ -139,10 +160,10 @@ emcc -lembind \
 "$CSRC_DIR/threading.cpp" \
 "$CSRC_DIR/debugDraw.cpp" \
 "$ENKITS_DIR/src/TaskScheduler.cpp" \
-"$CMAKEBUILD_DIR/src/$LIBARCHIVE" \
+"$CMAKEBUILD_DIR/box2d/src/$LIBARCHIVE" \
 -I "$BOX2D_DIR/include" \
 -I "$ENKITS_DIR/src" \
--I "$B2CPP_DIR/include" \
+-I "$CSRC_DIR/generated" \
 "${EMCC_OPTS[@]}" \
 -o "$ES_FILE" \
 --emit-tsd "$ES_TSD"

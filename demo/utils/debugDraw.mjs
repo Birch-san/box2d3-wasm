@@ -12,7 +12,13 @@ export default class DebugDrawRenderer {
         this.Module = Module;
         this.ctx = context;
         this.baseScale = pixelToMeters;
+        // canvas offset for absolute world coordinates (samples drawing their own lines and points)
         this.offset = { x: 0, y: 0 };
+        // Box2D's debug draw commands are relative to an origin at the camera center, which keeps
+        // their precision in large (double precision) worlds. This is the canvas offset for those.
+        this.origin = { x: 0, y: 0 };
+        this.commandOffset = { x: 0, y: 0 };
+        this.activeOffset = this.offset;
 
         this.autoHD = autoHD;
         this.dpr = autoHD ? Math.min(window.devicePixelRatio || 1, 2) : 1;
@@ -183,19 +189,22 @@ export default class DebugDrawRenderer {
         return cache;
     }
 
-    prepareCanvas() {
+    // relative: true for Box2D's command data (relative to this.origin), false for absolute world coordinates
+    prepareCanvas(relative = false) {
+        this.activeOffset = relative ? this.commandOffset : this.offset;
         this.ctx.save();
         this.ctx.scale(this.finalScale, -this.finalScale);
-        this.ctx.translate(this.offset.x, this.offset.y);
+        this.ctx.translate(this.activeOffset.x, this.activeOffset.y);
         this.ctx.lineWidth = 1 / this.finalScale;
     }
 
     restoreCanvas() {
+        this.activeOffset = this.offset;
         this.ctx.restore();
     }
 
     processCommands(ptr, size, stride) {
-        this.prepareCanvas();
+        this.prepareCanvas(true);
 
         // type: 0 (uint8_t)
         // color: 4 (uint32_t)
@@ -447,8 +456,8 @@ export default class DebugDrawRenderer {
         this.ctx.font = `${fontSize}px Arial`;
         this.ctx.fillStyle = 'rgb(230, 230, 230)';
 
-        const screenX = (x + this.offset.x) * this.finalScale;
-        const screenY = (-y - this.offset.y) * this.finalScale;
+        const screenX = (x + this.activeOffset.x) * this.finalScale;
+        const screenY = (-y - this.activeOffset.y) * this.finalScale;
 
         this.ctx.fillText(text, screenX, screenY);
         this.ctx.restore();
@@ -541,6 +550,21 @@ export default class DebugDrawRenderer {
             this.finalScale = this.baseScale * this.dpr;
             this.offset.x = transform.offset.x;
             this.offset.y = transform.offset.y;
+
+            this.origin.x = camera.center.x;
+            this.origin.y = camera.center.y;
+            this.commandOffset.x = transform.offset.x + camera.center.x;
+            this.commandOffset.y = transform.offset.y + camera.center.y;
+            this.debugDrawCommandBuffer.SetOrigin(this.origin.x, this.origin.y);
+
+            // Only draw what the camera sees (Box2D culls against drawingBounds, which must be a valid box)
+            const extentX = camera.zoom * (camera.width / camera.height);
+            const extentY = camera.zoom;
+            if (extentX > 0 && extentY > 0 && Number.isFinite(extentX) && Number.isFinite(extentY)) {
+                const drawingBounds = this.debugDrawCommandBuffer.GetDebugDraw().drawingBounds;
+                drawingBounds.lowerBound.Set(camera.center.x - extentX, camera.center.y - extentY);
+                drawingBounds.upperBound.Set(camera.center.x + extentX, camera.center.y + extentY);
+            }
         } else {
             const clientWidth = this.ctx.canvas.clientWidth;
             const clientHeight = this.ctx.canvas.clientHeight;
@@ -549,6 +573,13 @@ export default class DebugDrawRenderer {
             this.ctx.canvas.height = clientHeight * this.dpr;
             this.ctx.canvas.style.width = `${clientWidth}px`;
             this.ctx.canvas.style.height = `${clientHeight}px`;
+
+            // without a camera, commands stay in absolute world coordinates
+            this.origin.x = 0;
+            this.origin.y = 0;
+            this.commandOffset.x = this.offset.x;
+            this.commandOffset.y = this.offset.y;
+            this.debugDrawCommandBuffer.SetOrigin(0, 0);
         }
 
         this.Module.b2World_Draw(worldId, this.debugDrawCommandBuffer.GetDebugDraw());

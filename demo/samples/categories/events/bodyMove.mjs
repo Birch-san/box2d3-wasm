@@ -18,8 +18,7 @@ export default class BodyMove extends Sample{
 		this.m_sleepCount = 0;
 		this.m_count = 0;
 		this.m_bodyIds = new Array(e_count);
-		this.m_sleeping = new Array(e_count);
-		this.m_userData = {};
+		this.m_sleeping = new Array(e_count).fill(false);
 
 		const {
 			b2Vec2,
@@ -93,7 +92,6 @@ export default class BodyMove extends Sample{
 			b2CreatePolygonShape,
 			RandomPolygon,
 			b2CreateBody,
-			b2Body_GetPointer,
 			b2DefaultBodyDef,
 			b2DefaultShapeDef
 		} = this.box2d;
@@ -117,11 +115,10 @@ export default class BodyMove extends Sample{
 		for ( let i = 0; i < 10 && this.m_count < e_count; i++ )
 		{
 			bodyDef.position.Set(x, y);
+			bodyDef.isBullet = ( this.m_count % 12 == 0 );
+			// user data is an integer, 0 means no user data, so store the index + 1
+			bodyDef.userData = this.m_count + 1;
 			this.m_bodyIds[this.m_count] = b2CreateBody( this.m_worldId, bodyDef );
-
-			const bodyPointer = b2Body_GetPointer( this.m_bodyIds[this.m_count] );
-			this.m_userData[bodyPointer] = this.m_count;
-
 			this.m_sleeping[this.m_count] = false;
 
 			const remainder = this.m_count % 4;
@@ -166,7 +163,7 @@ export default class BodyMove extends Sample{
 	Step(){
 		const {
 			b2World_GetBodyEvents,
-			b2Body_GetPointer,
+			b2Body_GetTransform,
 		} = this.box2d;
 
 		if ( settings.pause == false && ( this.m_stepCount & 15 ) == 15 && this.m_count < e_count )
@@ -182,9 +179,16 @@ export default class BodyMove extends Sample{
 		const bodyEvents = b2World_GetBodyEvents( this.m_worldId );
 		for ( let i = 0; i < bodyEvents.moveCount; ++i )
 		{
-			// draw the transform of every body that moved (not sleeping)
 			const event = bodyEvents.GetMoveEvent(i);
 
+			if ( event.userData === 0 )
+			{
+				// The mouse joint body has no user data
+				event.delete();
+				continue;
+			}
+
+			// draw the transform of every body that moved (not sleeping)
 			const drawCommandTransform = {
 				data: [
 					event.transform.p.x,
@@ -196,9 +200,15 @@ export default class BodyMove extends Sample{
 
 			this.debugDraw.drawTransform( drawCommandTransform );
 
+			const transform = b2Body_GetTransform( event.bodyId );
+			console.assert( transform.p.x == event.transform.p.x );
+			console.assert( transform.p.y == event.transform.p.y );
+			console.assert( transform.q.c == event.transform.q.c );
+			console.assert( transform.q.s == event.transform.q.s );
+			transform.delete();
+
 			// this shows a somewhat contrived way to track body sleeping
-			const bodyPointer = b2Body_GetPointer( event.bodyId );
-			const bodyIndex = this.m_userData[bodyPointer];
+			const bodyIndex = event.userData - 1;
 
 			if ( event.fellAsleep )
 			{
@@ -286,7 +296,8 @@ export default class BodyMove extends Sample{
 
 	UpdateUI(DrawString, m_textLine){
 		m_textLine = super.UpdateUI(DrawString, m_textLine);
-		DrawString( 5, m_textLine, `sleep count: ${this.m_sleepCount}` );
+		m_textLine = DrawString( 5, m_textLine, `sleep count: ${this.m_sleepCount}` );
+		return m_textLine;
 	}
 
 	Destroy(){

@@ -13,6 +13,17 @@ export default class LargePyramid extends Sample{
 		this.Spawn();
 	}
 
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.staticShapeCount = 1;
+		capacity.dynamicShapeCount = 5600;
+		capacity.staticBodyCount = 1;
+		capacity.dynamicBodyCount = 5600;
+		capacity.contactCount = 19000;
+		capacity.arenaByteCount = 2800 * 1024;
+		return capacity;
+	}
+
 	Spawn(){
 		CreateLargePyramid(this.box2d, this.m_worldId);
 	}
@@ -37,7 +48,6 @@ function CreateLargePyramid(box2d, worldId){
 		b2DefaultShapeDef,
 		b2MakeBox,
 		b2MakeSquare,
-		b2Vec2,
 		b2BodyType,
 	} = box2d;
 
@@ -61,15 +71,15 @@ function CreateLargePyramid(box2d, worldId){
 
 	const bodyDef = b2DefaultBodyDef();
 	bodyDef.type = b2BodyType.b2_dynamicBody;
-	bodyDef.enableSleep = false;
+	// bodyDef.enableSleep = false;
 
 	const shapeDef = b2DefaultShapeDef();
 	shapeDef.density = 1.0;
 
-	const h = 0.5;
-	const box = b2MakeSquare( h );
+	const a = 0.5;
+	const box = b2MakeSquare( a );
 
-	const shift = 1.0 * h;
+	const shift = 1.0 * a;
 
 	for ( let i = 0; i < baseCount; i++ )
 	{
@@ -77,7 +87,7 @@ function CreateLargePyramid(box2d, worldId){
 
 		for ( let j = i; j < baseCount; j++ )
 		{
-			const x = ( i + 1.0 ) * shift + 2.0 * ( j - i ) * shift - h * baseCount;
+			const x = ( i + 1.0 ) * shift + 2.0 * ( j - i ) * shift - a * baseCount;
 
 			bodyDef.position.Set(x, y);
 
