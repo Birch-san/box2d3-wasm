@@ -12,6 +12,12 @@
         "default": "./build/dist/es/entry.mjs"
       }
     },
+    "./double": {
+      "import": {
+        "types": "./build/dist/es/entry-double.d.ts",
+        "default": "./build/dist/es/entry-double.mjs"
+      }
+    },
     "./utils/*": {
       "import": {
         "types": "./build/dist/es/utils/*.d.ts",

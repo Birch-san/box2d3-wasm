@@ -136,6 +136,58 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         });
         ;
 
+#if defined( BOX2D_DOUBLE_PRECISION )
+    // Large world types, positions are doubles. In single precision these are aliases of b2Vec2,
+    // b2Transform and b2CastOutput, and entry.mjs exposes those under these names as well.
+    class_<b2Pos>("b2Pos")
+        .constructor()
+        .constructor(+[](double x, double y) -> b2Pos { return b2Pos{x, y}; })
+        .property("x", &b2Pos::x)
+        .property("y", &b2Pos::y)
+        .function("Set", +[](b2Pos& self, double x, double y) -> b2Pos& {
+            self.x = x;
+            self.y = y;
+            return self;
+        }, return_value_policy::reference())
+        .function("Copy", +[](b2Pos& self, const b2Pos& other) -> b2Pos& {
+            self = other;
+            return self;
+        }, return_value_policy::reference())
+        .function("Clone", +[](const b2Pos& self) -> b2Pos {
+            return self;
+        })
+        .function("Add", +[](b2Pos& self, const b2Pos& other) -> b2Pos& {
+            self.x += other.x;
+            self.y += other.y;
+            return self;
+        }, return_value_policy::reference())
+        .function("Sub", +[](b2Pos& self, const b2Pos& other) -> b2Pos& {
+            self.x -= other.x;
+            self.y -= other.y;
+            return self;
+        }, return_value_policy::reference())
+        ;
+
+    class_<b2WorldTransform>("b2WorldTransform")
+        .constructor()
+        .property("p", &b2WorldTransform::p, return_value_policy::reference())
+        .property("q", &b2WorldTransform::q, return_value_policy::reference())
+        .function("ToBytes", +[](const b2WorldTransform& self) -> emscripten::val {
+            return toBytes(self);
+        })
+        ;
+
+    class_<b2WorldCastOutput>("b2WorldCastOutput")
+        .constructor()
+        .property("normal", &b2WorldCastOutput::normal, return_value_policy::reference())
+        .property("point", &b2WorldCastOutput::point, return_value_policy::reference())
+        .property("fraction", &b2WorldCastOutput::fraction)
+        .property("iterations", &b2WorldCastOutput::iterations)
+        .property("hit", &b2WorldCastOutput::hit)
+        ;
+#endif
+    constant("b2WorldTransform_identity", b2WorldTransform_identity);
+
     class_<b2Mat22>("b2Mat22")
         .constructor()
         .property("cx", &b2Mat22::cx, return_value_policy::reference())
@@ -749,24 +801,31 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             {
                 emscripten::val matVal = array[i];
 
-                persistentMaterials[i] = b2SurfaceMaterial{};
+                // Missing fields keep Box2D's defaults. Read through property access, which also
+                // works for b2SurfaceMaterial objects (their fields are getters, not own properties).
+                b2SurfaceMaterial& material = persistentMaterials[i];
+                material = b2DefaultSurfaceMaterial();
+                auto has = [&matVal](const char* name) {
+                    emscripten::val field = matVal[name];
+                    return !field.isUndefined() && !field.isNull();
+                };
 
-                if (matVal.hasOwnProperty("friction"))
-                    persistentMaterials[i].friction = matVal["friction"].as<float>();
-                if (matVal.hasOwnProperty("restitution"))
-                    persistentMaterials[i].restitution = matVal["restitution"].as<float>();
-                if (matVal.hasOwnProperty("rollingResistance"))
-                    persistentMaterials[i].rollingResistance = matVal["rollingResistance"].as<float>();
-                if (matVal.hasOwnProperty("tangentSpeed"))
-                    persistentMaterials[i].tangentSpeed = matVal["tangentSpeed"].as<float>();
-                if (matVal.hasOwnProperty("userMaterialId")) {
+                if (has("friction"))
+                    material.friction = matVal["friction"].as<float>();
+                if (has("restitution"))
+                    material.restitution = matVal["restitution"].as<float>();
+                if (has("rollingResistance"))
+                    material.rollingResistance = matVal["rollingResistance"].as<float>();
+                if (has("tangentSpeed"))
+                    material.tangentSpeed = matVal["tangentSpeed"].as<float>();
+                if (has("userMaterialId")) {
                     emscripten::val id = matVal["userMaterialId"];
-                    persistentMaterials[i].userMaterialId = id.typeOf().as<std::string>() == "bigint"
+                    material.userMaterialId = id.typeOf().as<std::string>() == "bigint"
                         ? id.as<uint64_t>()
                         : static_cast<uint64_t>(id.as<double>());
                 }
-                if (matVal.hasOwnProperty("customColor"))
-                    persistentMaterials[i].customColor = matVal["customColor"].as<uint32_t>();
+                if (has("customColor"))
+                    material.customColor = matVal["customColor"].as<uint32_t>();
             }
 
             def.materials = persistentMaterials.data();
@@ -1591,7 +1650,7 @@ struct MemoryStats {
 
 struct b2RayCallbackResult {
     b2ShapeId shapeId;
-    b2Vec2 point;
+    b2Pos point;
     b2Vec2 normal;
     float fraction;
 };

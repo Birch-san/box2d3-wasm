@@ -113,6 +113,45 @@ jobs:
         env:
           FLAVOUR: compat
           TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
+      - name: "deluxe double precision: build makefile"
+        working-directory: box2d3-wasm
+        run: shell/0_build_makefile.sh
+        env:
+          FLAVOUR: deluxe
+          PRECISION: double
+          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
+      - name: "deluxe double precision: emmake"
+        working-directory: box2d3-wasm
+        run: emmake make -j8 -C cmake-build-deluxe-double
+      - name: "deluxe double precision: build wasm"
+        working-directory: box2d3-wasm
+        run: shell/1_build_wasm.sh
+        env:
+          FLAVOUR: deluxe
+          PRECISION: double
+          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
+      - name: "compat double precision: build makefile"
+        working-directory: box2d3-wasm
+        run: shell/0_build_makefile.sh
+        env:
+          FLAVOUR: compat
+          PRECISION: double
+          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
+      - name: "compat double precision: emmake"
+        working-directory: box2d3-wasm
+        run: emmake make -j8 -C cmake-build-compat-double
+      - name: "compat double precision: build wasm"
+        working-directory: box2d3-wasm
+        run: shell/1_build_wasm.sh
+        env:
+          FLAVOUR: compat
+          PRECISION: double
+          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
+      - name: integration tests
+        working-directory: box2d3-wasm
+        run: |
+          node integration-test/index.mjs
+          node integration-test/double.mjs
       - name: copy demo utils to build output
         run: |
           mkdir -p box2d3-wasm/build/dist/es/utils

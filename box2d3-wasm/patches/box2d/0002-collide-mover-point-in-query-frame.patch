@@ -1,0 +1,48 @@
+diff --git a/src/geometry.c b/src/geometry.c
+index 5c7463b..523e725 100644
+--- a/src/geometry.c
++++ b/src/geometry.c
+@@ -1010,7 +1010,8 @@ b2PlaneResult b2CollideMoverAndCircle( const b2Capsule* mover, const b2Circle* s
+ 		b2Plane plane = { distanceOutput.normal, totalRadius - distanceOutput.distance };
+ 		return (b2PlaneResult){
+ 			.plane = plane,
+-			.point = distanceOutput.pointA,
++			// pointA is on the shape core, offset it to the rounded surface
++			.point = b2MulAdd( distanceOutput.pointA, shape->radius, distanceOutput.normal ),
+ 			.hit = true,
+ 		};
+ 	}
+@@ -1036,7 +1037,8 @@ b2PlaneResult b2CollideMoverAndCapsule( const b2Capsule* mover, const b2Capsule*
+ 		b2Plane plane = { distanceOutput.normal, totalRadius - distanceOutput.distance };
+ 		return (b2PlaneResult){
+ 			.plane = plane,
+-			.point = distanceOutput.pointA,
++			// pointA is on the shape core, offset it to the rounded surface
++			.point = b2MulAdd( distanceOutput.pointA, shape->radius, distanceOutput.normal ),
+ 			.hit = true,
+ 		};
+ 	}
+@@ -1062,7 +1064,8 @@ b2PlaneResult b2CollideMoverAndPolygon( const b2Capsule* mover, const b2Polygon*
+ 		b2Plane plane = { distanceOutput.normal, totalRadius - distanceOutput.distance };
+ 		return (b2PlaneResult){
+ 			.plane = plane,
+-			.point = distanceOutput.pointA,
++			// pointA is on the shape core, offset it to the rounded surface
++			.point = b2MulAdd( distanceOutput.pointA, shape->radius, distanceOutput.normal ),
+ 			.hit = true,
+ 		};
+ 	}
+diff --git a/src/shape.c b/src/shape.c
+index 7d40992..f79e2b5 100644
+--- a/src/shape.c
++++ b/src/shape.c
+@@ -1124,7 +1124,9 @@ b2PlaneResult b2CollideMover( const b2Capsule* mover, const b2Shape* shape, b2Tr
+ 		return result;
+ 	}
+ 
++	// The mover was collided in the shape frame, bring the plane and the point back to the query frame
+ 	result.plane.normal = b2RotateVector( transform.q, result.plane.normal );
++	result.point = b2TransformPoint( transform, result.point );
+ 	return result;
+ }
+ 

@@ -25,6 +25,26 @@ Install as an [npm package](https://www.npmjs.com/package/box2d3-wasm):
 npm i --save box2d3-wasm
 ```
 
+### Large worlds (double precision)
+
+Box2D normally stores positions in single precision, which is fine within a few kilometres of the origin. For larger worlds, import the double precision build instead. It is Box2D's large world mode: positions (`b2Pos`) and body transforms (`b2WorldTransform`) are doubles, so a body 10,000 km from the origin simulates like one at the origin.
+
+```js
+import Box2DFactory from 'box2d3-wasm/double';
+
+const box2d = await Box2DFactory();
+const { b2Pos, b2DefaultBodyDef, b2OffsetPos, b2Vec2 } = box2d;
+
+const bodyDef = b2DefaultBodyDef();
+bodyDef.position = new b2Pos(10.0e6, 0.0);
+// local offsets stay b2Vec2
+const pivot = b2OffsetPos(bodyDef.position, new b2Vec2(0.0, 2.0));
+```
+
+In the double precision build, world positions must be `b2Pos` objects (and world transforms `b2WorldTransform`); local vectors stay `b2Vec2`. The single precision build exposes `b2Pos`, `b2WorldTransform` and `b2WorldCastOutput` as aliases of `b2Vec2`, `b2Transform` and `b2CastOutput`, so code written with `b2Pos` runs on both builds. See [integration-test/double.mjs](integration-test/double.mjs).
+
+The debug draw command buffer emits positions relative to an origin you set with `SetOrigin(x, y)` (the demo renderer uses the camera center), so drawing stays precise far from the world origin.
+
 ## Build from Source Pre-Requisites
 
 Install [Node.js and npm][].
@@ -70,6 +90,25 @@ The C++ classes (`World`, `Body`, `Shape`, joints…) come from [box2cpp](https:
 
 Small fixes to the upstream generator live in `shell/box2cpp-generator.patch`.
 
+### Box2D patches
+
+`shell/0_build_makefile.sh` copies the Box2D sources to `build/box2d-src` and applies `patches/box2d/*.patch` there, so the `box2d` submodule itself stays untouched. The patches fix upstream v3.2.0 bugs:
+
+- `0001`: the mover and pogo joints had no case in `b2Joint_GetConstraintTorque`, `b2Joint_GetLinearSeparation` and `b2Joint_GetAngularSeparation`, which asserted in debug builds (for example when drawing joint extras).
+- `0002`: `b2World_CollideMover` reported the contact point in the touched shape's local frame instead of relative to the query origin, and on the core of rounded shapes instead of their surface.
+
+Drop a patch once it is fixed upstream.
+
+### Double precision builds
+
+Set `PRECISION=double` for both scripts. The output goes to `cmake-build-<flavour>-double` and `build/dist/es/<flavour>-double`:
+
+```bash
+PRECISION=double FLAVOUR=deluxe TARGET_TYPE=Debug ./shell/0_build_makefile.sh
+emmake make -j8 -C cmake-build-deluxe-double
+PRECISION=double FLAVOUR=deluxe TARGET_TYPE=Debug ./shell/1_build_wasm.sh
+```
+
 ## Run Demos
 
 Inside the `demo` directory, run `yarn` to install `local-web-server` locally.
@@ -101,6 +140,7 @@ Regardless of whether you use threading: you may need web server customizations 
 
 ```bash
 node integration-test/index.mjs
+node integration-test/double.mjs
 ```
 
 ## Release
@@ -108,15 +148,16 @@ node integration-test/index.mjs
 From `box2d3-wasm` package's directory,
 
 ```bash
-git clean -dfx build cmake-build-deluxe cmake-build-compat
+git clean -dfx build cmake-build-deluxe cmake-build-compat cmake-build-deluxe-double cmake-build-compat-double
 
-FLAVOUR=deluxe TARGET_TYPE=Release ./shell/0_build_makefile.sh
-emmake make -j8 -C cmake-build-deluxe
-FLAVOUR=deluxe TARGET_TYPE=Release ./shell/1_build_wasm.sh
-
-FLAVOUR=compat TARGET_TYPE=Release ./shell/0_build_makefile.sh
-emmake make -j8 -C cmake-build-compat
-FLAVOUR=compat TARGET_TYPE=Release ./shell/1_build_wasm.sh
+for PRECISION in single double; do
+  SUFFIX=$([ "$PRECISION" = double ] && echo "-double")
+  for FLAVOUR in deluxe compat; do
+    PRECISION=$PRECISION FLAVOUR=$FLAVOUR TARGET_TYPE=Release ./shell/0_build_makefile.sh
+    emmake make -j8 -C cmake-build-$FLAVOUR$SUFFIX
+    PRECISION=$PRECISION FLAVOUR=$FLAVOUR TARGET_TYPE=Release ./shell/1_build_wasm.sh
+  done
+done
 
 # e.g. major | minor | patch, see https://docs.npmjs.com/cli/v10/commands/npm-version
 npm version minor
@@ -139,7 +180,7 @@ box2d3-wasm follows the Box2D C API names, so most changes come straight from th
 - **New:** world snapshots (`b2World_GetSnapshot` returns a `Uint8Array`, `b2World_RestoreFromSnapshot`, `b2CreateWorldFromSnapshot`, `b2World_GetStateHash`), integer user data on bodies, shapes and joints (`b2Body_SetUserData(bodyId, n)`), per-body continuous `safetyFactor`, wind and drag (`b2Shape_ApplyWind`), and joint force/torque thresholds.
 - JavaScript callbacks (pre-solve, custom filter, friction and restitution mixing) only work in single-threaded worlds, because they cannot be called from worker threads.
 
-Not bound yet: recording and replay, the standalone dynamic tree, and the double precision large world build.
+Not bound yet: recording and replay, and the standalone dynamic tree.
 
 ## Licensing
 

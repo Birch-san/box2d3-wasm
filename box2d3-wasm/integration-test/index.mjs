@@ -233,6 +233,151 @@ const subStepCount = 4;
 })();
 
 
+// Patched upstream bugs (see patches/box2d)
+(() => {
+  const {
+      b2DefaultWorldDef,
+      b2CreateWorld,
+      b2DestroyWorld,
+      b2World_Step,
+      b2World_Draw,
+      b2World_CollideMover,
+      b2DefaultBodyDef,
+      b2DefaultShapeDef,
+      b2CreateBody,
+      b2CreatePolygonShape,
+      b2CreateCircleShape,
+      b2MakeBox,
+      b2MakeRot,
+      b2DefaultMoverJointDef,
+      b2CreateMoverJoint,
+      b2DefaultPogoJointDef,
+      b2CreatePogoJoint,
+      b2Joint_GetConstraintTorque,
+      b2Joint_GetLinearSeparation,
+      b2Joint_GetAngularSeparation,
+      b2DefaultQueryFilter,
+      b2BodyType,
+      b2Capsule,
+      b2Circle,
+      b2Vec2,
+      b2Pos,
+      DebugDrawCommandBuffer,
+  } = box2d;
+
+  const worldId = b2CreateWorld(b2DefaultWorldDef());
+  const groundId = b2CreateBody(worldId, b2DefaultBodyDef());
+  b2CreatePolygonShape(groundId, b2DefaultShapeDef(), b2MakeBox(20, 1));
+
+  const bd = b2DefaultBodyDef();
+  bd.type = b2BodyType.b2_dynamicBody;
+  bd.position = new b2Vec2(0, 2);
+  const bodyId = b2CreateBody(worldId, bd);
+  b2CreatePolygonShape(bodyId, b2DefaultShapeDef(), b2MakeBox(0.5, 0.5));
+
+  // mover and pogo joints have no constraint torque or separation, this used to assert
+  const moverDef = b2DefaultMoverJointDef();
+  moverDef.base.bodyIdA = groundId;
+  moverDef.base.bodyIdB = bodyId;
+  const moverId = b2CreateMoverJoint(worldId, moverDef);
+  const pogoDef = b2DefaultPogoJointDef();
+  pogoDef.base.bodyIdA = groundId;
+  pogoDef.base.bodyIdB = bodyId;
+  pogoDef.normal = new b2Vec2(0, 1);
+  pogoDef.restLength = 1.5;
+  const pogoId = b2CreatePogoJoint(worldId, pogoDef);
+  b2World_Step(worldId, timeStep, subStepCount);
+  for (const jointId of [moverId, pogoId]) {
+    assert.equal(b2Joint_GetConstraintTorque(jointId), 0);
+    assert.equal(b2Joint_GetLinearSeparation(jointId), 0);
+    assert.equal(b2Joint_GetAngularSeparation(jointId), 0);
+  }
+  const commandBuffer = new DebugDrawCommandBuffer(1000);
+  const debugDraw = commandBuffer.GetDebugDraw();
+  debugDraw.drawJoints = true;
+  debugDraw.drawJointExtras = true;
+  b2World_Draw(worldId, debugDraw);
+  commandBuffer.delete();
+
+  // b2World_CollideMover points are relative to the query origin and on the shape surface
+  const boxDef = b2DefaultBodyDef();
+  boxDef.position = new b2Vec2(30, 5);
+  boxDef.rotation = b2MakeRot(0.5 * Math.PI);
+  const boxBodyId = b2CreateBody(worldId, boxDef);
+  b2CreatePolygonShape(boxBodyId, b2DefaultShapeDef(), b2MakeBox(2, 1));
+  const circleDef = b2DefaultBodyDef();
+  circleDef.position = new b2Vec2(40, 5);
+  const circleBodyId = b2CreateBody(worldId, circleDef);
+  const circle = new b2Circle();
+  circle.radius = 1;
+  b2CreateCircleShape(circleBodyId, b2DefaultShapeDef(), circle);
+
+  const collide = (origin, centerX) => {
+    const mover = new b2Capsule();
+    mover.center1 = new b2Vec2(centerX, -0.25);
+    mover.center2 = new b2Vec2(centerX, 0.25);
+    mover.radius = 0.5;
+    const points = [];
+    b2World_CollideMover(worldId, origin, mover, b2DefaultQueryFilter(), (shapeId, result) => {
+      points.push({ x: result.point.x, y: result.point.y, normal: result.plane.normal });
+      return true;
+    });
+    return points;
+  };
+  // the rotated box is 1 wide in x, so its right face is at x = 31
+  const boxHits = collide(new b2Pos(30, 5), 1.45);
+  assert.equal(boxHits.length, 1);
+  assert(Math.abs(boxHits[0].x - 1) < 1e-4 && Math.abs(boxHits[0].y) < 0.6, `box point ${JSON.stringify(boxHits[0])}`);
+  const circleHits = collide(new b2Pos(40, 5), -1.45);
+  assert.equal(circleHits.length, 1);
+  assert(Math.abs(circleHits[0].x + 1) < 1e-4 && Math.abs(circleHits[0].y) < 1e-4, `circle point ${JSON.stringify(circleHits[0])}`);
+
+  b2DestroyWorld(worldId);
+  console.log('👍 patches: mover/pogo joint torque and separation, collide mover points');
+})();
+
+
+// Chain materials keep Box2D's defaults for fields that are not given, from plain objects or b2SurfaceMaterial
+(() => {
+  const {
+      b2DefaultWorldDef,
+      b2CreateWorld,
+      b2DestroyWorld,
+      b2CreateBody,
+      b2DefaultBodyDef,
+      b2DefaultChainDef,
+      b2CreateChain,
+      b2Chain_GetSurfaceMaterial,
+      b2DefaultSurfaceMaterial,
+  } = box2d;
+
+  const worldId = b2CreateWorld(b2DefaultWorldDef());
+  const groundId = b2CreateBody(worldId, b2DefaultBodyDef());
+  const points = [{ x: -5, y: 0 }, { x: 0, y: 0 }, { x: 5, y: 0 }, { x: 0, y: 5 }];
+
+  const plainDef = b2DefaultChainDef();
+  plainDef.SetPoints(points);
+  plainDef.isLoop = true;
+  plainDef.SetMaterials([{ customColor: 0x8FBC8F }]);
+  const plainChainId = b2CreateChain(groundId, plainDef);
+  const plain = b2Chain_GetSurfaceMaterial(plainChainId, 0);
+  assert(Math.abs(plain.friction - 0.6) < 1e-6, `friction ${plain.friction}`);
+  assert.equal(plain.customColor, 0x8FBC8F);
+
+  const material = b2DefaultSurfaceMaterial();
+  material.restitution = 0.5;
+  const embindDef = b2DefaultChainDef();
+  embindDef.SetPoints(points);
+  embindDef.isLoop = true;
+  embindDef.SetMaterials([material]);
+  const embindChainId = b2CreateChain(groundId, embindDef);
+  assert.equal(b2Chain_GetSurfaceMaterial(embindChainId, 2).restitution, 0.5);
+
+  b2DestroyWorld(worldId);
+  console.log('👍 chain materials keep defaults');
+})();
+
+
 // Threading via the enkiTS task system
 (() => {
   const {

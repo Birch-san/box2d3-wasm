@@ -50,8 +50,8 @@ public:
 
             for (int i = 0; i < cmd.vertexCount; i++) {
                 b2Pos p = b2TransformWorldPoint(transform, vertices[i]);
-                cmd.data[i*2] = p.x;
-                cmd.data[i*2+1] = p.y;
+                cmd.data[i*2] = self->RelX(p.x);
+                cmd.data[i*2+1] = self->RelY(p.y);
             }
 
             self->commands.push_back(cmd);
@@ -68,8 +68,8 @@ public:
             const uint16_t maxVertices = (COMMAND_DATA_SIZE - 5) / 2; // reserve 4 floats for transform + 1 for radius
             cmd.vertexCount = std::min((uint16_t)vertexCount, maxVertices);
 
-            cmd.data[0] = transform.p.x;
-            cmd.data[1] = transform.p.y;
+            cmd.data[0] = self->RelX(transform.p.x);
+            cmd.data[1] = self->RelY(transform.p.y);
             cmd.data[2] = transform.q.s;
             cmd.data[3] = transform.q.c;
             cmd.data[4] = radius;
@@ -90,8 +90,8 @@ public:
             cmd.commandType = DebugDrawCommandType::e_circle;
             cmd.color = color;
             cmd.vertexCount = 1;
-            cmd.data[0] = center.x;
-            cmd.data[1] = center.y;
+            cmd.data[0] = self->RelX(center.x);
+            cmd.data[1] = self->RelY(center.y);
             cmd.data[2] = radius;
 
             self->commands.push_back(cmd);
@@ -108,8 +108,8 @@ public:
             cmd.commandType = DebugDrawCommandType::e_solidCircle;
             cmd.color = color;
             cmd.vertexCount = 1;
-            cmd.data[0] = worldCenter.x;
-            cmd.data[1] = worldCenter.y;
+            cmd.data[0] = self->RelX(worldCenter.x);
+            cmd.data[1] = self->RelY(worldCenter.y);
             cmd.data[2] = transform.q.s;
             cmd.data[3] = transform.q.c;
             cmd.data[4] = radius;
@@ -125,10 +125,10 @@ public:
             cmd.commandType = DebugDrawCommandType::e_solidCapsule;
             cmd.color = color;
             cmd.vertexCount = 2;
-            cmd.data[0] = p1.x;
-            cmd.data[1] = p1.y;
-            cmd.data[2] = p2.x;
-            cmd.data[3] = p2.y;
+            cmd.data[0] = self->RelX(p1.x);
+            cmd.data[1] = self->RelY(p1.y);
+            cmd.data[2] = self->RelX(p2.x);
+            cmd.data[3] = self->RelY(p2.y);
             cmd.data[4] = radius;
 
             self->commands.push_back(cmd);
@@ -142,10 +142,10 @@ public:
             cmd.commandType = DebugDrawCommandType::e_line;
             cmd.color = color;
             cmd.vertexCount = 2;
-            cmd.data[0] = p1.x;
-            cmd.data[1] = p1.y;
-            cmd.data[2] = p2.x;
-            cmd.data[3] = p2.y;
+            cmd.data[0] = self->RelX(p1.x);
+            cmd.data[1] = self->RelY(p1.y);
+            cmd.data[2] = self->RelX(p2.x);
+            cmd.data[3] = self->RelY(p2.y);
 
             self->commands.push_back(cmd);
         };
@@ -157,8 +157,8 @@ public:
             DebugDrawCommand cmd;
             cmd.commandType = DebugDrawCommandType::e_transform;
             cmd.vertexCount = 1;
-            cmd.data[0] = transform.p.x;
-            cmd.data[1] = transform.p.y;
+            cmd.data[0] = self->RelX(transform.p.x);
+            cmd.data[1] = self->RelY(transform.p.y);
             cmd.data[2] = transform.q.s;
             cmd.data[3] = transform.q.c;
 
@@ -173,8 +173,8 @@ public:
             cmd.commandType = DebugDrawCommandType::e_point;
             cmd.color = color;
             cmd.vertexCount = 1;
-            cmd.data[0] = p.x;
-            cmd.data[1] = p.y;
+            cmd.data[0] = self->RelX(p.x);
+            cmd.data[1] = self->RelY(p.y);
             cmd.data[2] = size;
 
             self->commands.push_back(cmd);
@@ -189,8 +189,8 @@ public:
             cmd.color = color;
             cmd.vertexCount = 1;
 
-            cmd.data[0] = p.x;
-            cmd.data[1] = p.y;
+            cmd.data[0] = self->RelX(p.x);
+            cmd.data[1] = self->RelY(p.y);
 
             std::string_view sv(s);
             auto dst = std::transform(sv.begin(),
@@ -210,14 +210,14 @@ public:
             cmd.commandType = DebugDrawCommandType::e_polygon;
             cmd.color = color;
             cmd.vertexCount = 4;
-            cmd.data[0] = aabb.lowerBound.x;
-            cmd.data[1] = aabb.lowerBound.y;
-            cmd.data[2] = aabb.upperBound.x;
-            cmd.data[3] = aabb.lowerBound.y;
-            cmd.data[4] = aabb.upperBound.x;
-            cmd.data[5] = aabb.upperBound.y;
-            cmd.data[6] = aabb.lowerBound.x;
-            cmd.data[7] = aabb.upperBound.y;
+            cmd.data[0] = self->RelX(aabb.lowerBound.x);
+            cmd.data[1] = self->RelY(aabb.lowerBound.y);
+            cmd.data[2] = self->RelX(aabb.upperBound.x);
+            cmd.data[3] = self->RelY(aabb.lowerBound.y);
+            cmd.data[4] = self->RelX(aabb.upperBound.x);
+            cmd.data[5] = self->RelY(aabb.upperBound.y);
+            cmd.data[6] = self->RelX(aabb.lowerBound.x);
+            cmd.data[7] = self->RelY(aabb.upperBound.y);
 
             self->commands.push_back(cmd);
         };
@@ -225,6 +225,18 @@ public:
 
     b2DebugDraw* GetDebugDraw() { return &debugDraw; }
     void ClearCommands() { commands.clear(); }
+
+    // World positions are emitted relative to this origin. Set it near the camera, so positions far
+    // from the world origin keep their precision when they are narrowed to floats (large worlds).
+    void SetOrigin(double x, double y) {
+        originX = x;
+        originY = y;
+    }
+    double GetOriginX() const { return originX; }
+    double GetOriginY() const { return originY; }
+
+    float RelX(double x) const { return static_cast<float>(x - originX); }
+    float RelY(double y) const { return static_cast<float>(y - originY); }
     size_t GetMaxCommands() const { return maxCommands; }
 
     uintptr_t GetCommandsData() const {
@@ -243,6 +255,8 @@ private:
     b2DebugDraw debugDraw;
     std::vector<DebugDrawCommand> commands;
     size_t maxCommands;
+    double originX = 0.0;
+    double originY = 0.0;
 };
 
 EMSCRIPTEN_BINDINGS(debug_draw_buffer) {
@@ -254,6 +268,9 @@ EMSCRIPTEN_BINDINGS(debug_draw_buffer) {
         .function("GetCommandsSize", &DebugDrawCommandBuffer::GetCommandsSize)
         .function("GetCommandStride", &DebugDrawCommandBuffer::GetCommandStride)
         .function("ClearCommands", &DebugDrawCommandBuffer::ClearCommands)
+        .function("SetOrigin", &DebugDrawCommandBuffer::SetOrigin)
+        .function("GetOriginX", &DebugDrawCommandBuffer::GetOriginX)
+        .function("GetOriginY", &DebugDrawCommandBuffer::GetOriginY)
         ;
 
     emscripten::enum_<DebugDrawCommandType>("DebugDrawCommandType")

@@ -1,0 +1,54 @@
+diff --git a/src/joint.c b/src/joint.c
+index 26bf078..7c248a0 100644
+--- a/src/joint.c
++++ b/src/joint.c
+@@ -1202,9 +1202,17 @@ static float b2GetJointConstraintTorque( b2World* world, b2Joint* joint )
+ 		case b2_motorJoint:
+ 			return b2GetMotorJointTorque( world, base );
+ 
++		case b2_moverJoint:
++			// the mover joint only drives linear velocity
++			return 0.0f;
++
+ 		case b2_filterJoint:
+ 			return 0.0f;
+ 
++		case b2_pogoJoint:
++			// the pogo joint pushes along its normal, like a distance joint
++			return 0.0f;
++
+ 		case b2_prismaticJoint:
+ 			return b2GetPrismaticJointTorque( world, base );
+ 
+@@ -1284,9 +1292,15 @@ float b2Joint_GetLinearSeparation( b2JointId jointId )
+ 		case b2_motorJoint:
+ 			return 0.0f;
+ 
++		case b2_moverJoint:
++			return 0.0f;
++
+ 		case b2_filterJoint:
+ 			return 0.0f;
+ 
++		case b2_pogoJoint:
++			return 0.0f;
++
+ 		case b2_prismaticJoint:
+ 		{
+ 			b2PrismaticJoint* prismaticJoint = &base->prismaticJoint;
+@@ -1375,9 +1389,15 @@ float b2Joint_GetAngularSeparation( b2JointId jointId )
+ 		case b2_motorJoint:
+ 			return 0.0f;
+ 
++		case b2_moverJoint:
++			return 0.0f;
++
+ 		case b2_filterJoint:
+ 			return 0.0f;
+ 
++		case b2_pogoJoint:
++			return 0.0f;
++
+ 		case b2_prismaticJoint:
+ 		{
+ 			return relativeAngle;
