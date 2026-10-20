@@ -5,10 +5,12 @@ import settings from '../../settings.mjs';
 /*
 	Port of shared/determinism.c from upstream Box2D. The Rollback sample imports these helpers too.
 
-	Upstream expects (single precision) sleep step 299 and hash 0x465F3DF4. The wasm build is single
-	precision too, but differs from the native C build (different compiler and math codegen): with
-	Box2D v3.2.0 both the deluxe and compat builds reach sleep step 278, hash 0x427BF9E6, for any
-	worker count. The wasm build itself should be deterministic cross-browser / cross-platform.
+	Upstream expects (single precision) sleep step 299 and hash 0x465F3DF4. The wasm build (deluxe and
+	compat, any worker count) is bitwise identical to native Box2D, so it reaches the same values, as
+	long as the scene is built from the same float values. Upstream computes the scene in float, JS
+	computes in double, so every value that upstream derives with float arithmetic is rounded with
+	Math.fround after each operation below. Rounding only once, when the value reaches the wasm side,
+	moves 12 of the 80 bodies by one ulp and the run ends at sleep step 278, hash 0x427BF9E6.
 */
 export const EXPECTED_SLEEP_STEP = 299;
 export const EXPECTED_HASH = 0x465F3DF4;
@@ -48,6 +50,9 @@ export function CreateFallingHinges(box2d, worldId){
 
 	const bodyIds = new Array(bodyCount);
 
+	// single precision arithmetic, like the float math in upstream's determinism.c
+	const f = Math.fround;
+
 	const h = 0.25;
 	// upstream builds a rounded box (h - r, h - r, r) with r = 0.1 * h and then replaces it with a square
 	const box = b2MakeSquare( h );
@@ -56,8 +61,8 @@ export function CreateFallingHinges(box2d, worldId){
 
 	const jointDef = b2DefaultRevoluteJointDef();
 	jointDef.enableLimit = true;
-	jointDef.lowerAngle = -0.1 * B2_PI;
-	jointDef.upperAngle = 0.2 * B2_PI;
+	jointDef.lowerAngle = f( f( -0.1 ) * B2_PI );
+	jointDef.upperAngle = f( f( 0.2 ) * B2_PI );
 	jointDef.enableSpring = true;
 	jointDef.hertz = 1.0;
 	jointDef.dampingRatio = 1.0;
@@ -70,13 +75,14 @@ export function CreateFallingHinges(box2d, worldId){
 	jointDef.base.drawScale = 0.5;
 
 	let bodyIndex = 0;
-	const offset = 0.4 * h;
-	const dx = 10.0 * h;
-	const xBase = -0.5 * dx * ( columnCount - 1.0 );
+	// offset is 0.1f in float but 0.1 in double: x + offset * i must be rounded at each step
+	const offset = f( f( 0.4 ) * h );
+	const dx = f( 10.0 * h );
+	const xBase = f( f( -0.5 * dx ) * ( columnCount - 1.0 ) );
 
 	for ( let j = 0; j < columnCount; ++j )
 	{
-		const x = xBase + j * dx;
+		const x = f( xBase + f( j * dx ) );
 
 		let prevBodyId = null;
 
@@ -86,8 +92,8 @@ export function CreateFallingHinges(box2d, worldId){
 			bodyDef.type = b2BodyType.b2_dynamicBody;
 
 			bodyDef.position.Set(
-				x + offset * i,
-				h + 2.0 * h * i
+				f( x + f( offset * i ) ),
+				f( h + f( f( 2.0 * h ) * i ) )
 			);
 
 			// this tests the deterministic cosine and sine functions
@@ -252,7 +258,8 @@ export default class FallingHinges extends Sample{
 
 			if ( this.m_done )
 			{
-				console.log( `sleep step = ${this.m_data.sleepStep}, hash = ${FormatHash(this.m_data.hash)}` );
+				const match = this.m_data.sleepStep == EXPECTED_SLEEP_STEP && ( this.m_data.hash >>> 0 ) == EXPECTED_HASH;
+				console.log( `sleep step = ${this.m_data.sleepStep}, hash = ${FormatHash(this.m_data.hash)}${match ? ' (matches upstream)' : ' (MISMATCH, upstream: sleep step = ' + EXPECTED_SLEEP_STEP + ', hash = ' + FormatHash(EXPECTED_HASH) + ')'}` );
 			}
 		}
 	}
