@@ -5,6 +5,7 @@ set -eo pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 B2D_WASM_DIR="$(realpath "$DIR/..")"
 MONOREPO_DIR="$(realpath "$B2D_WASM_DIR/..")"
+B2CPP_DIR="$(realpath "$MONOREPO_DIR/box2cpp")"
 ENKITS_DIR="$(realpath "$MONOREPO_DIR/enkiTS")"
 BUILD_DIR="$(realpath "$B2D_WASM_DIR/build")"
 # the patched copy of the box2d sources made by 0_build_makefile.sh
@@ -155,7 +156,7 @@ mkdir -p "$BUILD_DIR" "$ES_DIR"
 
 >&2 echo -e "${Blue}Building...${NC}"
 set -x
-emcc -lembind \
+em++ -lembind \
 "$CSRC_DIR/glue.cpp" \
 "$CSRC_DIR/threading.cpp" \
 "$CSRC_DIR/debugDraw.cpp" \
@@ -163,7 +164,7 @@ emcc -lembind \
 "$CMAKEBUILD_DIR/box2d/src/$LIBARCHIVE" \
 -I "$BOX2D_DIR/include" \
 -I "$ENKITS_DIR/src" \
--I "$CSRC_DIR/generated" \
+-I "$B2CPP_DIR/include" \
 "${EMCC_OPTS[@]}" \
 -o "$ES_FILE" \
 --emit-tsd "$ES_TSD"

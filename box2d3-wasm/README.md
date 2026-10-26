@@ -82,13 +82,15 @@ FLAVOUR=deluxe TARGET_TYPE=Debug ./shell/1_build_wasm.sh
 
 ### C++ wrapper (box2cpp)
 
-The C++ classes (`World`, `Body`, `Shape`, joints…) come from [box2cpp](https://github.com/HolyBlackCat/box2cpp), which is generated from the Box2D headers. Its published header lags behind Box2D releases, so we generate our own copy into `csrc/generated/box2cpp/box2cpp.h` (committed). After bumping the `box2d` or `box2cpp` submodules, regenerate it (needs `gawk` and `perl`, e.g. `brew install gawk`):
+The C++ classes (`World`, `Body`, `Shape`, joints…) come from the [Birch-san/box2cpp fork](https://github.com/Birch-san/box2cpp). The `box2cpp` submodule pins the Box2D v3.2 wrapper, and the wasm build includes its committed header directly from `box2cpp/include`. Generator changes and generated C++ belong in that repository.
+
+After updating Box2D, regenerate and commit the wrapper in `box2cpp` first (needs `gawk` and `perl`, e.g. `brew install gawk`). From this package's directory:
 
 ```bash
-./shell/generate_box2cpp.sh
+make -C ../box2cpp generate BOX2D_DIR=../box2d
 ```
 
-Small fixes to the upstream generator live in `shell/box2cpp-generator.patch`.
+Then update this repository's submodule pin to that published commit.
 
 ### Box2D patches
 
