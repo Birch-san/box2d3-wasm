@@ -127,7 +127,7 @@ Then update this repository's submodule pin to that published commit.
 
 ### Box2D fork
 
-The `box2d` submodule pins [`codex/box2d-v3.2-wasm-fixes`](https://github.com/Birch-san/box2d/tree/codex/box2d-v3.2-wasm-fixes) in the Birch-san fork. Both build scripts use this checkout directly. The branch carries two fixes on top of v3.2.0:
+The `box2d` submodule pins [`codex/box2d-v3.2-wasm-fixes`](https://github.com/Birch-san/box2d/tree/codex/box2d-v3.2-wasm-fixes) in the Birch-san fork. Both build scripts use this checkout directly. The branch carries two fixes on top of upstream `erincatto/box2d:main`:
 
 - Mover and pogo joint torque/separation queries no longer assert (for example when drawing joint extras).
 - `b2World_CollideMover` reports collision points in the query frame and on the rounded shape surface.
