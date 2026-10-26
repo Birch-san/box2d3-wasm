@@ -4,7 +4,9 @@
 !/build/dist/
 /build/dist/es/*
 !/build/dist/es/entry.mjs
-!/build/dist/es/entry.d.ts
+!/build/dist/es/entry.d.mts
 !/build/dist/es/entry-double.mjs
-!/build/dist/es/entry-double.d.ts
+!/build/dist/es/entry-double.d.mts
+!/build/dist/es/entry-compat.mjs
+!/build/dist/es/entry-deluxe.mjs
 /node_modules/

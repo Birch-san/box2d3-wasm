@@ -25,6 +25,39 @@ Install as an [npm package](https://www.npmjs.com/package/box2d3-wasm):
 npm i --save box2d3-wasm
 ```
 
+### Choosing a build
+
+The default import uses `deluxe` (SIMD and threads) when SIMD is available and the page is cross-origin isolated (or under Node.js). Otherwise it uses `compat`. To choose explicitly:
+
+```js
+import Box2DFactory from 'box2d3-wasm/compat'; // no SIMD, threads or cross-origin isolation required
+// or: import Box2DFactory from 'box2d3-wasm/deluxe';
+```
+
+Importing `compat` directly keeps the threaded build and its worker out of your bundle. Both imports expose the same single precision API, including the `b2Pos` aliases.
+
+### Memory ownership
+
+Constructors and functions returning class values, such as `b2Body_GetPosition` and `b2Joint_GetLocalFrameA/B`, create owned wasm objects. Call `.delete()` when finished with them. IDs are plain JavaScript objects and need no deletion.
+
+Plain JavaScript results can contain owned class values: `b2World_CollideMover`'s `result.plane` and `result.point` each need `.delete()`.
+
+Reference properties such as `jointDef.base`, `worldDef.gravity`, `bodyDef.position` and `transform.p/q` are borrowed views into their parent. **Do not call `.delete()` on these views.** Delete the parent once; its views then become invalid.
+
+```js
+const def = box2d.b2DefaultRevoluteJointDef();
+def.base.bodyIdA = bodyA; // base is a borrowed view
+def.base.bodyIdB = bodyB;
+const jointId = box2d.b2CreateRevoluteJoint(worldId, def);
+def.delete();
+```
+
+### IDs and user data
+
+Treat IDs as opaque handles. A world's `index1` is one-based, while an object's `world0` is zero-based; use `b2Shape_GetWorld`, `b2Body_GetWorld` or `b2Joint_GetWorld` to retrieve the owning world.
+
+Bodies, shapes and joints expose `SetUserData`/`GetUserData` through the C-style functions, for example `b2Body_SetUserData(bodyId, id)`. Store an integer from `0` to `2^32 - 1` (`0` means no user data), and keep the corresponding JavaScript object in your own lookup table.
+
 ### Large worlds (double precision)
 
 Box2D normally stores positions in single precision, which is fine within a few kilometres of the origin. For larger worlds, import the double precision build instead. It is Box2D's large world mode: positions (`b2Pos`) and body transforms (`b2WorldTransform`) are doubles, so a body 10,000 km from the origin simulates like one at the origin.
@@ -173,6 +206,7 @@ box2d3-wasm follows the Box2D C API names, so most changes come straight from th
 - **Queries take an origin.** `b2World_OverlapAABB`, `b2World_OverlapShape`, `b2World_CastShape`, `b2World_CastMover` and `b2World_CollideMover` take a `b2Pos` origin as the second argument; the AABB, proxy or capsule is relative to it. Pass `b2Pos_zero` for the old behaviour.
 - **Pre-solve was redesigned.** `b2World_SetPreSolveCallback(worldId, preSolve, preContinuous)` takes two callbacks (either may be `null`). `preSolve(shapeIdA, shapeIdB, manifold)` gets the live `b2Manifold`, which you may edit (set `manifold.pointCount = 0` to disable the contact). `preContinuous(shapeIdA, shapeIdB, point, normal)` returns `false` to skip a time of impact event.
 - **Joints.** `b2DestroyJoint(jointId)` no longer takes a wake flag. Current values say so (`b2RevoluteJoint_GetCurrentAngle`, `b2PrismaticJoint_GetCurrentTranslation`, `…GetCurrentMotorTorque/Force`), motor speeds are targets (`…SetTargetMotorSpeed`), and the distance joint uses `SetRestLength`/`SetLimits`/`GetLowerLimit`/`GetUpperLimit`. The wheel joint axis is the x-axis of `localFrameA`, motor joint defaults are zero, and the new mover and pogo joints are available.
+- Weld joint reference orientations are set through the rotations in `localFrameA/B`, using `b2Joint_SetLocalFrameA/B`; there are no separate weld reference-angle functions in this Box2D API.
 - **Bodies and shapes.** `b2Body_UpdateMassFromShapes`, `b2Body_GetLocalCenter`, `b2Body_GetWorldCenter`, `b2Body_EnableSleeping`, `b2Body_IsSleepingEnabled`, `b2Body_ComputeBounds`, `b2Shape_GetBounds` and `b2Shape_CastRay(shapeId, origin, translation)` replace the old names. `b2Body_SetTargetTransform` takes a wake flag.
 - **Chains.** `b2ChainDef.count` is now `pointCount`, open chains need `ghost1` and `ghost2`, and every segment of an open chain collides.
 - **Contacts.** Contact events and `b2ContactData` carry a `contactId`; use `b2Contact_IsValid` and `b2Contact_GetData`. `b2ManifoldPoint.point` was removed.
