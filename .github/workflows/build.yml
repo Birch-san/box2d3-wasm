@@ -69,7 +69,7 @@ jobs:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
       - name: install global deps
-        run: npm i -g typescript@7.0.2 yarn
+        run: npm i -g typescript@7 yarn
       - name: install local deps
         run: npm ci
         working-directory: box2d3-wasm

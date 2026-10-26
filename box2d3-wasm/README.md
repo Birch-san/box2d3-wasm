@@ -82,10 +82,10 @@ The debug draw command buffer emits positions relative to an origin you set with
 
 Install [Node.js and npm][].
 
-The CI toolchain uses Emscripten 6.0.13 and TypeScript 7.0.2. Install TypeScript and yarn:
+The CI toolchain uses Emscripten 6.0.13 and TypeScript 7.x. Install TypeScript and yarn:
 
 ```bash
-npm i -g typescript@7.0.2
+npm i -g typescript@7
 npm i -g yarn
 ```
 
