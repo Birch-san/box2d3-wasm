@@ -3,10 +3,8 @@
 # PRECISION=double builds Box2D's large world mode into cmake-build-$FLAVOUR-double (default: single)
 set -eo pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-B2D_WASM_DIR="$(realpath "$DIR/..")"
 BOX2D_DIR="$(realpath "$DIR/../../box2d")"
 CMAKE_WRAPPER_DIR="$(realpath "$DIR/../cmake")"
-PATCHED_BOX2D_DIR="$B2D_WASM_DIR/build/box2d-src"
 
 # This script just does what the README says, except with some extra validation and interactivity.
 # If you're more interested in going through step-by-step, and avoiding rebuilds of files you've 
@@ -59,17 +57,6 @@ case "${PRECISION:-single}" in
     ;;
 esac
 
-# Box2D is built from a patched copy of the submodule, so the submodule itself stays clean.
-# The patches fix upstream bugs, see patches/box2d.
->&2 echo -e '\nCopying and patching Box2D sources'
-rm -rf "$PATCHED_BOX2D_DIR"
-mkdir -p "$PATCHED_BOX2D_DIR"
-cp -Rp "$BOX2D_DIR/CMakeLists.txt" "$BOX2D_DIR/include" "$BOX2D_DIR/src" "$PATCHED_BOX2D_DIR/"
-for PATCH in "$B2D_WASM_DIR"/patches/box2d/*.patch; do
-  >&2 echo -e "applying $(basename "$PATCH")"
-  patch -s -p1 -d "$PATCHED_BOX2D_DIR" < "$PATCH"
-done
-
 >&2 echo -e '\nGenerating Makefile with emcmake'
 
 case "$TARGET_TYPE" in
@@ -91,6 +78,6 @@ emcmake cmake \
 -DCMAKE_BUILD_TYPE="$TARGET_TYPE" \
 -B"cmake-build-$BUILD_NAME" \
 -S"$CMAKE_WRAPPER_DIR" \
--DBOX2D_DIR="$PATCHED_BOX2D_DIR" \
+-DBOX2D_DIR="$BOX2D_DIR" \
 "${CMAKE_OPTS[@]}" \
 -DBOX2D_VALIDATE=OFF

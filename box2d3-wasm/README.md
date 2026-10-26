@@ -125,14 +125,14 @@ make -C ../box2cpp generate BOX2D_DIR=../box2d
 
 Then update this repository's submodule pin to that published commit.
 
-### Box2D patches
+### Box2D fork
 
-`shell/0_build_makefile.sh` copies the Box2D sources to `build/box2d-src` and applies `patches/box2d/*.patch` there, so the `box2d` submodule itself stays untouched. The patches fix upstream v3.2.0 bugs:
+The `box2d` submodule pins [`codex/box2d-v3.2-wasm-fixes`](https://github.com/Birch-san/box2d/tree/codex/box2d-v3.2-wasm-fixes) in the Birch-san fork. Both build scripts use this checkout directly. The branch carries two fixes on top of v3.2.0:
 
-- `0001`: the mover and pogo joints had no case in `b2Joint_GetConstraintTorque`, `b2Joint_GetLinearSeparation` and `b2Joint_GetAngularSeparation`, which asserted in debug builds (for example when drawing joint extras).
-- `0002`: `b2World_CollideMover` reported the contact point in the touched shape's local frame instead of relative to the query origin, and on the core of rounded shapes instead of their surface.
+- Mover and pogo joint torque/separation queries no longer assert (for example when drawing joint extras).
+- `b2World_CollideMover` reports collision points in the query frame and on the rounded shape surface.
 
-Drop a patch once it is fixed upstream.
+[Box2D draft PR #1](https://github.com/Birch-san/box2d/pull/1) shows only these changes. It is for viewing the patches; the wasm build consumes the branch directly, without merging the draft.
 
 ### Double precision builds
 

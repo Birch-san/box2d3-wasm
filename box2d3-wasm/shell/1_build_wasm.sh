@@ -8,8 +8,7 @@ MONOREPO_DIR="$(realpath "$B2D_WASM_DIR/..")"
 B2CPP_DIR="$(realpath "$MONOREPO_DIR/box2cpp")"
 ENKITS_DIR="$(realpath "$MONOREPO_DIR/enkiTS")"
 BUILD_DIR="$(realpath "$B2D_WASM_DIR/build")"
-# the patched copy of the box2d sources made by 0_build_makefile.sh
-BOX2D_DIR="$BUILD_DIR/box2d-src"
+BOX2D_DIR="$(realpath "$MONOREPO_DIR/box2d")"
 CSRC_DIR="$(realpath "$B2D_WASM_DIR/csrc")"
 
 Red='\033[0;31m'

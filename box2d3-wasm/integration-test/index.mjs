@@ -167,7 +167,7 @@ const subStepCount = 4;
 })();
 
 
-// Patched upstream bugs (see patches/box2d)
+// Native fixes carried by the Box2D fork
 (() => {
   const worldId = box2d.b2CreateWorld(box2d.b2DefaultWorldDef());
   const groundId = box2d.b2CreateBody(worldId, box2d.b2DefaultBodyDef());
@@ -237,7 +237,7 @@ const subStepCount = 4;
   assert(Math.abs(circleHits[0].x + 1) < 1e-4 && Math.abs(circleHits[0].y) < 1e-4, `circle point ${JSON.stringify(circleHits[0])}`);
 
   box2d.b2DestroyWorld(worldId);
-  console.log('👍 patches: mover/pogo joint torque and separation, collide mover points');
+  console.log('👍 native fixes: mover/pogo joint torque and separation, collide mover points');
 })();
 
 
