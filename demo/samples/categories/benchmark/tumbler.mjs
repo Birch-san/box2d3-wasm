@@ -11,6 +11,16 @@ export default class Tumbler extends Sample{
 		this.Spawn();
 	}
 
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.dynamicShapeCount = 2300;
+		capacity.staticBodyCount = 1;
+		capacity.dynamicBodyCount = 2300;
+		capacity.contactCount = 13000;
+		capacity.arenaByteCount = 1100 * 1024;
+		return capacity;
+	}
+
 	Spawn(){
 		CreateTumbler(this.box2d, this.m_worldId);
 	}
@@ -81,7 +91,6 @@ function CreateTumbler(box2d, worldId){
 		jd.base.bodyIdB = bodyId;
 		jd.base.localFrameA.p.Set(0.0, 10.0);
 		jd.base.localFrameB.p.Set(0.0, 0.0);
-		jd.referenceAngle = 0.0;
 		jd.motorSpeed = ( B2_PI / 180.0 ) * motorSpeed;
 		jd.maxMotorTorque = 1e8;
 		jd.enableMotor = true;

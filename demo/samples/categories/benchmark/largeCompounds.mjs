@@ -1,8 +1,7 @@
 import Sample from "../../sample.mjs";
-import settings from "../../settings.mjs";
 
 
-export default class Compound extends Sample{
+export default class LargeCompounds extends Sample{
 	constructor(box2d, camera, debugDraw){
 		super(box2d, camera, debugDraw);
 
@@ -11,8 +10,8 @@ export default class Compound extends Sample{
 
 		const grid = 1.0;
 
-		const height = 100;
-		const width = 100;
+		const height = 200;
+		const width = 200;
 
 		const {
 			b2DefaultBodyDef,
@@ -23,16 +22,15 @@ export default class Compound extends Sample{
 			b2Vec2,
 			b2Rot_identity,
 			b2BodyType,
-			b2Body_ApplyMassFromShapes
+			b2Body_UpdateMassFromShapes
 		} = this.box2d;
 
+		const p = new b2Vec2(0.0, 0.0);
 
 		{
 			const bodyDef = b2DefaultBodyDef();
 			const groundId = b2CreateBody( this.m_worldId, bodyDef );
 			const shapeDef = b2DefaultShapeDef();
-
-			const p = new b2Vec2(0.0, 0.0);
 
 			for ( let i = 0; i < height; i++ )
 			{
@@ -60,7 +58,6 @@ export default class Compound extends Sample{
 
 			bodyDef.delete();
 			shapeDef.delete();
-			p.delete();
 		}
 
 		{
@@ -86,25 +83,24 @@ export default class Compound extends Sample{
 					for ( let i = 0; i < span; i++ )
 					{
 						const y = i * grid;
-						const p = new b2Vec2();
 						for ( let j = 0; j < span; j++ )
 						{
 							const x = j * grid;
 							const square = b2MakeOffsetBox( 0.5 * grid, 0.5 * grid, p.Set(x, y), b2Rot_identity );
 							b2CreatePolygonShape( bodyId, shapeDef, square );
-
 							square.delete();
 						}
-						p.delete();
 					}
 
 					// All shapes have been added so I can efficiently compute the mass properties.
-					b2Body_ApplyMassFromShapes( bodyId );
+					b2Body_UpdateMassFromShapes( bodyId );
 				}
 			}
 
 			bodyDef.delete();
 			shapeDef.delete();
 		}
+
+		p.delete();
 	}
 }

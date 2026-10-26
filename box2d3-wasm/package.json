@@ -4,12 +4,30 @@
   "description": "Let's try and use box2d v3 on the web.",
   "//": "we prefer ES modules, but we can just name those .mjs. we set the package type as commonjs so that the .js UMD module can be treated as CommonJS (a valid interpretation though not the only one) without having to name it .cjs (which would mislead, as its compatibility is not only CommonJS, but also AMD and browser globals)",
   "type": "commonjs",
-  "types": "build/dist/es/entry.d.ts",
+  "types": "build/dist/es/entry.d.mts",
   "exports": {
     ".": {
       "import": {
-        "types": "./build/dist/es/entry.d.ts",
+        "types": "./build/dist/es/entry.d.mts",
         "default": "./build/dist/es/entry.mjs"
+      }
+    },
+    "./double": {
+      "import": {
+        "types": "./build/dist/es/entry-double.d.mts",
+        "default": "./build/dist/es/entry-double.mjs"
+      }
+    },
+    "./compat": {
+      "import": {
+        "types": "./build/dist/es/entry.d.mts",
+        "default": "./build/dist/es/entry-compat.mjs"
+      }
+    },
+    "./deluxe": {
+      "import": {
+        "types": "./build/dist/es/entry.d.mts",
+        "default": "./build/dist/es/entry-deluxe.mjs"
       }
     },
     "./utils/*": {
@@ -22,6 +40,7 @@
   "module": "build/dist/es/entry.mjs",
   "files": [
     "build/dist/**/*.d.ts",
+    "build/dist/**/*.d.mts",
     "build/dist/**/*.mjs",
     "!build/dist/**/*.orig.mjs",
     "build/dist/**/*.wasm",

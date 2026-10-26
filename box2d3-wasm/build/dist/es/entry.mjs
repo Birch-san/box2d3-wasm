@@ -23,8 +23,8 @@ export default async (options, ...args) => {
     /** @type {{ 'default': (options?: unknown) => MainModule) }} */
     const Box2DModule = await (
       (hasSIMD && (typeof window === 'undefined' || window.crossOriginIsolated === true))
-        ? import('./deluxe/Box2D.deluxe.mjs')
-        : import('./compat/Box2D.compat.mjs')
+        ? import('./entry-deluxe.mjs')
+        : import('./entry-compat.mjs')
     );
     const { 'default': Box2DFactory } = Box2DModule;
     // awaiting gives us a better stack trace (at the cost of an extra microtask)

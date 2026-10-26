@@ -29,6 +29,13 @@ export default class Cast extends Sample{
 		this.m_buildTime = 0.0;
 		this.m_radius = 0.1;
 
+		this.hitCount = 0;
+		this.nodeVisits = 0;
+		this.leafVisits = 0;
+		this.ms = 0.0;
+
+		// reset the random seed so the rays and the grid are the same every run, like upstream
+		this.box2d.SetRandomSeed( 1234 );
 		const sampleCount = 10000;
 		this.m_origins = new Array(sampleCount).fill(null);
 		this.m_translations = new Array(sampleCount).fill(null);
@@ -48,6 +55,7 @@ export default class Cast extends Sample{
 		this.CreateUI();
 	}
 
+	// BuildScene in upstream
 	Spawn(){
 		const {
 			b2DefaultWorldDef,
@@ -104,15 +112,15 @@ export default class Cast extends Sample{
 					shapeDef.filter.categoryBits = 1 << category;
 					if ( category == 0 )
 					{
-						shapeDef.customColor = b2HexColor.b2_colorBox2DBlue;
+						shapeDef.material.customColor = b2HexColor.b2_colorBox2DBlue;
 					}
 					else if ( category == 1 )
 					{
-						shapeDef.customColor = b2HexColor.b2_colorBox2DYellow;
+						shapeDef.material.customColor = b2HexColor.b2_colorBox2DYellow;
 					}
 					else
 					{
-						shapeDef.customColor = b2HexColor.b2_colorBox2DGreen;
+						shapeDef.material.customColor = b2HexColor.b2_colorBox2DGreen;
 					}
 
 					b2CreatePolygonShape( bodyId, shapeDef, box );
@@ -160,18 +168,16 @@ export default class Cast extends Sample{
 			grid: this.m_grid,
 			ratio: this.m_ratio,
 			'top down': this.m_topDown,
-			drawIndex: this.m_drawIndex,
 		};
 
 		this.pane.addBinding(PARAMS, 'query', {
 			options: {
-				e_rayCast: e_rayCast,
-				e_circleCast: e_circleCast,
-				e_overlap: e_overlap,
+				Ray: e_rayCast,
+				Circle: e_circleCast,
+				Overlap: e_overlap,
 			},
 		}).on('change', (event) => {
 			this.m_queryType = event.value;
-
 
 			if ( this.m_queryType == e_overlap )
 			{
@@ -182,14 +188,13 @@ export default class Cast extends Sample{
 				this.m_radius = 0.1;
 			}
 
-
 			this.Spawn();
 		});
 
 		this.pane.addBinding(PARAMS, 'rows', {
 			step: 1,
 			min: 0,
-			max: this.m_rowCount,
+			max: 1000,
 		}).on('change', event => {
 			this.m_rowCount = event.value;
 			this.Spawn();
@@ -198,7 +203,7 @@ export default class Cast extends Sample{
 		this.pane.addBinding(PARAMS, 'columns', {
 			step: 1,
 			min: 0,
-			max: this.m_rowCount,
+			max: 1000,
 		}).on('change', event => {
 			this.m_columnCount = event.value;
 			this.Spawn();
@@ -223,7 +228,7 @@ export default class Cast extends Sample{
 		});
 
 		this.pane.addBinding(PARAMS, 'ratio', {
-			step: 0.1,
+			step: 0.01,
 			min: 1.0,
 			max: 10.0,
 		}).on('change', event => {
@@ -238,7 +243,7 @@ export default class Cast extends Sample{
 		});
 
 		this.pane.addButton({
-			title: 'draw next',
+			title: 'Draw Next',
 		}).on('click', () => {
 			this.m_drawIndex = ( this.m_drawIndex + 1 ) % this.m_origins.length;
 		});
@@ -261,7 +266,7 @@ export default class Cast extends Sample{
 	OverlapCallback( overlapCallbackResult, context )
 	{
 		const {
-			b2Shape_GetAABB,
+			b2Shape_GetBounds,
 			b2AABB_Center
 		} = this.box2d;
 
@@ -270,7 +275,7 @@ export default class Cast extends Sample{
 		const result = context;
 		if ( result.count < 32 )
 		{
-			const aabb = b2Shape_GetAABB( shapeId );
+			const aabb = b2Shape_GetBounds( shapeId );
 			const center = b2AABB_Center( aabb );
 
 			result.points[result.count] = {x: center.x, y: center.y};
@@ -289,12 +294,12 @@ export default class Cast extends Sample{
 			b2DefaultQueryFilter,
 			b2World_CastRayClosest,
 			b2World_CastShape,
-			b2Circle,
 			b2World_OverlapAABB,
 			b2AABB,
-			b2Lerp,
-			b2Vec2,
 			b2MakeProxy,
+			b2Vec2_zero,
+			b2RoundDownFloat,
+			b2RoundUpFloat,
 		} = this.box2d;
 
 		super.Step();
@@ -307,6 +312,27 @@ export default class Cast extends Sample{
 		let leafVisits = 0;
 		let ms = 0.0;
 		const sampleCount = this.m_origins.length;
+
+		const drawRay = () => {
+			const p1 = this.m_origins[this.m_drawIndex];
+			const t = this.m_translations[this.m_drawIndex];
+			const p2 = {x: p1.x + t.x, y: p1.y + t.y};
+
+			this.debugDraw.drawLine({
+				data: [p1.x, p1.y, p2.x, p2.y],
+				color: b2HexColor.b2_colorWhite,
+			});
+
+			this.debugDraw.drawPoint({
+				data: [p1.x, p1.y, 5.0],
+				color: b2HexColor.b2_colorGreen,
+			});
+
+			this.debugDraw.drawPoint({
+				data: [p2.x, p2.y, 5.0],
+				color: b2HexColor.b2_colorRed,
+			});
+		};
 
 		if ( this.m_queryType == e_rayCast )
 		{
@@ -326,7 +352,6 @@ export default class Cast extends Sample{
 					drawResult = {point: {x: result.point.x, y: result.point.y}, hit: result.hit};
 				}
 
-
 				nodeVisits += result.nodeVisits;
 				leafVisits += result.leafVisits;
 				hitCount += result.hit ? 1 : 0;
@@ -338,57 +363,33 @@ export default class Cast extends Sample{
 
 			this.m_minTime = Math.min( this.m_minTime, ms );
 
-			const p1 = this.m_origins[this.m_drawIndex];
-			const p2 = p1.Clone().Add(this.m_translations[this.m_drawIndex]);
-
-			const drawSegmentCommand = {
-				data: [p1.x, p1.y, p2.x, p2.y],
-				color: b2HexColor.b2_colorWhite,
-			};
-			this.debugDraw.drawLine(drawSegmentCommand);
-
-			const drawPointCommand = {
-				data: [p1.x, p1.y, 5.0],
-				color: b2HexColor.b2_colorGreen,
-			};
-			this.debugDraw.drawPoint(drawPointCommand);
-
-			drawPointCommand.data = [p2.x, p2.y, 5.0];
-			drawPointCommand.color = b2HexColor.b2_colorRed;
-
-			this.debugDraw.drawPoint(drawPointCommand);
-
+			drawRay();
 
 			if ( drawResult.hit )
 			{
-				drawPointCommand.data = [drawResult.point.x, drawResult.point.y, 5.0];
-				drawPointCommand.color = b2HexColor.b2_colorWhite;
-				this.debugDraw.drawPoint(drawPointCommand);
+				this.debugDraw.drawPoint({
+					data: [drawResult.point.x, drawResult.point.y, 5.0],
+					color: b2HexColor.b2_colorWhite,
+				});
 			}
-
-			p2.delete();
 		}
 		else if ( this.m_queryType == e_circleCast )
 		{
 			const timer = performance.now();
 
-			const circle = new b2Circle();
-			circle.center.Set( 0.0, 0.0 );
-			circle.radius = this.m_radius;
-
 			let drawResult = {};
+
+			// The proxy is relative to the query origin
+			const proxy = b2MakeProxy( b2Vec2_zero, 1, this.m_radius );
 
 			for ( let i = 0; i < sampleCount; i++ )
 			{
-
-				const proxy = b2MakeProxy(this.m_origins[1], 1, this.m_radius);
 				const translation = this.m_translations[i];
 
 				const result = {};
 				const traversalResult =
-					b2World_CastShape( this.m_worldId, proxy, translation, filter,
+					b2World_CastShape( this.m_worldId, this.m_origins[i], proxy, translation, filter,
 										(rayCallbackResult) => this.CastCallback(rayCallbackResult, result));
-
 
 				if ( i == this.m_drawIndex )
 				{
@@ -398,61 +399,44 @@ export default class Cast extends Sample{
 				nodeVisits += traversalResult.nodeVisits;
 				leafVisits += traversalResult.leafVisits;
 				hitCount += result.hit ? 1 : 0;
-
-				proxy.delete();
 			}
+
+			proxy.delete();
 
 			ms = performance.now() - timer;
 
 			this.m_minTime = Math.min( this.m_minTime, ms );
 
-			const p1 = this.m_origins[this.m_drawIndex];
-			const p2 = p1.Clone().Add(this.m_translations[this.m_drawIndex]);
-
-			const drawSegmentCommand = {
-				data: [p1.x, p1.y, p2.x, p2.y],
-				color: b2HexColor.b2_colorWhite,
-			};
-			this.debugDraw.drawLine(drawSegmentCommand);
-
-			const drawPointCommand = {
-				data: [p1.x, p1.y, 5.0],
-				color: b2HexColor.b2_colorGreen,
-			};
-			this.debugDraw.drawPoint(drawPointCommand);
-
-			drawPointCommand.data = [p2.x, p2.y, 5.0];
-			drawPointCommand.color = b2HexColor.b2_colorRed;
-
-			this.debugDraw.drawPoint(drawPointCommand);
+			drawRay();
 
 			if ( drawResult.hit )
 			{
-				const t = b2Lerp( p1, p2, drawResult.fraction );
+				const p1 = this.m_origins[this.m_drawIndex];
+				const translation = this.m_translations[this.m_drawIndex];
+				const t = {x: p1.x + drawResult.fraction * translation.x, y: p1.y + drawResult.fraction * translation.y};
 
-				const drawCircleCommand = {
+				this.debugDraw.drawCircle({
 					data: [t.x, t.y, this.m_radius],
 					color: b2HexColor.b2_colorWhite,
-				};
+				});
 
-				this.debugDraw.drawCircle(drawCircleCommand);
-
-				drawPointCommand.data = [drawResult.point.x, drawResult.point.y, 5.0];
-				drawPointCommand.color = b2HexColor.b2_colorWhite;
-				this.debugDraw.drawPoint(drawPointCommand);
-
-				t.delete();
+				this.debugDraw.drawPoint({
+					data: [drawResult.point.x, drawResult.point.y, 5.0],
+					color: b2HexColor.b2_colorWhite,
+				});
 			}
-
-			circle.delete();
-			p2.delete();
 		}
 		else if ( this.m_queryType == e_overlap )
 		{
 			const timer = performance.now();
 
 			let drawResult = {};
-			const extent = new b2Vec2(this.m_radius, this.m_radius );
+			const extent = {x: this.m_radius, y: this.m_radius};
+
+			// The box is relative to the query origin
+			const aabb = new b2AABB();
+			aabb.lowerBound.Set( -extent.x, -extent.y );
+			aabb.upperBound.Set( extent.x, extent.y );
 
 			for ( let i = 0; i < sampleCount; i++ )
 			{
@@ -461,13 +445,7 @@ export default class Cast extends Sample{
 					points: new Array(32).fill(null),
 				};
 
-				const origin = this.m_origins[i];
-				const aabb = new b2AABB();
-				aabb.lowerBound.Copy( origin ).Sub( extent );
-				aabb.upperBound.Copy( origin ).Add( extent );
-
-				result.count = 0;
-				const traversalResult = b2World_OverlapAABB( this.m_worldId, aabb, filter,
+				const traversalResult = b2World_OverlapAABB( this.m_worldId, this.m_origins[i], aabb, filter,
 															  (overlapCallbackResult) => this.OverlapCallback(overlapCallbackResult, result) );
 				if ( i == this.m_drawIndex )
 				{
@@ -477,42 +455,34 @@ export default class Cast extends Sample{
 				nodeVisits += traversalResult.nodeVisits;
 				leafVisits += traversalResult.leafVisits;
 				hitCount += result.count;
-
-				aabb.delete();
 			}
+
+			aabb.delete();
 
 			ms = performance.now() - timer;
 
 			this.m_minTime = Math.min( this.m_minTime, ms );
 
 			const origin = this.m_origins[this.m_drawIndex];
-			const aabb = new b2AABB();
-			aabb.lowerBound.Copy( origin ).Sub( extent );
-			aabb.upperBound.Copy( origin ).Add( extent );
+			const lower = {x: b2RoundDownFloat( origin.x - extent.x ), y: b2RoundDownFloat( origin.y - extent.y )};
+			const upper = {x: b2RoundUpFloat( origin.x + extent.x ), y: b2RoundUpFloat( origin.y + extent.y )};
 
-			const drawAABBCommand = {
-				data: [ aabb.lowerBound.x, aabb.lowerBound.y,
-				aabb.upperBound.x, aabb.lowerBound.y,
-				aabb.upperBound.x, aabb.upperBound.y,
-				aabb.lowerBound.x, aabb.upperBound.y ],
+			this.debugDraw.drawPolygon({
+				data: [ lower.x, lower.y,
+					upper.x, lower.y,
+					upper.x, upper.y,
+					lower.x, upper.y ],
 				vertexCount: 4,
 				color: b2HexColor.b2_colorWhite,
-			};
-
-			this.debugDraw.drawPolygon(drawAABBCommand);
+			});
 
 			for ( let i = 0; i < drawResult.count; i++ )
 			{
-				const drawPointCommand = {
+				this.debugDraw.drawPoint({
 					data: [drawResult.points[i].x, drawResult.points[i].y, 5],
 					color: b2HexColor.b2_colorHotPink,
-				};
-
-				this.debugDraw.drawPoint(drawPointCommand);
+				});
 			}
-
-			extent.delete();
-			aabb.delete();
 		}
 
 		this.hitCount = hitCount;
@@ -528,16 +498,13 @@ export default class Cast extends Sample{
 	UpdateUI(DrawString, m_textLine){
 		m_textLine = super.UpdateUI(DrawString, m_textLine);
 
-		m_textLine = DrawString( 5, m_textLine, `build time ms = ${this.m_buildTime}` );
-
+		m_textLine = DrawString( 5, m_textLine, `build time ms = ${this.m_buildTime.toFixed(3)}` );
 		m_textLine = DrawString( 5, m_textLine, `hit count = ${this.hitCount}, node visits = ${this.nodeVisits}, leaf visits = ${this.leafVisits}`);
-
-		m_textLine = DrawString( 5, m_textLine, `total ms = ${this.ms}`,  );
-
-		m_textLine = DrawString( 5, m_textLine, `min total ms = ${this.m_minTime}` );
+		m_textLine = DrawString( 5, m_textLine, `total ms = ${this.ms.toFixed(3)}` );
+		m_textLine = DrawString( 5, m_textLine, `min total ms = ${this.m_minTime.toFixed(3)}` );
 
 		const aveRayCost = 1000.0 * this.m_minTime / this.m_origins.length;
-		m_textLine = DrawString( 5, m_textLine, `average us = ${aveRayCost}` );
+		m_textLine = DrawString( 5, m_textLine, `average us = ${aveRayCost.toFixed(2)}` );
 
 		return m_textLine;
 	}

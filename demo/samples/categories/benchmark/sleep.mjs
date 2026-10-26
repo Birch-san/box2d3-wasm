@@ -1,157 +1,159 @@
 import Sample from "../../sample.mjs";
+import settings from "../../settings.mjs";
 
-const e_maxBaseCount = 100;
-const e_maxBodyCount = e_maxBaseCount * ( e_maxBaseCount + 1 ) / 2;
+const SLEEP_PYRAMID_COUNT = 10;
+
+const g_sleepData = {
+	bodyIdA: new Array(SLEEP_PYRAMID_COUNT).fill(null),
+	bodyIdB: new Array(SLEEP_PYRAMID_COUNT).fill(null),
+};
 
 export default class Sleep extends Sample{
 	constructor(box2d, camera, debugDraw){
 		super(box2d, camera, debugDraw);
 
-		camera.center = {x: 0.0, y: 50.0 };
-		camera.zoom = 25.0 * 2.2;
+		camera.center = {x: 0.0, y: 20.0 };
+		camera.zoom = 25.0 * 6.0;
 
-		const {
-			b2DefaultBodyDef,
-			b2CreateBody,
-			b2MakeBox,
-			b2DefaultShapeDef,
-			b2CreatePolygonShape,
-		} = this.box2d;
-
-		const groundSize = 100.0;
-
-		const bodyDef = b2DefaultBodyDef();
-		const groundId = b2CreateBody( this.m_worldId, bodyDef );
-
-		const box = b2MakeBox( groundSize, 1.0 );
-		const shapeDef = b2DefaultShapeDef();
-		b2CreatePolygonShape( groundId, shapeDef, box );
-
-		this.m_bodies = new Array(e_maxBodyCount).fill(null);
-
-		this.m_baseCount = 100;
-		this.m_bodyCount = 0;
-
-		this.m_wakeTotal = 0.0;
-		this.m_sleepTotal = 0.0;
-
-		bodyDef.delete();
-		box.delete();
-		shapeDef.delete();
-
-		this.Spawn();
+		CreateSleep(this.box2d, this.m_worldId);
 	}
 
-	Spawn(){
-		const {
-			b2DefaultBodyDef,
-			b2CreateBody,
-			b2DestroyBody,
-			b2DefaultShapeDef,
-			b2CreatePolygonShape,
-			b2MakeRoundedBox,
-			b2BodyType
-		} = this.box2d;
-
-		for ( let i = 0; i < e_maxBodyCount; i++ )
-		{
-			if (this.m_bodies[i] !== null)
-			{
-				b2DestroyBody( this.m_bodies[i] );
-				this.m_bodies[i] = null;
-			}
-		}
-
-		const count = this.m_baseCount;
-		const rad = 0.5;
-		const shift = rad * 2.0;
-		const centerx = shift * count / 2.0;
-		const centery = shift / 2.0 + 1.0;
-
-		const bodyDef = b2DefaultBodyDef();
-		bodyDef.type = b2BodyType.b2_dynamicBody;
-
-		const shapeDef = b2DefaultShapeDef();
-		shapeDef.density = 1.0;
-		shapeDef.material.friction = 0.5;
-
-		const h = 0.5;
-		const box = b2MakeRoundedBox( h, h, 0.0 );
-
-		let index = 0;
-
-		for ( let i = 0; i < count; i++ )
-		{
-			const y = i * shift + centery;
-
-			for ( let j = i; j < count; j++ )
-			{
-				const x = 0.5 * i * shift + ( j - i ) * shift - centerx;
-				bodyDef.position.Set(x, y);
-
-				console.assert( index < e_maxBodyCount );
-				this.m_bodies[index] = b2CreateBody( this.m_worldId, bodyDef );
-				b2CreatePolygonShape( this.m_bodies[index], shapeDef, box );
-
-				index += 1;
-			}
-		}
-
-		box.delete();
-		bodyDef.delete();
-		shapeDef.delete();
-
-		this.m_bodyCount = index;
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.staticShapeCount = 1;
+		capacity.dynamicShapeCount = 21000;
+		capacity.staticBodyCount = 1;
+		capacity.dynamicBodyCount = 21000;
+		capacity.contactCount = 68000;
+		capacity.arenaByteCount = 10000 * 1024;
+		return capacity;
 	}
 
 	Step(){
-		const {
-			b2Body_SetAwake,
-			b2DefaultFilterJointDef,
-			b2CreateFilterJoint,
-			b2DestroyJoint
-		} = this.box2d;
-
-		let start = performance.now();
-
-		const b2GetMillisecondsAndReset = () => {
-			const end = performance.now();
-			const ms = end - start;
-			start = end;
-			return ms
-		}
-
-		if(this.m_stepCount > 20) {
-			const jointDef = b2DefaultFilterJointDef();
-			jointDef.base.bodyIdA = this.m_bodies[0];
-			jointDef.base.bodyIdB = this.m_bodies[1];
-			const jointId = b2CreateFilterJoint(this.m_worldId, jointDef);
-
-			b2DestroyJoint( jointId, true );
-			this.m_wakeTotal += b2GetMillisecondsAndReset();
-
-			b2Body_SetAwake( this.m_bodies[0], false );
-			this.m_sleepTotal += b2GetMillisecondsAndReset();
+		if (settings.pause == false || settings.singleStep)
+		{
+			StepSleep(this.box2d, this.m_worldId, this.m_stepCount);
 		}
 
 		super.Step();
 	}
+}
 
-	UpdateUI(DrawString, m_textLine){
-		m_textLine = super.UpdateUI(DrawString, m_textLine);
+// Reports two bodies that are certain to share a touching contact, so the filter joint below always
+// lands inside one island.
+function CreateSleepPyramid(box2d, worldId, baseCount, extent, centerX, index){
+	const {
+		b2DefaultBodyDef,
+		b2DefaultShapeDef,
+		b2MakeSquare,
+		b2CreateBody,
+		b2CreatePolygonShape,
+		b2BodyType
+	} = box2d;
 
-		const count = this.m_stepCount - 20;
-		m_textLine = DrawString( 5, m_textLine, `wake ave = ${(this.m_wakeTotal / count).toFixed(6)} ms`);
-		m_textLine = DrawString( 5, m_textLine, `sleep ave = ${(this.m_sleepTotal / count).toFixed(6)} ms` );
-	}
+	const bodyDef = b2DefaultBodyDef();
+	bodyDef.type = b2BodyType.b2_dynamicBody;
+	bodyDef.sleepThreshold = 1.0;
 
-	Destroy(){
-		super.Destroy();
-		this.Despawn();
+	const shapeDef = b2DefaultShapeDef();
+	const box = b2MakeSquare( extent );
 
-		if (this.pane){
-			this.pane.dispose();
-			this.pane = null;
+	for ( let i = 0; i < baseCount; ++i )
+	{
+		const y = ( 2.0 * i + 1.0 ) * extent;
+
+		for ( let j = i; j < baseCount; ++j )
+		{
+			const x = ( i + 1.0 ) * extent + 2.0 * ( j - i ) * extent + centerX;
+			bodyDef.position.Set( x, y );
+
+			const bodyId = b2CreateBody( worldId, bodyDef );
+			b2CreatePolygonShape( bodyId, shapeDef, box );
+
+			if ( i == 0 && j == 0 )
+			{
+				g_sleepData.bodyIdA[index] = bodyId;
+			}
+			else if ( i == 1 && j == 1 )
+			{
+				// Rests on the base body above, so the pair always has a touching contact
+				g_sleepData.bodyIdB[index] = bodyId;
+			}
 		}
 	}
+
+	bodyDef.delete();
+	shapeDef.delete();
+	box.delete();
+}
+
+// Stress tests waking and sleeping.
+function CreateSleep(box2d, worldId){
+	const {
+		b2DefaultBodyDef,
+		b2CreateBody,
+		b2MakeBox,
+		b2DefaultShapeDef,
+		b2CreatePolygonShape,
+	} = box2d;
+
+	g_sleepData.bodyIdA.fill(null);
+	g_sleepData.bodyIdB.fill(null);
+
+	const baseCount = 60;
+	const extent = 0.5;
+
+	const baseWidth = 2.0 * extent * baseCount;
+	const pitch = baseWidth + 8.0 * extent;
+	const span = pitch * ( SLEEP_PYRAMID_COUNT - 1 );
+
+	{
+		const bodyDef = b2DefaultBodyDef();
+		bodyDef.position.Set( 0.0, -1.0 );
+		const groundId = b2CreateBody( worldId, bodyDef );
+
+		const box = b2MakeBox( 0.5 * span + baseWidth, 1.0 );
+		const shapeDef = b2DefaultShapeDef();
+		b2CreatePolygonShape( groundId, shapeDef, box );
+
+		bodyDef.delete();
+		box.delete();
+		shapeDef.delete();
+	}
+
+	for ( let i = 0; i < SLEEP_PYRAMID_COUNT; ++i )
+	{
+		const centerX = -0.5 * span + i * pitch - 0.5 * baseWidth;
+		CreateSleepPyramid( box2d, worldId, baseCount, extent, centerX, i );
+	}
+}
+
+function StepSleep(box2d, worldId, stepCount){
+	const {
+		b2Body_IsAwake,
+		b2DefaultFilterJointDef,
+		b2CreateFilterJoint,
+		b2DestroyJoint
+	} = box2d;
+
+	for ( let i = 0; i < SLEEP_PYRAMID_COUNT; ++i )
+	{
+		if ( b2Body_IsAwake( g_sleepData.bodyIdA[i] ) == false )
+		{
+			// Creating and destroying a joint engages the island splitter
+			const jointDef = b2DefaultFilterJointDef();
+			jointDef.base.bodyIdA = g_sleepData.bodyIdA[i];
+			jointDef.base.bodyIdB = g_sleepData.bodyIdB[i];
+			const jointId = b2CreateFilterJoint( worldId, jointDef );
+			jointDef.delete();
+
+			// This wakes the island
+			b2DestroyJoint( jointId );
+
+			// Only one per step
+			break;
+		}
+	}
+
+	return 0.0;
 }

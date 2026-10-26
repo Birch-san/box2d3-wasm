@@ -44,6 +44,16 @@ emscripten::val getArrayWrapper(const ObjectType& object,
     return result;
 }
 
+// User data pointers are exposed to JS as plain integers (0 to 2^32 - 1), which is enough to
+// store an index or key into a JS-side lookup table. 0 means "no user data".
+inline double userDataToNumber(const void* userData) {
+    return static_cast<double>(reinterpret_cast<uintptr_t>(userData));
+}
+
+inline void* numberToUserData(double value) {
+    return reinterpret_cast<void*>(static_cast<uintptr_t>(value));
+}
+
 template<typename T>
 emscripten::val toBytes(const T& value) {
     auto array = emscripten::val::global("Uint8Array").new_(sizeof(T));
@@ -126,6 +136,58 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         });
         ;
 
+#if defined( BOX2D_DOUBLE_PRECISION )
+    // Large world types, positions are doubles. In single precision these are aliases of b2Vec2,
+    // b2Transform and b2CastOutput; the single precision entries expose these aliases to JS.
+    class_<b2Pos>("b2Pos")
+        .constructor()
+        .constructor(+[](double x, double y) -> b2Pos { return b2Pos{x, y}; })
+        .property("x", &b2Pos::x)
+        .property("y", &b2Pos::y)
+        .function("Set", +[](b2Pos& self, double x, double y) -> b2Pos& {
+            self.x = x;
+            self.y = y;
+            return self;
+        }, return_value_policy::reference())
+        .function("Copy", +[](b2Pos& self, const b2Pos& other) -> b2Pos& {
+            self = other;
+            return self;
+        }, return_value_policy::reference())
+        .function("Clone", +[](const b2Pos& self) -> b2Pos {
+            return self;
+        })
+        .function("Add", +[](b2Pos& self, const b2Pos& other) -> b2Pos& {
+            self.x += other.x;
+            self.y += other.y;
+            return self;
+        }, return_value_policy::reference())
+        .function("Sub", +[](b2Pos& self, const b2Pos& other) -> b2Pos& {
+            self.x -= other.x;
+            self.y -= other.y;
+            return self;
+        }, return_value_policy::reference())
+        ;
+
+    class_<b2WorldTransform>("b2WorldTransform")
+        .constructor()
+        .property("p", &b2WorldTransform::p, return_value_policy::reference())
+        .property("q", &b2WorldTransform::q, return_value_policy::reference())
+        .function("ToBytes", +[](const b2WorldTransform& self) -> emscripten::val {
+            return toBytes(self);
+        })
+        ;
+
+    class_<b2WorldCastOutput>("b2WorldCastOutput")
+        .constructor()
+        .property("normal", &b2WorldCastOutput::normal, return_value_policy::reference())
+        .property("point", &b2WorldCastOutput::point, return_value_policy::reference())
+        .property("fraction", &b2WorldCastOutput::fraction)
+        .property("iterations", &b2WorldCastOutput::iterations)
+        .property("hit", &b2WorldCastOutput::hit)
+        ;
+#endif
+    constant("b2WorldTransform_identity", b2WorldTransform_identity);
+
     class_<b2Mat22>("b2Mat22")
         .constructor()
         .property("cx", &b2Mat22::cx, return_value_policy::reference())
@@ -154,15 +216,29 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor<const b2WorldDef&>()
         .property("gravity", &b2WorldDef::gravity, return_value_policy::reference())
         .property("restitutionThreshold", &b2WorldDef::restitutionThreshold)
+        .property("restitutionIterations", &b2WorldDef::restitutionIterations)
+        .property("enableRestitutionPropagation", &b2WorldDef::enableRestitutionPropagation)
         .property("hitEventThreshold", &b2WorldDef::hitEventThreshold)
         .property("contactHertz", &b2WorldDef::contactHertz)
         .property("contactDampingRatio", &b2WorldDef::contactDampingRatio)
+        .property("contactSpeed", &b2WorldDef::contactSpeed)
         .property("maximumLinearSpeed", &b2WorldDef::maximumLinearSpeed)
         .property("enableSleep", &b2WorldDef::enableSleep)
         .property("enableContinuous", &b2WorldDef::enableContinuous)
         .property("workerCount", &b2WorldDef::workerCount)
         // we do not assign threading callbacks here, we leave this in the C++ code
+        .property("capacity", &b2WorldDef::capacity, return_value_policy::reference())
         .property("internalValue", &b2WorldDef::internalValue)
+        ;
+
+    class_<b2Capacity>("b2Capacity")
+        .constructor()
+        .property("staticShapeCount", &b2Capacity::staticShapeCount)
+        .property("dynamicShapeCount", &b2Capacity::dynamicShapeCount)
+        .property("staticBodyCount", &b2Capacity::staticBodyCount)
+        .property("dynamicBodyCount", &b2Capacity::dynamicBodyCount)
+        .property("contactCount", &b2Capacity::contactCount)
+        .property("arenaByteCount", &b2Capacity::arenaByteCount)
         ;
 
     value_object<b2BodyId>("b2BodyId")
@@ -183,6 +259,13 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .field("generation", &b2WorldId::generation)
         ;
 
+    value_object<b2ContactId>("b2ContactId")
+        .field("index1", &b2ContactId::index1)
+        .field("world0", &b2ContactId::world0)
+        .field("padding", &b2ContactId::padding)
+        .field("generation", &b2ContactId::generation)
+        ;
+
     class_<b2CastOutput>("b2CastOutput")
         .constructor()
         .property("normal", &b2CastOutput::normal, return_value_policy::reference())
@@ -199,9 +282,66 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("maxFraction", &b2RayCastInput::maxFraction)
         ;
 
+    class_<b2ShapeCastInput>("b2ShapeCastInput")
+        .constructor()
+        .property("proxy", &b2ShapeCastInput::proxy, return_value_policy::reference())
+        .property("translation", &b2ShapeCastInput::translation, return_value_policy::reference())
+        .property("maxFraction", &b2ShapeCastInput::maxFraction)
+        .property("canEncroach", &b2ShapeCastInput::canEncroach)
+        ;
+
+    class_<b2SimplexCache>("b2SimplexCache")
+        .constructor()
+        .property("count", &b2SimplexCache::count)
+        ;
+
+    class_<b2DistanceInput>("b2DistanceInput")
+        .constructor()
+        .property("proxyA", &b2DistanceInput::proxyA, return_value_policy::reference())
+        .property("proxyB", &b2DistanceInput::proxyB, return_value_policy::reference())
+        .property("transform", &b2DistanceInput::transform, return_value_policy::reference())
+        .property("useRadii", &b2DistanceInput::useRadii)
+        ;
+
+    class_<b2DistanceOutput>("b2DistanceOutput")
+        .constructor()
+        .property("pointA", &b2DistanceOutput::pointA, return_value_policy::reference())
+        .property("pointB", &b2DistanceOutput::pointB, return_value_policy::reference())
+        .property("normal", &b2DistanceOutput::normal, return_value_policy::reference())
+        .property("distance", &b2DistanceOutput::distance)
+        .property("iterations", &b2DistanceOutput::iterations)
+        .property("simplexCount", &b2DistanceOutput::simplexCount)
+        ;
+
+    class_<b2ShapeCastPairInput>("b2ShapeCastPairInput")
+        .constructor()
+        .property("proxyA", &b2ShapeCastPairInput::proxyA, return_value_policy::reference())
+        .property("proxyB", &b2ShapeCastPairInput::proxyB, return_value_policy::reference())
+        .property("transform", &b2ShapeCastPairInput::transform, return_value_policy::reference())
+        .property("translationB", &b2ShapeCastPairInput::translationB, return_value_policy::reference())
+        .property("maxFraction", &b2ShapeCastPairInput::maxFraction)
+        .property("canEncroach", &b2ShapeCastPairInput::canEncroach)
+        ;
+
+    class_<b2SegmentDistanceResult>("b2SegmentDistanceResult")
+        .constructor()
+        .property("closest1", &b2SegmentDistanceResult::closest1, return_value_policy::reference())
+        .property("closest2", &b2SegmentDistanceResult::closest2, return_value_policy::reference())
+        .property("fraction1", &b2SegmentDistanceResult::fraction1)
+        .property("fraction2", &b2SegmentDistanceResult::fraction2)
+        .property("distanceSquared", &b2SegmentDistanceResult::distanceSquared)
+        ;
+
+    // The GJK debug simplexes are not exposed. The cache may be null.
+    function("b2ComputeShapeDistance", +[](const b2DistanceInput& input, b2SimplexCache* cache) -> b2DistanceOutput {
+        b2SimplexCache localCache = {};
+        return b2ComputeShapeDistance(&input, cache != nullptr ? cache : &localCache, nullptr, 0);
+    }, allow_raw_pointers());
+    function("b2ComputeSegmentDistance", &b2ComputeSegmentDistance);
+    function("b2CastShape", &b2CastShape, allow_raw_pointers());
+
     class_<b2ManifoldPoint>("b2ManifoldPoint")
         .constructor()
-        .property("point", &b2ManifoldPoint::point, return_value_policy::reference())
         .property("anchorA", &b2ManifoldPoint::anchorA, return_value_policy::reference())
         .property("anchorB", &b2ManifoldPoint::anchorB, return_value_policy::reference())
         .property("separation", &b2ManifoldPoint::separation)
@@ -209,6 +349,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("tangentImpulse", &b2ManifoldPoint::tangentImpulse)
         .property("totalNormalImpulse", &b2ManifoldPoint::totalNormalImpulse)
         .property("normalVelocity", &b2ManifoldPoint::normalVelocity)
+        .property("baseSeparation", &b2ManifoldPoint::baseSeparation)
         .property("id", &b2ManifoldPoint::id)
         .property("persisted", &b2ManifoldPoint::persisted)
         ;
@@ -222,6 +363,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             self.points[index] = point;
         })
         .property("normal", &b2Manifold::normal, return_value_policy::reference())
+        .property("rollingImpulse", &b2Manifold::rollingImpulse)
         .property("pointCount", &b2Manifold::pointCount)
         ;
 
@@ -237,18 +379,21 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("treeHeight", &b2Counters::treeHeight)
         .property("byteCount", &b2Counters::byteCount)
         .property("taskCount", &b2Counters::taskCount)
+        .property("awakeContactCount", &b2Counters::awakeContactCount)
+        .property("recycledContactCount", &b2Counters::recycledContactCount)
         .function("GetColorCount", +[](const b2Counters& self, int index) -> int {
-            if (index < 0 || index >= 12) {
+            if (index < 0 || index >= B2_GRAPH_COLOR_COUNT) {
                 return 0;  // Return 0 for out of bounds
             }
             return self.colorCounts[index];
         })
         .function("SetColorCount", +[](b2Counters& self, int index, int value) {
-            if (index >= 0 && index < 12) {
+            if (index >= 0 && index < B2_GRAPH_COLOR_COUNT) {
                 self.colorCounts[index] = value;
             }
         })
         ;
+    constant("B2_GRAPH_COLOR_COUNT", B2_GRAPH_COLOR_COUNT);
 
     value_object<b2SensorBeginTouchEvent>("b2SensorBeginTouchEvent")
         .field("sensorShapeId", &b2SensorBeginTouchEvent::sensorShapeId)
@@ -281,6 +426,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         ;
 
     class_<b2BodyMoveEvent>("b2BodyMoveEvent")
+        .property("userData", +[](const b2BodyMoveEvent& self) { return userDataToNumber(self.userData); })
         .property("transform", &b2BodyMoveEvent::transform, return_value_policy::reference())
         .property("bodyId", &b2BodyMoveEvent::bodyId)
         .property("fellAsleep", &b2BodyMoveEvent::fellAsleep)
@@ -305,9 +451,11 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<b2ContactBeginTouchEvent>("b2ContactBeginTouchEvent")
         .property("shapeIdA", &b2ContactBeginTouchEvent::shapeIdA)
         .property("shapeIdB", &b2ContactBeginTouchEvent::shapeIdB)
+        .property("contactId", &b2ContactBeginTouchEvent::contactId)
     ;
 
     class_<b2ContactData>("b2ContactData")
+        .property("contactId", &b2ContactData::contactId)
         .property("shapeIdA", &b2ContactData::shapeIdA)
         .property("shapeIdB", &b2ContactData::shapeIdB)
         .property("manifold", &b2ContactData::manifold, return_value_policy::reference())
@@ -316,11 +464,13 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     value_object<b2ContactEndTouchEvent>("b2ContactEndTouchEvent")
         .field("shapeIdA", &b2ContactEndTouchEvent::shapeIdA)
         .field("shapeIdB", &b2ContactEndTouchEvent::shapeIdB)
+        .field("contactId", &b2ContactEndTouchEvent::contactId)
         ;
 
     class_<b2ContactHitEvent>("b2ContactHitEvent")
         .property("shapeIdA", &b2ContactHitEvent::shapeIdA)
         .property("shapeIdB", &b2ContactHitEvent::shapeIdB)
+        .property("contactId", &b2ContactHitEvent::contactId)
         .property("point", &b2ContactHitEvent::point, return_value_policy::reference())
         .property("normal", &b2ContactHitEvent::normal, return_value_policy::reference())
         .property("approachSpeed", &b2ContactHitEvent::approachSpeed)
@@ -328,6 +478,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2JointEvent>("b2JointEvent")
         .property("jointId", &b2JointEvent::jointId)
+        .property("userData", +[](const b2JointEvent& self) { return userDataToNumber(self.userData); })
         ;
 
     class_<b2JointEvents>("b2JointEvents")
@@ -344,15 +495,15 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("pairs", &b2Profile::pairs)
         .property("collide", &b2Profile::collide)
         .property("solve", &b2Profile::solve)
-        .property("prepareStages", &b2Profile::prepareStages)
-        .property("solveConstraints", &b2Profile::solveConstraints)
+        .property("solverSetup", &b2Profile::solverSetup)
+        .property("constraints", &b2Profile::constraints)
         .property("prepareConstraints", &b2Profile::prepareConstraints)
         .property("integrateVelocities", &b2Profile::integrateVelocities)
         .property("warmStart", &b2Profile::warmStart)
         .property("solveImpulses", &b2Profile::solveImpulses)
         .property("integratePositions", &b2Profile::integratePositions)
         .property("relaxImpulses", &b2Profile::relaxImpulses)
-        .property("applyRestitution", &b2Profile::applyRestitution)
+        .property("restitution", &b2Profile::restitution)
         .property("storeImpulses", &b2Profile::storeImpulses)
         .property("splitIslands", &b2Profile::splitIslands)
         .property("transforms", &b2Profile::transforms)
@@ -445,8 +596,17 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("IsSleepingEnabled", &b2::World::IsSleepingEnabled)
         .function("EnableWarmStarting", &b2::World::EnableWarmStarting)
         .function("IsWarmStartingEnabled", &b2::World::IsWarmStartingEnabled)
-        .function("SetMaximumLinearSpeed", &b2::World::SetMaximumLinearSpeed)
-        .function("GetMaximumLinearSpeed", &b2::World::GetMaximumLinearSpeed)
+        .function("SetMaxLinearSpeed", &b2::World::SetMaxLinearSpeed)
+        .function("GetMaxLinearSpeed", &b2::World::GetMaxLinearSpeed)
+        .function("SetContactRecycleDistance", &b2::World::SetContactRecycleDistance)
+        .function("GetContactRecycleDistance", &b2::World::GetContactRecycleDistance)
+        .function("SetRestitutionIterations", &b2::World::SetRestitutionIterations)
+        .function("GetRestitutionIterations", &b2::World::GetRestitutionIterations)
+        .function("EnableRestitutionPropagation", &b2::World::EnableRestitutionPropagation)
+        .function("IsRestitutionPropagationEnabled", &b2::World::IsRestitutionPropagationEnabled)
+        .function("SetWorkerCount", &b2::World::SetWorkerCount)
+        .function("GetWorkerCount", &b2::World::GetWorkerCount)
+        .function("GetBounds", &b2::World::GetBounds)
         .function("SetRestitutionThreshold", &b2::World::SetRestitutionThreshold)
         .function("GetRestitutionThreshold", &b2::World::GetRestitutionThreshold)
         .function("SetHitEventThreshold", &b2::World::SetHitEventThreshold)
@@ -489,6 +649,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("point2", &b2Segment::point2, return_value_policy::reference())
         ;
 
+    function("b2DefaultFilter", &b2DefaultFilter);
+
     class_<b2Filter>("b2Filter")
         .constructor()
         .property("categoryBits",
@@ -519,6 +681,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2ShapeDef>("b2ShapeDef")
         .constructor()
+        .property("userData",
+            +[](const b2ShapeDef& self) { return userDataToNumber(self.userData); },
+            +[](b2ShapeDef& self, double value) { self.userData = numberToUserData(value); })
         .property("material", &b2ShapeDef::material, return_value_policy::reference())
         .property("density", &b2ShapeDef::density)
         .property("filter", &b2ShapeDef::filter, return_value_policy::reference())
@@ -559,7 +724,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("rollingResistance", &b2SurfaceMaterial::rollingResistance)
         .property("tangentSpeed", &b2SurfaceMaterial::tangentSpeed)
         .property("userMaterialId", &b2SurfaceMaterial::userMaterialId)
-        .property("customColor", &b2SurfaceMaterial::customColor);
+        .property("customColor", &b2SurfaceMaterial::customColor)
+        ;
 
     class_<b2Polygon>("b2Polygon")
         .constructor()
@@ -593,7 +759,11 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     
     function("b2Chain_IsValid", &b2Chain_IsValid);
     function("b2DefaultChainDef", &b2DefaultChainDef);
+    function("b2Chain_GetWorld", &b2Chain_GetWorld);
     function("b2Chain_GetSegmentCount", &b2Chain_GetSegmentCount);
+    function("b2Chain_SetAllSurfaceMaterials", &b2Chain_SetAllSurfaceMaterials, allow_raw_pointers());
+    function("b2Chain_SetSurfaceMaterial", &b2Chain_SetSurfaceMaterial, allow_raw_pointers());
+    function("b2Chain_GetSurfaceMaterial", &b2Chain_GetSurfaceMaterial);
     function("b2Chain_GetSegments", +[](b2ChainId chainId, int capacity) -> emscripten::val {
         std::vector<b2ShapeId> segments(capacity);
         int count = b2Chain_GetSegments(chainId, segments.data(), capacity);
@@ -631,20 +801,31 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             {
                 emscripten::val matVal = array[i];
 
-                persistentMaterials[i] = b2SurfaceMaterial{};
+                // Missing fields keep Box2D's defaults. Read through property access, which also
+                // works for b2SurfaceMaterial objects (their fields are getters, not own properties).
+                b2SurfaceMaterial& material = persistentMaterials[i];
+                material = b2DefaultSurfaceMaterial();
+                auto has = [&matVal](const char* name) {
+                    emscripten::val field = matVal[name];
+                    return !field.isUndefined() && !field.isNull();
+                };
 
-                if (matVal.hasOwnProperty("friction"))
-                    persistentMaterials[i].friction = matVal["friction"].as<float>();
-                if (matVal.hasOwnProperty("restitution"))
-                    persistentMaterials[i].restitution = matVal["restitution"].as<float>();
-                if (matVal.hasOwnProperty("rollingResistance"))
-                    persistentMaterials[i].rollingResistance = matVal["rollingResistance"].as<float>();
-                if (matVal.hasOwnProperty("tangentSpeed"))
-                    persistentMaterials[i].tangentSpeed = matVal["tangentSpeed"].as<float>();
-                if (matVal.hasOwnProperty("userMaterialId"))
-                    persistentMaterials[i].userMaterialId = matVal["userMaterialId"].as<int>();
-                if (matVal.hasOwnProperty("customColor"))
-                    persistentMaterials[i].customColor = matVal["customColor"].as<uint32_t>();
+                if (has("friction"))
+                    material.friction = matVal["friction"].as<float>();
+                if (has("restitution"))
+                    material.restitution = matVal["restitution"].as<float>();
+                if (has("rollingResistance"))
+                    material.rollingResistance = matVal["rollingResistance"].as<float>();
+                if (has("tangentSpeed"))
+                    material.tangentSpeed = matVal["tangentSpeed"].as<float>();
+                if (has("userMaterialId")) {
+                    emscripten::val id = matVal["userMaterialId"];
+                    material.userMaterialId = id.typeOf().as<std::string>() == "bigint"
+                        ? id.as<uint64_t>()
+                        : static_cast<uint64_t>(id.as<double>());
+                }
+                if (has("customColor"))
+                    material.customColor = matVal["customColor"].as<uint32_t>();
             }
 
             def.materials = persistentMaterials.data();
@@ -652,9 +833,11 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         })
         .property("filter", &b2ChainDef::filter, return_value_policy::reference())
         .property("isLoop", &b2ChainDef::isLoop)
+        .property("ghost1", &b2ChainDef::ghost1, return_value_policy::reference())
+        .property("ghost2", &b2ChainDef::ghost2, return_value_policy::reference())
         .function("GetPoints", +[](const b2ChainDef& self) -> emscripten::val {
             auto result = emscripten::val::array();
-            for (int i = 0; i < self.count; i++) {
+            for (int i = 0; i < self.pointCount; i++) {
                 auto point = emscripten::val::object();
                 point.set("x", self.points[i].x);
                 point.set("y", self.points[i].y);
@@ -672,18 +855,18 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
                 newPoints[i].y = point["y"].as<float>();
             }
             if (self.points != nullptr) {
-                delete[] self.points;
+                delete[] const_cast<b2Vec2*>(self.points);
             }
 
             self.points = newPoints;
-            self.count = length;
+            self.pointCount = length;
         })
-        .property("count", &b2ChainDef::count)
+        .property("pointCount", &b2ChainDef::pointCount)
         .property("internalValue", &b2ChainDef::internalValue)
         .property("enableSensorEvents", &b2ChainDef::enableSensorEvents)
         .function("delete", +[](b2ChainDef* self) {
             if (self->points != nullptr) {
-                delete[] self->points;
+                delete[] const_cast<b2Vec2*>(self->points);
                 self->points = nullptr;
             }
             delete self;
@@ -744,22 +927,22 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     function("b2ComputeCircleMass", &b2ComputeCircleMass, allow_raw_pointers());
     function("b2ComputeCapsuleMass", &b2ComputeCapsuleMass, allow_raw_pointers());
     function("b2ComputePolygonMass", &b2ComputePolygonMass, allow_raw_pointers());
-    function("b2ComputeCircleAABB", &b2ComputeCircleAABB, allow_raw_pointers());
-    function("b2ComputeCapsuleAABB", &b2ComputeCapsuleAABB, allow_raw_pointers());
-    function("b2ComputePolygonAABB", &b2ComputePolygonAABB, allow_raw_pointers());
-    function("b2ComputeSegmentAABB", &b2ComputeSegmentAABB, allow_raw_pointers());
+    function("b2ComputeCircleBounds", &b2ComputeCircleBounds, allow_raw_pointers());
+    function("b2ComputeCapsuleBounds", &b2ComputeCapsuleBounds, allow_raw_pointers());
+    function("b2ComputePolygonBounds", &b2ComputePolygonBounds, allow_raw_pointers());
+    function("b2ComputeSegmentBounds", &b2ComputeSegmentBounds, allow_raw_pointers());
     function("b2PointInCircle", &b2PointInCircle, allow_raw_pointers());
     function("b2PointInCapsule", &b2PointInCapsule, allow_raw_pointers());
     function("b2PointInPolygon", &b2PointInPolygon, allow_raw_pointers());
     function("b2IsValidRay", &b2IsValidRay, allow_raw_pointers());
-    // function("b2RayCastCircle", &b2RayCastCircle, allow_raw_pointers());
-    // function("b2RayCastCapsule", &b2RayCastCapsule, allow_raw_pointers());
-    // function("b2RayCastSegment", &b2RayCastSegment, allow_raw_pointers());
-    // function("b2RayCastPolygon", &b2RayCastPolygon, allow_raw_pointers());
-    // function("b2ShapeCastCircle", &b2ShapeCastCircle, allow_raw_pointers());
-    // function("b2ShapeCastCapsule", &b2ShapeCastCapsule, allow_raw_pointers());
-    // function("b2ShapeCastSegment", &b2ShapeCastSegment, allow_raw_pointers());
-    // function("b2ShapeCastPolygon", &b2ShapeCastPolygon, allow_raw_pointers());
+    function("b2CastRayCircle", &b2CastRayCircle, allow_raw_pointers());
+    function("b2CastRayCapsule", &b2CastRayCapsule, allow_raw_pointers());
+    function("b2CastRaySegment", &b2CastRaySegment, allow_raw_pointers());
+    function("b2CastRayPolygon", &b2CastRayPolygon, allow_raw_pointers());
+    function("b2CastShapeCircle", &b2CastShapeCircle, allow_raw_pointers());
+    function("b2CastShapeCapsule", &b2CastShapeCapsule, allow_raw_pointers());
+    function("b2CastShapeSegment", &b2CastShapeSegment, allow_raw_pointers());
+    function("b2CastShapePolygon", &b2CastShapePolygon, allow_raw_pointers());
 
     enum_<b2ShapeType>("b2ShapeType")
         .value("b2_circleShape", b2_circleShape)
@@ -776,7 +959,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor()
         .function("Destroy", &Shape::Destroy)
         .function("IsValid", &Shape::IsValid)
-        .function("GetAABB", &Shape::GetAABB)
+        .function("GetBounds", &Shape::GetBounds)
         .function("GetDensity", &Shape::GetDensity)
         .function("SetDensity", &Shape::SetDensity)
         .function("GetFilter", &Shape::GetFilter)
@@ -799,11 +982,14 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("EnablePreSolveEvents", &Shape::EnablePreSolveEvents)
         .function("ArePreSolveEventsEnabled", &Shape::ArePreSolveEventsEnabled)
         .function("GetClosestPoint", &Shape::GetClosestPoint)
-        .function("RayCast", &Shape::RayCast)
+        .function("CastRay", &Shape::CastRay)
         .function("TestPoint", &Shape::TestPoint)
         .function("GetType", &Shape::GetType)
         .function("GetRestitution", &Shape::GetRestitution)
         .function("SetRestitution", &Shape::SetRestitution)
+        .function("GetSurfaceMaterial", &Shape::GetSurfaceMaterial)
+        .function("SetSurfaceMaterial", &Shape::SetSurfaceMaterial)
+        .function("ApplyWind", &Shape::ApplyWind)
         .function("GetBody", select_overload<BodyRef()>(&Shape::GetBody))
         .function("GetParentChain", select_overload<ChainRef()>(&Shape::GetParentChain))
         .function("GetWorld", select_overload<WorldRef()>(&Shape::GetWorld))
@@ -819,6 +1005,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     function("b2CreateCircleShape", &b2CreateCircleShape, allow_raw_pointers());
     function("b2CreateCapsuleShape", &b2CreateCapsuleShape, allow_raw_pointers());
     function("b2CreateSegmentShape", &b2CreateSegmentShape, allow_raw_pointers());
+    function("b2CreateChainSegmentShape", &b2CreateChainSegmentShape, allow_raw_pointers());
     function("b2DestroyShape", &b2DestroyShape);
 
     // ------------------------------------------------------------------------
@@ -850,6 +1037,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor()
         .constructor<const b2BodyDef&>()
         .property("type", &b2BodyDef::type)
+        .property("userData",
+            +[](const b2BodyDef& self) { return userDataToNumber(self.userData); },
+            +[](b2BodyDef& self, double value) { self.userData = numberToUserData(value); })
         .property("position", &b2BodyDef::position, return_value_policy::reference())
         .property("rotation", &b2BodyDef::rotation, return_value_policy::reference())
         .property("linearVelocity", &b2BodyDef::linearVelocity, return_value_policy::reference())
@@ -858,11 +1048,13 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("angularDamping", &b2BodyDef::angularDamping)
         .property("gravityScale", &b2BodyDef::gravityScale)
         .property("sleepThreshold", &b2BodyDef::sleepThreshold)
+        .property("safetyFactor", &b2BodyDef::safetyFactor)
         .property("enableSleep", &b2BodyDef::enableSleep)
         .property("isAwake", &b2BodyDef::isAwake)
         .property("isBullet", &b2BodyDef::isBullet)
         .property("isEnabled", &b2BodyDef::isEnabled)
         .property("allowFastRotation", &b2BodyDef::allowFastRotation)
+        .property("enableContactRecycling", &b2BodyDef::enableContactRecycling)
         .property("internalValue", &b2BodyDef::internalValue)
         .property("motionLocks", &b2BodyDef::motionLocks, return_value_policy::reference())
         ;
@@ -911,20 +1103,31 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("ApplyLinearImpulse", &Body::ApplyLinearImpulse)
         .function("ApplyLinearImpulseToCenter", &Body::ApplyLinearImpulseToCenter)
         .function("ApplyTorque", &Body::ApplyTorque)
-        .function("ApplyMassFromShapes", &Body::ApplyMassFromShapes)
+        .function("ClearForces", &Body::ClearForces)
+        .function("UpdateMassFromShapes", &Body::UpdateMassFromShapes)
         .function("GetMass", &Body::GetMass)
         .function("SetMassData", &Body::SetMassData)
         .function("GetMassData", &Body::GetMassData)
         .function("GetRotationalInertia", &Body::GetRotationalInertia)
         .function("SetAwake", &Body::SetAwake)
         .function("IsAwake", &Body::IsAwake)
-        .function("EnableSleep", &Body::EnableSleep)
-        .function("IsSleepEnabled", &Body::IsSleepEnabled)
+        .function("WakeTouching", &Body::WakeTouching)
+        .function("EnableSleeping", &Body::EnableSleeping)
+        .function("IsSleepingEnabled", &Body::IsSleepingEnabled)
         .function("SetSleepThreshold", &Body::SetSleepThreshold)
         .function("GetSleepThreshold", &Body::GetSleepThreshold)
+        .function("SetSafetyFactor", &Body::SetSafetyFactor)
+        .function("GetSafetyFactor", &Body::GetSafetyFactor)
         .function("SetBullet", &Body::SetBullet)
         .function("IsBullet", &Body::IsBullet)
-        .function("ComputeAABB", &Body::ComputeAABB)
+        .function("EnableContactRecycling", &Body::EnableContactRecycling)
+        .function("IsContactRecyclingEnabled", &Body::IsContactRecyclingEnabled)
+        .function("SetMotionLocks", &Body::SetMotionLocks)
+        .function("GetMotionLocks", &Body::GetMotionLocks)
+        .function("ComputeBounds", &Body::ComputeBounds)
+        .function("GetMinExtent", &Body::GetMinExtent)
+        .function("GetMaxExtent", &Body::GetMaxExtent)
+        .function("GetMaxExtentFromOrigin", &Body::GetMaxExtentFromOrigin)
         .function("GetContactCapacity", &Body::GetContactCapacity)
         .function("GetContactData", +[](const Body& body) {
             return getArrayWrapper<b2ContactData>(body, &Body::GetContactCapacity, &Body::GetContactData);
@@ -941,13 +1144,16 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetLinearDamping", &Body::GetLinearDamping)
         .function("SetLinearVelocity", &Body::SetLinearVelocity)
         .function("GetLinearVelocity", &Body::GetLinearVelocity)
-        .function("GetLocalCenterOfMass", &Body::GetLocalCenterOfMass)
+        .function("GetLocalCenter", &Body::GetLocalCenter)
         .function("GetLocalPoint", &Body::GetLocalPoint)
         .function("GetLocalVector", &Body::GetLocalVector)
         .function("GetPosition", &Body::GetPosition)
         .function("GetRotation", &Body::GetRotation)
         .function("SetTransform", &Body::SetTransform)
         .function("GetTransform", &Body::GetTransform)
+        .function("SetTargetTransform", &Body::SetTargetTransform)
+        .function("GetLocalPointVelocity", &Body::GetLocalPointVelocity)
+        .function("GetWorldPointVelocity", &Body::GetWorldPointVelocity)
         .function("GetShapeCount", &Body::GetShapeCount)
         .function("GetShapes", +[](const Body& body) {
             return getArrayWrapper<b2ShapeId>(body, &Body::GetShapeCount, &Body::GetShapes);
@@ -958,7 +1164,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
             return emscripten::val(self.Handle().index1);
         })
         .function("GetWorld", select_overload<WorldRef()>(&Body::GetWorld))
-        .function("GetWorldCenterOfMass", &Body::GetWorldCenterOfMass)
+        .function("GetWorldCenter", &Body::GetWorldCenter)
         .function("GetWorldPoint", &Body::GetWorldPoint)
         .function("GetWorldVector", &Body::GetWorldVector)
         .function("SetName", +[](Body& body, const std::string& name) {
@@ -974,8 +1180,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     // ------------------------------------------------------------------------
     enum_<b2JointType>("b2JointType")
         .value("b2_distanceJoint", b2JointType::b2_distanceJoint)
-        .value("b2_motorJoint", b2JointType::b2_motorJoint)
         .value("b2_filterJoint", b2JointType::b2_filterJoint)
+        .value("b2_motorJoint", b2JointType::b2_motorJoint)
+        .value("b2_moverJoint", b2JointType::b2_moverJoint)
+        .value("b2_pogoJoint", b2JointType::b2_pogoJoint)
         .value("b2_prismaticJoint", b2JointType::b2_prismaticJoint)
         .value("b2_revoluteJoint", b2JointType::b2_revoluteJoint)
         .value("b2_weldJoint", b2JointType::b2_weldJoint)
@@ -990,10 +1198,18 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<b2JointDef>("b2JointDef")
         .constructor()
+        .property("userData",
+            +[](const b2JointDef& self) { return userDataToNumber(self.userData); },
+            +[](b2JointDef& self, double value) { self.userData = numberToUserData(value); })
         .property("bodyIdA", &b2JointDef::bodyIdA)
         .property("bodyIdB", &b2JointDef::bodyIdB)
         .property("localFrameA", &b2JointDef::localFrameA, return_value_policy::reference())
         .property("localFrameB", &b2JointDef::localFrameB, return_value_policy::reference())
+        .property("forceThreshold", &b2JointDef::forceThreshold)
+        .property("torqueThreshold", &b2JointDef::torqueThreshold)
+        .property("constraintHertz", &b2JointDef::constraintHertz)
+        .property("constraintDampingRatio", &b2JointDef::constraintDampingRatio)
+        .property("drawScale", &b2JointDef::drawScale)
         .property("collideConnected", &b2JointDef::collideConnected)
     ;
 
@@ -1007,12 +1223,17 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetCollideConnected", &Joint::GetCollideConnected)
         .function("GetConstraintForce", &Joint::GetConstraintForce)
         .function("GetConstraintTorque", &Joint::GetConstraintTorque)
+        .function("GetLinearSeparation", &Joint::GetLinearSeparation)
+        .function("GetAngularSeparation", &Joint::GetAngularSeparation)
+        .function("SetConstraintTuning", &Joint::SetConstraintTuning)
         .function("SetForceThreshold", &Joint::SetForceThreshold)
         .function("GetForceThreshold", &Joint::GetForceThreshold)
         .function("SetTorqueThreshold", &Joint::SetTorqueThreshold)
         .function("GetTorqueThreshold", &Joint::GetTorqueThreshold)
-        .function("GetLocalFrameA", &Joint::GetLocalFrameA, return_value_policy::reference())
-        .function("GetLocalFrameB", &Joint::GetLocalFrameB, return_value_policy::reference())
+        .function("GetLocalFrameA", &Joint::GetLocalFrameA)
+        .function("GetLocalFrameB", &Joint::GetLocalFrameB)
+        .function("SetLocalFrameA", &Joint::SetLocalFrameA)
+        .function("SetLocalFrameB", &Joint::SetLocalFrameB)
         .function("GetType", &Joint::GetType)
         .function("WakeBodies", &Joint::WakeBodies)
         .function("GetWorld", select_overload<WorldRef()>(&Joint::GetWorld))
@@ -1027,6 +1248,10 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<b2::MaybeConstDistanceJointRef<true>>("DistanceJointConstRef");
     class_<b2::MaybeConstMotorJointRef<false>>("MotorJointRef");
     class_<b2::MaybeConstMotorJointRef<true>>("MotorJointConstRef");
+    class_<b2::MaybeConstMoverJointRef<false>>("MoverJointRef");
+    class_<b2::MaybeConstMoverJointRef<true>>("MoverJointConstRef");
+    class_<b2::MaybeConstPogoJointRef<false>>("PogoJointRef");
+    class_<b2::MaybeConstPogoJointRef<true>>("PogoJointConstRef");
     class_<b2::MaybeConstPrismaticJointRef<false>>("PrismaticJointRef");
     class_<b2::MaybeConstPrismaticJointRef<true>>("PrismaticJointConstRef");
     class_<b2::MaybeConstRevoluteJointRef<false>>("RevoluteJointRef");
@@ -1038,6 +1263,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
     class_<BasicDistanceJointInterface<DistanceJoint, false>>("BasicDistanceJointInterface");
     class_<BasicMotorJointInterface<MotorJoint, false>>("BasicMotorJointInterface");
+    class_<BasicMoverJointInterface<MoverJoint, false>>("BasicMoverJointInterface");
+    class_<BasicPogoJointInterface<PogoJoint, false>>("BasicPogoJointInterface");
     class_<BasicPrismaticJointInterface<PrismaticJoint, false>>("BasicPrismaticJointInterface");
     class_<BasicRevoluteJointInterface<RevoluteJoint, false>>("BasicRevoluteJointInterface");
     class_<BasicWeldJointInterface<WeldJoint, false>>("BasicWeldJointInterface");
@@ -1055,6 +1282,8 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("base", &b2DistanceJointDef::base, return_value_policy::reference())
         .property("length", &b2DistanceJointDef::length)
         .property("enableSpring", &b2DistanceJointDef::enableSpring)
+        .property("lowerSpringForce", &b2DistanceJointDef::lowerSpringForce)
+        .property("upperSpringForce", &b2DistanceJointDef::upperSpringForce)
         .property("hertz", &b2DistanceJointDef::hertz)
         .property("dampingRatio", &b2DistanceJointDef::dampingRatio)
         .property("enableLimit", &b2DistanceJointDef::enableLimit)
@@ -1079,6 +1308,28 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .property("angularHertz", &b2MotorJointDef::angularHertz)
         .property("angularDampingRatio", &b2MotorJointDef::angularDampingRatio)
         .property("maxSpringTorque", &b2MotorJointDef::maxSpringTorque)
+    ;
+
+    class_<b2MoverJointDef>("b2MoverJointDef")
+        .constructor()
+        .constructor<const b2MoverJointDef&>()
+        .property("base", &b2MoverJointDef::base, return_value_policy::reference())
+        .property("linearVelocity", &b2MoverJointDef::linearVelocity, return_value_policy::reference())
+        .property("maxVelocityForce", &b2MoverJointDef::maxVelocityForce, return_value_policy::reference())
+    ;
+
+    class_<b2PogoJointDef>("b2PogoJointDef")
+        .constructor()
+        .constructor<const b2PogoJointDef&>()
+        .property("base", &b2PogoJointDef::base, return_value_policy::reference())
+        .property("normal", &b2PogoJointDef::normal, return_value_policy::reference())
+        .property("hertz", &b2PogoJointDef::hertz)
+        .property("dampingRatio", &b2PogoJointDef::dampingRatio)
+        .property("restLength", &b2PogoJointDef::restLength)
+        .property("maxTensionForce", &b2PogoJointDef::maxTensionForce)
+        .property("maxCompressionForce", &b2PogoJointDef::maxCompressionForce)
+        .property("impulse", &b2PogoJointDef::impulse)
+        .property("velocity", &b2PogoJointDef::velocity)
     ;
 
     class_<b2FilterJointDef>("b2FilterJointDef")
@@ -1147,22 +1398,24 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
     class_<DistanceJoint, base<BasicDistanceJointInterface<DistanceJoint, false>>>("DistanceJoint")
         .constructor<>()
         .function("GetCurrentLength", &DistanceJoint::GetCurrentLength)
-        .function("SetLength", &DistanceJoint::SetLength)
-        .function("GetLength", &DistanceJoint::GetLength)
-        .function("SetLengthRange", &DistanceJoint::SetLengthRange)
+        .function("SetRestLength", &DistanceJoint::SetRestLength)
+        .function("GetRestLength", &DistanceJoint::GetRestLength)
+        .function("SetLimits", &DistanceJoint::SetLimits)
         .function("EnableLimit", &DistanceJoint::EnableLimit)
         .function("IsLimitEnabled", &DistanceJoint::IsLimitEnabled)
-        .function("GetMaxLength", &DistanceJoint::GetMaxLength)
+        .function("GetLowerLimit", &DistanceJoint::GetLowerLimit)
+        .function("GetUpperLimit", &DistanceJoint::GetUpperLimit)
         .function("SetMaxMotorForce", &DistanceJoint::SetMaxMotorForce)
         .function("GetMaxMotorForce", &DistanceJoint::GetMaxMotorForce)
-        .function("GetMinLength", &DistanceJoint::GetMinLength)
         .function("EnableMotor", &DistanceJoint::EnableMotor)
         .function("IsMotorEnabled", &DistanceJoint::IsMotorEnabled)
-        .function("GetMotorForce", &DistanceJoint::GetMotorForce)
-        .function("SetMotorSpeed", &DistanceJoint::SetMotorSpeed)
-        .function("GetMotorSpeed", &DistanceJoint::GetMotorSpeed)
+        .function("GetCurrentMotorForce", &DistanceJoint::GetCurrentMotorForce)
+        .function("SetTargetMotorSpeed", &DistanceJoint::SetTargetMotorSpeed)
+        .function("GetTargetMotorSpeed", &DistanceJoint::GetTargetMotorSpeed)
         .function("EnableSpring", &DistanceJoint::EnableSpring)
         .function("IsSpringEnabled", &DistanceJoint::IsSpringEnabled)
+        .function("SetSpringForceRange", &DistanceJoint::SetSpringForceRange)
+        .function("GetSpringForce", &DistanceJoint::GetSpringForce)
         .function("SetSpringDampingRatio", &DistanceJoint::SetSpringDampingRatio)
         .function("GetSpringDampingRatio", &DistanceJoint::GetSpringDampingRatio)
         .function("SetSpringHertz", &DistanceJoint::SetSpringHertz)
@@ -1192,6 +1445,27 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetMaxVelocityTorque", &MotorJoint::GetMaxVelocityTorque)
     ;
 
+    class_<MoverJoint, base<BasicMoverJointInterface<MoverJoint, false>>>("MoverJoint")
+        .constructor<>()
+        .function("SetLinearVelocity", &MoverJoint::SetLinearVelocity)
+        .function("GetLinearVelocity", &MoverJoint::GetLinearVelocity)
+        .function("SetMaxVelocityForce", &MoverJoint::SetMaxVelocityForce)
+        .function("GetMaxVelocityForce", &MoverJoint::GetMaxVelocityForce)
+    ;
+
+    class_<PogoJoint, base<BasicPogoJointInterface<PogoJoint, false>>>("PogoJoint")
+        .constructor<>()
+        .function("SetRestLength", &PogoJoint::SetRestLength)
+        .function("GetRestLength", &PogoJoint::GetRestLength)
+        .function("SetSpringHertz", &PogoJoint::SetSpringHertz)
+        .function("GetSpringHertz", &PogoJoint::GetSpringHertz)
+        .function("SetSpringDampingRatio", &PogoJoint::SetSpringDampingRatio)
+        .function("GetSpringDampingRatio", &PogoJoint::GetSpringDampingRatio)
+        .function("GetCurrentLength", &PogoJoint::GetCurrentLength)
+        .function("GetCurrentSpeed", &PogoJoint::GetCurrentSpeed)
+        .function("GetImpulse", &PogoJoint::GetImpulse)
+    ;
+
     class_<PrismaticJoint, base<BasicPrismaticJointInterface<PrismaticJoint, false>>>("PrismaticJoint")
         .constructor<>()
         .function("EnableLimit", &PrismaticJoint::EnableLimit)
@@ -1202,22 +1476,27 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetMaxMotorForce", &PrismaticJoint::GetMaxMotorForce)
         .function("EnableMotor", &PrismaticJoint::EnableMotor)
         .function("IsMotorEnabled", &PrismaticJoint::IsMotorEnabled)
-        .function("GetMotorForce", &PrismaticJoint::GetMotorForce)
-        .function("SetMotorSpeed", &PrismaticJoint::SetMotorSpeed)
-        .function("GetMotorSpeed", &PrismaticJoint::GetMotorSpeed)
-        .function("GetSpeed", &PrismaticJoint::GetSpeed)
+        .function("GetCurrentMotorForce", &PrismaticJoint::GetCurrentMotorForce)
+        .function("SetTargetMotorSpeed", &PrismaticJoint::SetTargetMotorSpeed)
+        .function("GetTargetMotorSpeed", &PrismaticJoint::GetTargetMotorSpeed)
+        .function("GetCurrentSpeed", &PrismaticJoint::GetCurrentSpeed)
+        .function("SetTargetTranslation", &PrismaticJoint::SetTargetTranslation)
+        .function("GetTargetTranslation", &PrismaticJoint::GetTargetTranslation)
         .function("EnableSpring", &PrismaticJoint::EnableSpring)
         .function("IsSpringEnabled", &PrismaticJoint::IsSpringEnabled)
         .function("SetSpringDampingRatio", &PrismaticJoint::SetSpringDampingRatio)
         .function("GetSpringDampingRatio", &PrismaticJoint::GetSpringDampingRatio)
         .function("SetSpringHertz", &PrismaticJoint::SetSpringHertz)
         .function("GetSpringHertz", &PrismaticJoint::GetSpringHertz)
-        .function("GetTranslation", &PrismaticJoint::GetTranslation)
+        .function("GetCurrentTranslation", &PrismaticJoint::GetCurrentTranslation)
         .function("GetUpperLimit", &PrismaticJoint::GetUpperLimit);
 
     class_<RevoluteJoint, base<BasicRevoluteJointInterface<RevoluteJoint, false>>>("RevoluteJoint")
         .constructor<>()
-        .function("GetAngle", &RevoluteJoint::GetAngle)
+        .function("GetCurrentAngle", &RevoluteJoint::GetCurrentAngle)
+        .function("GetCurrentSpeed", &RevoluteJoint::GetCurrentSpeed)
+        .function("SetTargetAngle", &RevoluteJoint::SetTargetAngle)
+        .function("GetTargetAngle", &RevoluteJoint::GetTargetAngle)
         .function("EnableLimit", &RevoluteJoint::EnableLimit)
         .function("IsLimitEnabled", &RevoluteJoint::IsLimitEnabled)
         .function("SetLimits", &RevoluteJoint::SetLimits)
@@ -1226,9 +1505,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetMaxMotorTorque", &RevoluteJoint::GetMaxMotorTorque)
         .function("EnableMotor", &RevoluteJoint::EnableMotor)
         .function("IsMotorEnabled", &RevoluteJoint::IsMotorEnabled)
-        .function("SetMotorSpeed", &RevoluteJoint::SetMotorSpeed)
-        .function("GetMotorSpeed", &RevoluteJoint::GetMotorSpeed)
-        .function("GetMotorTorque", &RevoluteJoint::GetMotorTorque)
+        .function("SetTargetMotorSpeed", &RevoluteJoint::SetTargetMotorSpeed)
+        .function("GetTargetMotorSpeed", &RevoluteJoint::GetTargetMotorSpeed)
+        .function("GetCurrentMotorTorque", &RevoluteJoint::GetCurrentMotorTorque)
         .function("EnableSpring", &RevoluteJoint::EnableSpring)
         .function("IsSpringEnabled", &RevoluteJoint::IsSpringEnabled)
         .function("SetSpringDampingRatio", &RevoluteJoint::SetSpringDampingRatio)
@@ -1259,9 +1538,9 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .function("GetMaxMotorTorque", &WheelJoint::GetMaxMotorTorque)
         .function("EnableMotor", &WheelJoint::EnableMotor)
         .function("IsMotorEnabled", &WheelJoint::IsMotorEnabled)
-        .function("SetMotorSpeed", &WheelJoint::SetMotorSpeed)
-        .function("GetMotorSpeed", &WheelJoint::GetMotorSpeed)
-        .function("GetMotorTorque", &WheelJoint::GetMotorTorque)
+        .function("SetTargetMotorSpeed", &WheelJoint::SetTargetMotorSpeed)
+        .function("GetTargetMotorSpeed", &WheelJoint::GetTargetMotorSpeed)
+        .function("GetCurrentMotorTorque", &WheelJoint::GetCurrentMotorTorque)
         .function("EnableSpring", &WheelJoint::EnableSpring)
         .function("IsSpringEnabled", &WheelJoint::IsSpringEnabled)
         .function("SetSpringDampingRatio", &WheelJoint::SetSpringDampingRatio)
@@ -1279,13 +1558,16 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
         .constructor<const b2DebugDraw&>()
         .property("forceScale", &b2DebugDraw::forceScale)
         .property("jointScale", &b2DebugDraw::jointScale)
+        .property("drawingBounds", &b2DebugDraw::drawingBounds, return_value_policy::reference())
+        .property("drawContacts", &b2DebugDraw::drawContacts)
+        .property("drawAnchorA", &b2DebugDraw::drawAnchorA)
         .property("drawShapes", &b2DebugDraw::drawShapes)
+        .property("drawChainNormals", &b2DebugDraw::drawChainNormals)
         .property("drawJoints", &b2DebugDraw::drawJoints)
         .property("drawJointExtras", &b2DebugDraw::drawJointExtras)
         .property("drawBounds", &b2DebugDraw::drawBounds)
         .property("drawMass", &b2DebugDraw::drawMass)
         .property("drawBodyNames", &b2DebugDraw::drawBodyNames)
-        .property("drawContactPoints", &b2DebugDraw::drawContactPoints)
         .property("drawGraphColors", &b2DebugDraw::drawGraphColors)
         .property("drawContactFeatures", &b2DebugDraw::drawContactFeatures)
         .property("drawContactNormals", &b2DebugDraw::drawContactNormals)
@@ -1368,7 +1650,7 @@ struct MemoryStats {
 
 struct b2RayCallbackResult {
     b2ShapeId shapeId;
-    b2Vec2 point;
+    b2Pos point;
     b2Vec2 normal;
     float fraction;
 };
@@ -1377,7 +1659,7 @@ struct b2OverlapCallbackResult {
     b2ShapeId shapeId;
 };
 
-float RayCastCallback(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* userData) {
+float RayCastCallback(b2ShapeId shapeId, b2Pos point, b2Vec2 normal, float fraction, void* userData) {
     auto* callback = reinterpret_cast<emscripten::val*>(userData);
     b2RayCallbackResult params = { shapeId, point, normal, fraction };
     return callback->operator()(emscripten::val(params)).as<float>();
@@ -1440,6 +1722,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2DestroyWorld", &b2DestroyWorld);
     function("b2World_Step", &b2World_Step);
     function("b2World_Draw", &b2World_Draw, allow_raw_pointers());
+    function("b2World_GetBounds", &b2World_GetBounds);
     function("b2World_GetBodyEvents", &b2World_GetBodyEvents);
     function("b2World_GetSensorEvents", &b2World_GetSensorEvents);
     function("b2World_GetContactEvents", &b2World_GetContactEvents);
@@ -1453,13 +1736,54 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_IsContinuousEnabled", &b2World_IsContinuousEnabled);
     function("b2World_SetRestitutionThreshold", &b2World_SetRestitutionThreshold);
     function("b2World_GetRestitutionThreshold", &b2World_GetRestitutionThreshold);
+    function("b2World_SetRestitutionIterations", &b2World_SetRestitutionIterations);
+    function("b2World_GetRestitutionIterations", &b2World_GetRestitutionIterations);
+    function("b2World_EnableRestitutionPropagation", &b2World_EnableRestitutionPropagation);
+    function("b2World_IsRestitutionPropagationEnabled", &b2World_IsRestitutionPropagationEnabled);
     function("b2World_SetHitEventThreshold", &b2World_SetHitEventThreshold);
     function("b2World_GetHitEventThreshold", &b2World_GetHitEventThreshold);
     function("b2World_SetContactTuning", &b2World_SetContactTuning);
-    function("b2World_SetMaximumLinearSpeed", &b2World_SetMaximumLinearSpeed);
-    function("b2World_GetMaximumLinearSpeed", &b2World_GetMaximumLinearSpeed);
+    // returns { hertz, dampingRatio, pushSpeed }
+    function("b2World_GetContactTuning", +[](b2WorldId worldId) -> emscripten::val {
+        float hertz = 0.0f, dampingRatio = 0.0f, pushSpeed = 0.0f;
+        b2World_GetContactTuning(worldId, &hertz, &dampingRatio, &pushSpeed);
+        auto result = emscripten::val::object();
+        result.set("hertz", hertz);
+        result.set("dampingRatio", dampingRatio);
+        result.set("pushSpeed", pushSpeed);
+        return result;
+    });
+    function("b2World_SetContactRecycleDistance", &b2World_SetContactRecycleDistance);
+    function("b2World_GetContactRecycleDistance", &b2World_GetContactRecycleDistance);
+    function("b2World_SetMaxLinearSpeed", &b2World_SetMaxLinearSpeed);
+    function("b2World_GetMaxLinearSpeed", &b2World_GetMaxLinearSpeed);
     function("b2World_GetProfile", &b2World_GetProfile);
     function("b2World_GetCounters", &b2World_GetCounters);
+    function("b2World_GetMaxCapacity", &b2World_GetMaxCapacity);
+    function("b2World_SetWorkerCount", &b2World_SetWorkerCount);
+    function("b2World_GetWorkerCount", &b2World_GetWorkerCount);
+    function("b2World_GetStateHash", &b2World_GetStateHash);
+
+    // Snapshots: the image is copied into a JS Uint8Array, so it stays valid after the world changes.
+    function("b2World_GetSnapshot", +[](b2WorldId worldId) -> emscripten::val {
+        int size = b2World_GetSnapshot(worldId, nullptr, 0);
+        if (size <= 0) {
+            return emscripten::val::null();
+        }
+        std::vector<uint8_t> image(size);
+        b2World_GetSnapshot(worldId, image.data(), size);
+        auto result = emscripten::val::global("Uint8Array").new_(size);
+        result.call<void>("set", emscripten::val(emscripten::typed_memory_view(image.size(), image.data())));
+        return result;
+    });
+    function("b2World_RestoreFromSnapshot", +[](b2WorldId worldId, const emscripten::val& image) -> bool {
+        std::vector<uint8_t> bytes = emscripten::convertJSArrayToNumberVector<uint8_t>(image);
+        return b2World_RestoreFromSnapshot(worldId, bytes.data(), static_cast<int>(bytes.size()));
+    });
+    function("b2CreateWorldFromSnapshot", +[](const emscripten::val& image, int workerCount) -> b2WorldId {
+        std::vector<uint8_t> bytes = emscripten::convertJSArrayToNumberVector<uint8_t>(image);
+        return b2CreateWorldFromSnapshot(bytes.data(), static_cast<int>(bytes.size()), workerCount);
+    });
     function("b2World_GetPointer", +[](b2WorldId worldId) -> emscripten::val {
         return emscripten::val(worldId.index1);
     });
@@ -1497,6 +1821,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
 
     value_object<b2PlaneResult>("b2PlaneResult")
         .field("plane", &b2PlaneResult::plane)
+        .field("point", &b2PlaneResult::point)
         .field("hit", &b2PlaneResult::hit);
 
     class_<b2CollisionPlane>("b2CollisionPlane")
@@ -1508,10 +1833,10 @@ EMSCRIPTEN_BINDINGS(box2d) {
 
     class_<b2PlaneSolverResult>("b2PlaneSolverResult")
         .constructor()
-        .property("translation", &b2PlaneSolverResult::translation, return_value_policy::reference())
+        .property("delta", &b2PlaneSolverResult::delta, return_value_policy::reference())
         .property("iterationCount", &b2PlaneSolverResult::iterationCount);
 
-    function("b2SolvePlanes", +[](const b2Vec2& position, const emscripten::val& collisionPlanes) -> b2PlaneSolverResult {
+    function("b2SolvePlanes", +[](const b2Vec2& targetDelta, const emscripten::val& collisionPlanes) -> b2PlaneSolverResult {
         int length = collisionPlanes["length"].as<int>();
         std::vector<b2CollisionPlane> planes(length);
 
@@ -1526,7 +1851,12 @@ EMSCRIPTEN_BINDINGS(box2d) {
             planes[i].clipVelocity = collisionPlane["clipVelocity"].as<float>();
         }
 
-        return b2SolvePlanes(position, planes.data(), length);
+        // b2SolvePlanes writes the resulting push back into the planes
+        b2PlaneSolverResult result = b2SolvePlanes(targetDelta, planes.data(), length);
+        for (int i = 0; i < length; ++i) {
+            collisionPlanes[i].set("push", planes[i].push);
+        }
+        return result;
     });
     function("b2ClipVector", +[](const b2Vec2& vector, const emscripten::val& collisionPlanes) -> b2Vec2 {
         int length = collisionPlanes["length"].as<int>();
@@ -1547,23 +1877,23 @@ EMSCRIPTEN_BINDINGS(box2d) {
     });
 
     function("b2World_OverlapAABB",
-        +[](b2WorldId worldId, const b2AABB& aabb, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
+        +[](b2WorldId worldId, b2Pos origin, const b2AABB& aabb, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
             auto* callbackPtr = new emscripten::val(callback);
-            b2TreeStats stats = b2World_OverlapAABB(worldId, aabb, filter, OverlapCallback, callbackPtr);
+            b2TreeStats stats = b2World_OverlapAABB(worldId, origin, aabb, filter, OverlapCallback, callbackPtr);
             delete callbackPtr;
             return stats;
         }
     , allow_raw_pointers());
     function("b2World_OverlapShape",
-        +[](b2WorldId worldId, const b2ShapeProxy* proxy, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
+        +[](b2WorldId worldId, b2Pos origin, const b2ShapeProxy* proxy, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
             auto* callbackPtr = new emscripten::val(callback);
-            b2TreeStats stats = b2World_OverlapShape(worldId, proxy, filter, OverlapCallback, callbackPtr);
+            b2TreeStats stats = b2World_OverlapShape(worldId, origin, proxy, filter, OverlapCallback, callbackPtr);
             delete callbackPtr;
             return stats;
         },
     allow_raw_pointers());
     function("b2World_CastRay",
-        +[](b2WorldId worldId, b2Vec2 origin, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
+        +[](b2WorldId worldId, b2Pos origin, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) {
             auto* callbackPtr = new emscripten::val(callback);
             b2TreeStats stats = b2World_CastRay(worldId, origin, translation, filter, RayCastCallback, callbackPtr);
             delete callbackPtr;
@@ -1572,9 +1902,9 @@ EMSCRIPTEN_BINDINGS(box2d) {
     , allow_raw_pointers());
     function("b2World_CastRayClosest", &b2World_CastRayClosest);
     function("b2World_CastShape",
-        +[](b2WorldId worldId, const b2ShapeProxy* proxy, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
+        +[](b2WorldId worldId, b2Pos origin, const b2ShapeProxy* proxy, b2Vec2 translation, b2QueryFilter filter, emscripten::val callback) -> b2TreeStats {
             auto* callbackPtr = new emscripten::val(callback);
-            b2TreeStats stats = b2World_CastShape(worldId, proxy, translation, filter, RayCastCallback, callbackPtr);
+            b2TreeStats stats = b2World_CastShape(worldId, origin, proxy, translation, filter, RayCastCallback, callbackPtr);
             delete callbackPtr;
             return stats;
         },
@@ -1582,9 +1912,9 @@ EMSCRIPTEN_BINDINGS(box2d) {
     );
     function("b2World_CastMover", &b2World_CastMover, allow_raw_pointers());
     function("b2World_CollideMover",
-        +[](b2WorldId worldId, const b2Capsule* mover, b2QueryFilter filter, emscripten::val callback) {
+        +[](b2WorldId worldId, b2Pos origin, const b2Capsule* mover, b2QueryFilter filter, emscripten::val callback) {
             auto* callbackPtr = new emscripten::val(callback);
-            b2World_CollideMover(worldId, mover, filter,
+            b2World_CollideMover(worldId, origin, mover, filter,
                 +[](b2ShapeId shapeId, const b2PlaneResult* planeResult, void* context) -> bool {
                     auto* cb = reinterpret_cast<emscripten::val*>(context);
                     return cb->operator()(emscripten::val(shapeId), *planeResult).as<bool>();
@@ -1611,25 +1941,38 @@ EMSCRIPTEN_BINDINGS(box2d) {
             return reinterpret_cast<uint32_t>(callbackPtr);
        }
     );
+    // preSolve(shapeIdA, shapeIdB, manifold): the manifold is the live b2Manifold, edit it in place
+    // (for example set pointCount = 0 to disable the contact). Do not delete it.
+    // preContinuous(shapeIdA, shapeIdB, point, normal) -> bool: return false to skip the time of impact event.
+    // Either callback may be null. Returns a handle to pass to b2World_DeleteCallback.
     function("b2World_SetPreSolveCallback",
-        +[](b2WorldId worldId, emscripten::val callback) {
-            auto callbackPtr = new emscripten::val(callback);
+        +[](b2WorldId worldId, emscripten::val preSolve, emscripten::val preContinuous) {
+            bool hasPreSolve = !preSolve.isNull() && !preSolve.isUndefined();
+            bool hasPreContinuous = !preContinuous.isNull() && !preContinuous.isUndefined();
+            auto callbacksPtr = new emscripten::val(emscripten::val::object());
+            callbacksPtr->set("preSolve", preSolve);
+            callbacksPtr->set("preContinuous", preContinuous);
             b2World_SetPreSolveCallback(worldId,
-                // The C++ lambda signature is updated here
-                +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Vec2 point, b2Vec2 normal, void* userData) -> bool {
-                    auto callback = *reinterpret_cast<emscripten::val*>(userData);
-                    
-                    // The arguments passed to your JS callback are also updated
-                    return callback(
+                hasPreSolve ? +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* userData) {
+                    auto& callbacks = *reinterpret_cast<emscripten::val*>(userData);
+                    callbacks["preSolve"](
+                        emscripten::val(shapeIdA),
+                        emscripten::val(shapeIdB),
+                        emscripten::val(manifold, allow_raw_pointers())
+                    );
+                } : nullptr,
+                hasPreContinuous ? +[](b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Pos point, b2Vec2 normal, void* userData) -> bool {
+                    auto& callbacks = *reinterpret_cast<emscripten::val*>(userData);
+                    return callbacks["preContinuous"](
                         emscripten::val(shapeIdA),
                         emscripten::val(shapeIdB),
                         emscripten::val(point),
                         emscripten::val(normal)
                     ).as<bool>();
-                },
-                callbackPtr
+                } : nullptr,
+                callbacksPtr
             );
-            return reinterpret_cast<uint32_t>(callbackPtr);
+            return reinterpret_cast<uint32_t>(callbacksPtr);
         }
     );
     function("b2World_DeleteCallback",
@@ -1641,7 +1984,6 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2World_GetGravity", &b2World_GetGravity);
     function("b2World_Explode", &b2World_Explode, allow_raw_pointers());
     function("b2World_RebuildStaticTree", &b2World_RebuildStaticTree);
-    function("b2World_EnableSpeculative", &b2World_EnableSpeculative);
     function("b2World_IsValid", &b2World_IsValid);
 
 
@@ -1654,16 +1996,20 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return emscripten::val(shapeId.index1);
     });
     function("b2Shape_IsValid", &b2Shape_IsValid);
+    function("b2Shape_SetUserData", +[](b2ShapeId shapeId, double value) { b2Shape_SetUserData(shapeId, numberToUserData(value)); });
+    function("b2Shape_GetUserData", +[](b2ShapeId shapeId) { return userDataToNumber(b2Shape_GetUserData(shapeId)); });
     function("b2Shape_IsSensor", &b2Shape_IsSensor);
     function("b2Shape_TestPoint", &b2Shape_TestPoint);
-    function("b2Shape_RayCast", &b2Shape_RayCast, allow_raw_pointers());
+    function("b2Shape_CastRay", &b2Shape_CastRay);
     function("b2Shape_SetDensity", &b2Shape_SetDensity);
     function("b2Shape_GetDensity", &b2Shape_GetDensity);
     function("b2Shape_SetFriction", &b2Shape_SetFriction);
     function("b2Shape_GetFriction", &b2Shape_GetFriction);
     function("b2Shape_SetRestitution", &b2Shape_SetRestitution);
     function("b2Shape_GetRestitution", &b2Shape_GetRestitution);
-	function("b2Shape_GetSurfaceMaterial", &b2Shape_GetSurfaceMaterial);
+    function("b2Shape_SetUserMaterial", &b2Shape_SetUserMaterial);
+    function("b2Shape_GetUserMaterial", &b2Shape_GetUserMaterial);
+    function("b2Shape_GetSurfaceMaterial", &b2Shape_GetSurfaceMaterial);
     function("b2Shape_SetSurfaceMaterial", &b2Shape_SetSurfaceMaterial, allow_raw_pointers());
     function("b2Shape_GetFilter", &b2Shape_GetFilter);
     function("b2Shape_SetFilter", &b2Shape_SetFilter);
@@ -1685,6 +2031,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Shape_SetCapsule", &b2Shape_SetCapsule, allow_raw_pointers());
     function("b2Shape_SetSegment", &b2Shape_SetSegment, allow_raw_pointers());
     function("b2Shape_SetPolygon", &b2Shape_SetPolygon, allow_raw_pointers());
+    function("b2Shape_SetChainSegment", &b2Shape_SetChainSegment, allow_raw_pointers());
     function("b2Shape_GetParentChain", &b2Shape_GetParentChain);
     function("b2Shape_GetContactCapacity", &b2Shape_GetContactCapacity);
     function("b2Shape_GetContactData", +[](b2ShapeId shapeId, int capacity) -> emscripten::val {
@@ -1706,7 +2053,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
         }
         return result;
     }, allow_raw_pointers());
-    function("b2Shape_GetAABB", &b2Shape_GetAABB);
+    function("b2Shape_GetBounds", &b2Shape_GetBounds);
     function("b2Shape_ComputeMassData", &b2Shape_ComputeMassData);
     function("b2Shape_GetClosestPoint", &b2Shape_GetClosestPoint);
     function("b2Shape_ApplyWind", &b2Shape_ApplyWind);
@@ -1729,11 +2076,11 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_GetWorldVector", &b2Body_GetWorldVector);
     function("b2Body_GetMass", &b2Body_GetMass);
     function("b2Body_GetRotationalInertia", &b2Body_GetRotationalInertia);
-    function("b2Body_GetLocalCenterOfMass", &b2Body_GetLocalCenterOfMass);
-    function("b2Body_GetWorldCenterOfMass", &b2Body_GetWorldCenterOfMass);
+    function("b2Body_GetLocalCenter", &b2Body_GetLocalCenter);
+    function("b2Body_GetWorldCenter", &b2Body_GetWorldCenter);
     function("b2Body_SetMassData", &b2Body_SetMassData);
     function("b2Body_GetMassData", &b2Body_GetMassData);
-    function("b2Body_ApplyMassFromShapes", &b2Body_ApplyMassFromShapes);
+    function("b2Body_UpdateMassFromShapes", &b2Body_UpdateMassFromShapes);
     function("b2Body_GetLinearVelocity", &b2Body_GetLinearVelocity);
     function("b2Body_GetAngularVelocity", &b2Body_GetAngularVelocity);
     function("b2Body_SetLinearVelocity", &b2Body_SetLinearVelocity);
@@ -1744,6 +2091,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_ApplyLinearImpulse", &b2Body_ApplyLinearImpulse);
     function("b2Body_ApplyLinearImpulseToCenter", &b2Body_ApplyLinearImpulseToCenter);
     function("b2Body_ApplyAngularImpulse", &b2Body_ApplyAngularImpulse);
+    function("b2Body_ClearForces", &b2Body_ClearForces);
     function("b2Body_SetLinearDamping", &b2Body_SetLinearDamping);
     function("b2Body_GetLinearDamping", &b2Body_GetLinearDamping);
     function("b2Body_SetAngularDamping", &b2Body_SetAngularDamping);
@@ -1754,15 +2102,27 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Body_SetType", &b2Body_SetType);
     function("b2Body_IsAwake", &b2Body_IsAwake);
     function("b2Body_SetAwake", &b2Body_SetAwake);
+    function("b2Body_WakeTouching", &b2Body_WakeTouching);
     function("b2Body_IsEnabled", &b2Body_IsEnabled);
     function("b2Body_Enable", &b2Body_Enable);
     function("b2Body_Disable", &b2Body_Disable);
-    function("b2Body_IsSleepEnabled", &b2Body_IsSleepEnabled);
-    function("b2Body_EnableSleep", &b2Body_EnableSleep);
+    function("b2Body_IsSleepingEnabled", &b2Body_IsSleepingEnabled);
+    function("b2Body_EnableSleeping", &b2Body_EnableSleeping);
     function("b2Body_SetSleepThreshold", &b2Body_SetSleepThreshold);
     function("b2Body_GetSleepThreshold", &b2Body_GetSleepThreshold);
+    function("b2Body_SetSafetyFactor", &b2Body_SetSafetyFactor);
+    function("b2Body_GetSafetyFactor", &b2Body_GetSafetyFactor);
     function("b2Body_SetBullet", &b2Body_SetBullet);
     function("b2Body_IsBullet", &b2Body_IsBullet);
+    function("b2Body_EnableContactRecycling", &b2Body_EnableContactRecycling);
+    function("b2Body_IsContactRecyclingEnabled", &b2Body_IsContactRecyclingEnabled);
+    function("b2Body_SetName", +[](b2BodyId bodyId, const std::string& name) {
+        b2Body_SetName(bodyId, name.c_str());
+    });
+    function("b2Body_GetName", +[](b2BodyId bodyId) -> std::string {
+        const char* name = b2Body_GetName(bodyId);
+        return name != nullptr ? std::string(name) : std::string();
+    });
     function("b2Body_SetMotionLocks", &b2Body_SetMotionLocks);
     function("b2Body_GetMotionLocks", &b2Body_GetMotionLocks);
     function("b2Body_GetPointer", +[](b2BodyId bodyId) -> emscripten::val {
@@ -1805,11 +2165,16 @@ EMSCRIPTEN_BINDINGS(box2d) {
         }
         return result;
     }, allow_raw_pointers());
-    function("b2Body_ComputeAABB", &b2Body_ComputeAABB);
+    function("b2Body_ComputeBounds", &b2Body_ComputeBounds);
+    function("b2Body_GetMinExtent", &b2Body_GetMinExtent);
+    function("b2Body_GetMaxExtent", &b2Body_GetMaxExtent);
+    function("b2Body_GetMaxExtentFromOrigin", &b2Body_GetMaxExtentFromOrigin);
     function("b2Body_GetWorld", &b2Body_GetWorld);
     function("b2Body_GetLocalPointVelocity", &b2Body_GetLocalPointVelocity);
     function("b2Body_GetWorldPointVelocity", &b2Body_GetWorldPointVelocity);
     function("b2Body_IsValid", &b2Body_IsValid);
+    function("b2Body_SetUserData", +[](b2BodyId bodyId, double value) { b2Body_SetUserData(bodyId, numberToUserData(value)); });
+    function("b2Body_GetUserData", +[](b2BodyId bodyId) { return userDataToNumber(b2Body_GetUserData(bodyId)); });
 
     // ------------------------------------------------------------------------
     // b2Joint
@@ -1819,6 +2184,10 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2CreateDistanceJoint", &b2CreateDistanceJoint, allow_raw_pointers());
     function("b2DefaultMotorJointDef", &b2DefaultMotorJointDef);
     function("b2CreateMotorJoint", &b2CreateMotorJoint, allow_raw_pointers());
+    function("b2DefaultMoverJointDef", &b2DefaultMoverJointDef);
+    function("b2CreateMoverJoint", &b2CreateMoverJoint, allow_raw_pointers());
+    function("b2DefaultPogoJointDef", &b2DefaultPogoJointDef);
+    function("b2CreatePogoJoint", &b2CreatePogoJoint, allow_raw_pointers());
     function("b2DefaultFilterJointDef", &b2DefaultFilterJointDef);
     function("b2CreateFilterJoint", &b2CreateFilterJoint, allow_raw_pointers());
     function("b2DefaultPrismaticJointDef", &b2DefaultPrismaticJointDef);
@@ -1831,6 +2200,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2CreateWheelJoint", &b2CreateWheelJoint, allow_raw_pointers());
 
     function("b2Joint_IsValid", &b2Joint_IsValid);
+    function("b2Joint_SetUserData", +[](b2JointId jointId, double value) { b2Joint_SetUserData(jointId, numberToUserData(value)); });
+    function("b2Joint_GetUserData", +[](b2JointId jointId) { return userDataToNumber(b2Joint_GetUserData(jointId)); });
     function("b2Joint_GetType", &b2Joint_GetType);
     function("b2Joint_GetBodyA", &b2Joint_GetBodyA);
     function("b2Joint_GetBodyB", &b2Joint_GetBodyB);
@@ -1847,32 +2218,55 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Joint_WakeBodies", &b2Joint_WakeBodies);
     function("b2Joint_GetConstraintForce", &b2Joint_GetConstraintForce);
     function("b2Joint_GetConstraintTorque", &b2Joint_GetConstraintTorque);
+    function("b2Joint_GetLinearSeparation", &b2Joint_GetLinearSeparation);
+    function("b2Joint_GetAngularSeparation", &b2Joint_GetAngularSeparation);
+    function("b2Joint_SetConstraintTuning", &b2Joint_SetConstraintTuning);
+    // returns { hertz, dampingRatio }
+    function("b2Joint_GetConstraintTuning", +[](b2JointId jointId) -> emscripten::val {
+        float hertz = 0.0f, dampingRatio = 0.0f;
+        b2Joint_GetConstraintTuning(jointId, &hertz, &dampingRatio);
+        auto result = emscripten::val::object();
+        result.set("hertz", hertz);
+        result.set("dampingRatio", dampingRatio);
+        return result;
+    });
     function("b2Joint_SetForceThreshold", &b2Joint_SetForceThreshold);
     function("b2Joint_GetForceThreshold", &b2Joint_GetForceThreshold);
     function("b2Joint_SetTorqueThreshold", &b2Joint_SetTorqueThreshold);
     function("b2Joint_GetTorqueThreshold", &b2Joint_GetTorqueThreshold);
 
-    function("b2DistanceJoint_SetLength", &b2DistanceJoint_SetLength);
-    function("b2DistanceJoint_GetLength", &b2DistanceJoint_GetLength);
+    function("b2DistanceJoint_SetRestLength", &b2DistanceJoint_SetRestLength);
+    function("b2DistanceJoint_GetRestLength", &b2DistanceJoint_GetRestLength);
     function("b2DistanceJoint_EnableSpring", &b2DistanceJoint_EnableSpring);
     function("b2DistanceJoint_IsSpringEnabled", &b2DistanceJoint_IsSpringEnabled);
+    function("b2DistanceJoint_SetSpringForceRange", &b2DistanceJoint_SetSpringForceRange);
+    // returns { lowerForce, upperForce }
+    function("b2DistanceJoint_GetSpringForceRange", +[](b2JointId jointId) -> emscripten::val {
+        float lowerForce = 0.0f, upperForce = 0.0f;
+        b2DistanceJoint_GetSpringForceRange(jointId, &lowerForce, &upperForce);
+        auto result = emscripten::val::object();
+        result.set("lowerForce", lowerForce);
+        result.set("upperForce", upperForce);
+        return result;
+    });
+    function("b2DistanceJoint_GetSpringForce", &b2DistanceJoint_GetSpringForce);
     function("b2DistanceJoint_SetSpringHertz", &b2DistanceJoint_SetSpringHertz);
     function("b2DistanceJoint_SetSpringDampingRatio", &b2DistanceJoint_SetSpringDampingRatio);
     function("b2DistanceJoint_GetSpringHertz", &b2DistanceJoint_GetSpringHertz);
     function("b2DistanceJoint_GetSpringDampingRatio", &b2DistanceJoint_GetSpringDampingRatio);
     function("b2DistanceJoint_EnableLimit", &b2DistanceJoint_EnableLimit);
     function("b2DistanceJoint_IsLimitEnabled", &b2DistanceJoint_IsLimitEnabled);
-    function("b2DistanceJoint_SetLengthRange", &b2DistanceJoint_SetLengthRange);
-    function("b2DistanceJoint_GetMinLength", &b2DistanceJoint_GetMinLength);
-    function("b2DistanceJoint_GetMaxLength", &b2DistanceJoint_GetMaxLength);
+    function("b2DistanceJoint_SetLimits", &b2DistanceJoint_SetLimits);
+    function("b2DistanceJoint_GetLowerLimit", &b2DistanceJoint_GetLowerLimit);
+    function("b2DistanceJoint_GetUpperLimit", &b2DistanceJoint_GetUpperLimit);
     function("b2DistanceJoint_GetCurrentLength", &b2DistanceJoint_GetCurrentLength);
     function("b2DistanceJoint_EnableMotor", &b2DistanceJoint_EnableMotor);
     function("b2DistanceJoint_IsMotorEnabled", &b2DistanceJoint_IsMotorEnabled);
-    function("b2DistanceJoint_SetMotorSpeed", &b2DistanceJoint_SetMotorSpeed);
-    function("b2DistanceJoint_GetMotorSpeed", &b2DistanceJoint_GetMotorSpeed);
+    function("b2DistanceJoint_SetTargetMotorSpeed", &b2DistanceJoint_SetTargetMotorSpeed);
+    function("b2DistanceJoint_GetTargetMotorSpeed", &b2DistanceJoint_GetTargetMotorSpeed);
     function("b2DistanceJoint_SetMaxMotorForce", &b2DistanceJoint_SetMaxMotorForce);
     function("b2DistanceJoint_GetMaxMotorForce", &b2DistanceJoint_GetMaxMotorForce);
-    function("b2DistanceJoint_GetMotorForce", &b2DistanceJoint_GetMotorForce);
+    function("b2DistanceJoint_GetCurrentMotorForce", &b2DistanceJoint_GetCurrentMotorForce);
 
     function("b2MotorJoint_SetLinearVelocity", &b2MotorJoint_SetLinearVelocity);
     function("b2MotorJoint_GetLinearVelocity", &b2MotorJoint_GetLinearVelocity);
@@ -1895,12 +2289,29 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2MotorJoint_SetMaxSpringTorque", &b2MotorJoint_SetMaxSpringTorque);
     function("b2MotorJoint_GetMaxSpringTorque", &b2MotorJoint_GetMaxSpringTorque);
 
+    function("b2MoverJoint_SetLinearVelocity", &b2MoverJoint_SetLinearVelocity);
+    function("b2MoverJoint_GetLinearVelocity", &b2MoverJoint_GetLinearVelocity);
+    function("b2MoverJoint_SetMaxVelocityForce", &b2MoverJoint_SetMaxVelocityForce);
+    function("b2MoverJoint_GetMaxVelocityForce", &b2MoverJoint_GetMaxVelocityForce);
+
+    function("b2PogoJoint_SetRestLength", &b2PogoJoint_SetRestLength);
+    function("b2PogoJoint_GetRestLength", &b2PogoJoint_GetRestLength);
+    function("b2PogoJoint_SetSpringHertz", &b2PogoJoint_SetSpringHertz);
+    function("b2PogoJoint_GetSpringHertz", &b2PogoJoint_GetSpringHertz);
+    function("b2PogoJoint_SetSpringDampingRatio", &b2PogoJoint_SetSpringDampingRatio);
+    function("b2PogoJoint_GetSpringDampingRatio", &b2PogoJoint_GetSpringDampingRatio);
+    function("b2PogoJoint_GetCurrentLength", &b2PogoJoint_GetCurrentLength);
+    function("b2PogoJoint_GetCurrentSpeed", &b2PogoJoint_GetCurrentSpeed);
+    function("b2PogoJoint_GetImpulse", &b2PogoJoint_GetImpulse);
+
     function("b2PrismaticJoint_EnableSpring", &b2PrismaticJoint_EnableSpring);
     function("b2PrismaticJoint_IsSpringEnabled", &b2PrismaticJoint_IsSpringEnabled);
     function("b2PrismaticJoint_SetSpringHertz", &b2PrismaticJoint_SetSpringHertz);
     function("b2PrismaticJoint_GetSpringHertz", &b2PrismaticJoint_GetSpringHertz);
     function("b2PrismaticJoint_SetSpringDampingRatio", &b2PrismaticJoint_SetSpringDampingRatio);
     function("b2PrismaticJoint_GetSpringDampingRatio", &b2PrismaticJoint_GetSpringDampingRatio);
+    function("b2PrismaticJoint_SetTargetTranslation", &b2PrismaticJoint_SetTargetTranslation);
+    function("b2PrismaticJoint_GetTargetTranslation", &b2PrismaticJoint_GetTargetTranslation);
     function("b2PrismaticJoint_EnableLimit", &b2PrismaticJoint_EnableLimit);
     function("b2PrismaticJoint_IsLimitEnabled", &b2PrismaticJoint_IsLimitEnabled);
     function("b2PrismaticJoint_GetLowerLimit", &b2PrismaticJoint_GetLowerLimit);
@@ -1908,13 +2319,13 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2PrismaticJoint_SetLimits", &b2PrismaticJoint_SetLimits);
     function("b2PrismaticJoint_EnableMotor", &b2PrismaticJoint_EnableMotor);
     function("b2PrismaticJoint_IsMotorEnabled", &b2PrismaticJoint_IsMotorEnabled);
-    function("b2PrismaticJoint_SetMotorSpeed", &b2PrismaticJoint_SetMotorSpeed);
-    function("b2PrismaticJoint_GetMotorSpeed", &b2PrismaticJoint_GetMotorSpeed);
+    function("b2PrismaticJoint_SetTargetMotorSpeed", &b2PrismaticJoint_SetTargetMotorSpeed);
+    function("b2PrismaticJoint_GetTargetMotorSpeed", &b2PrismaticJoint_GetTargetMotorSpeed);
     function("b2PrismaticJoint_SetMaxMotorForce", &b2PrismaticJoint_SetMaxMotorForce);
     function("b2PrismaticJoint_GetMaxMotorForce", &b2PrismaticJoint_GetMaxMotorForce);
-    function("b2PrismaticJoint_GetMotorForce", &b2PrismaticJoint_GetMotorForce);
-    function("b2PrismaticJoint_GetTranslation", &b2PrismaticJoint_GetTranslation);
-    function("b2PrismaticJoint_GetSpeed", &b2PrismaticJoint_GetSpeed);
+    function("b2PrismaticJoint_GetCurrentMotorForce", &b2PrismaticJoint_GetCurrentMotorForce);
+    function("b2PrismaticJoint_GetCurrentTranslation", &b2PrismaticJoint_GetCurrentTranslation);
+    function("b2PrismaticJoint_GetCurrentSpeed", &b2PrismaticJoint_GetCurrentSpeed);
 
     function("b2RevoluteJoint_EnableSpring", &b2RevoluteJoint_EnableSpring);
     function("b2RevoluteJoint_IsSpringEnabled", &b2RevoluteJoint_IsSpringEnabled);
@@ -1922,7 +2333,10 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2RevoluteJoint_GetSpringHertz", &b2RevoluteJoint_GetSpringHertz);
     function("b2RevoluteJoint_SetSpringDampingRatio", &b2RevoluteJoint_SetSpringDampingRatio);
     function("b2RevoluteJoint_GetSpringDampingRatio", &b2RevoluteJoint_GetSpringDampingRatio);
-    function("b2RevoluteJoint_GetAngle", &b2RevoluteJoint_GetAngle);
+    function("b2RevoluteJoint_SetTargetAngle", &b2RevoluteJoint_SetTargetAngle);
+    function("b2RevoluteJoint_GetTargetAngle", &b2RevoluteJoint_GetTargetAngle);
+    function("b2RevoluteJoint_GetCurrentAngle", &b2RevoluteJoint_GetCurrentAngle);
+    function("b2RevoluteJoint_GetCurrentSpeed", &b2RevoluteJoint_GetCurrentSpeed);
     function("b2RevoluteJoint_EnableLimit", &b2RevoluteJoint_EnableLimit);
     function("b2RevoluteJoint_IsLimitEnabled", &b2RevoluteJoint_IsLimitEnabled);
     function("b2RevoluteJoint_GetLowerLimit", &b2RevoluteJoint_GetLowerLimit);
@@ -1930,9 +2344,9 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2RevoluteJoint_SetLimits", &b2RevoluteJoint_SetLimits);
     function("b2RevoluteJoint_EnableMotor", &b2RevoluteJoint_EnableMotor);
     function("b2RevoluteJoint_IsMotorEnabled", &b2RevoluteJoint_IsMotorEnabled);
-    function("b2RevoluteJoint_SetMotorSpeed", &b2RevoluteJoint_SetMotorSpeed);
-    function("b2RevoluteJoint_GetMotorSpeed", &b2RevoluteJoint_GetMotorSpeed);
-    function("b2RevoluteJoint_GetMotorTorque", &b2RevoluteJoint_GetMotorTorque);
+    function("b2RevoluteJoint_SetTargetMotorSpeed", &b2RevoluteJoint_SetTargetMotorSpeed);
+    function("b2RevoluteJoint_GetTargetMotorSpeed", &b2RevoluteJoint_GetTargetMotorSpeed);
+    function("b2RevoluteJoint_GetCurrentMotorTorque", &b2RevoluteJoint_GetCurrentMotorTorque);
     function("b2RevoluteJoint_SetMaxMotorTorque", &b2RevoluteJoint_SetMaxMotorTorque);
     function("b2RevoluteJoint_GetMaxMotorTorque", &b2RevoluteJoint_GetMaxMotorTorque);
 
@@ -1958,11 +2372,17 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2WheelJoint_SetLimits", &b2WheelJoint_SetLimits);
     function("b2WheelJoint_EnableMotor", &b2WheelJoint_EnableMotor);
     function("b2WheelJoint_IsMotorEnabled", &b2WheelJoint_IsMotorEnabled);
-    function("b2WheelJoint_SetMotorSpeed", &b2WheelJoint_SetMotorSpeed);
-    function("b2WheelJoint_GetMotorSpeed", &b2WheelJoint_GetMotorSpeed);
+    function("b2WheelJoint_SetTargetMotorSpeed", &b2WheelJoint_SetTargetMotorSpeed);
+    function("b2WheelJoint_GetTargetMotorSpeed", &b2WheelJoint_GetTargetMotorSpeed);
     function("b2WheelJoint_SetMaxMotorTorque", &b2WheelJoint_SetMaxMotorTorque);
     function("b2WheelJoint_GetMaxMotorTorque", &b2WheelJoint_GetMaxMotorTorque);
-    function("b2WheelJoint_GetMotorTorque", &b2WheelJoint_GetMotorTorque);
+    function("b2WheelJoint_GetCurrentMotorTorque", &b2WheelJoint_GetCurrentMotorTorque);
+
+    // ------------------------------------------------------------------------
+    // b2Contact
+    // ------------------------------------------------------------------------
+    function("b2Contact_IsValid", &b2Contact_IsValid);
+    function("b2Contact_GetData", &b2Contact_GetData);
 
     // ------------------------------------------------------------------------
     // Misc
@@ -1978,13 +2398,40 @@ EMSCRIPTEN_BINDINGS(box2d) {
         return b2ComputeHull(points.data(), count);
     }));
 
+    // Pack ids into a single value, handy as Map keys. These return BigInt (uint32 for worlds).
+    function("b2StoreWorldId", &b2StoreWorldId);
+    function("b2LoadWorldId", &b2LoadWorldId);
+    function("b2StoreBodyId", &b2StoreBodyId);
+    function("b2LoadBodyId", &b2LoadBodyId);
+    function("b2StoreShapeId", &b2StoreShapeId);
+    function("b2LoadShapeId", &b2LoadShapeId);
+    function("b2StoreChainId", &b2StoreChainId);
+    function("b2LoadChainId", &b2LoadChainId);
+    function("b2StoreJointId", &b2StoreJointId);
+    function("b2LoadJointId", &b2LoadJointId);
+
     function("B2_ID_EQUALS", +[](const emscripten::val& id1, const emscripten::val& id2) -> bool {
         return  id1["index1"].as<int32_t>() == id2["index1"].as<int32_t>() &&
                 id1["world0"].as<uint16_t>() == id2["world0"].as<uint16_t>() &&
-                id1["generation"].as<uint16_t>() == id2["generation"].as<uint16_t>();
+                id1["generation"].as<uint32_t>() == id2["generation"].as<uint32_t>();
     });
 
     constant("B2_PI", B2_PI);
+    constant("b2Transform_identity", b2Transform_identity);
+    constant("b2Pos_zero", b2Pos_zero);
+    function("b2IsDoublePrecision", &b2IsDoublePrecision);
+    function("b2SetLengthUnitsPerMeter", &b2SetLengthUnitsPerMeter);
+    function("b2GetLengthUnitsPerMeter", &b2GetLengthUnitsPerMeter);
+    function("b2GetGraphColor", +[](int index) -> uint32_t { return static_cast<uint32_t>(b2GetGraphColor(index)); });
+    function("b2Atan2", &b2Atan2);
+    function("b2ComputeCosSin", &b2ComputeCosSin);
+    function("b2MinInt", &b2MinInt);
+    function("b2MaxInt", &b2MaxInt);
+    function("b2AbsInt", &b2AbsInt);
+    function("b2ClampInt", &b2ClampInt);
+    function("b2MinFloat", &b2MinFloat);
+    function("b2AbsFloat", &b2AbsFloat);
+    function("b2ClampFloat", &b2ClampFloat);
     function("b2Dot", &b2Dot);
     function("b2Cross", &b2Cross);
     function("b2CrossVS", &b2CrossVS);
@@ -2006,11 +2453,24 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2Length", &b2Length);
     function("b2Distance", &b2Distance);
     function("b2Normalize", &b2Normalize);
+    // returns { length, normal }
+    function("b2GetLengthAndNormalize", +[](b2Vec2 v) -> emscripten::val {
+        float length = 0.0f;
+        b2Vec2 normal = b2GetLengthAndNormalize(&length, v);
+        auto result = emscripten::val::object();
+        result.set("length", length);
+        result.set("normal", normal);
+        return result;
+    });
     function("b2NormalizeRot", &b2NormalizeRot);
     function("b2IntegrateRotation", &b2IntegrateRotation);
     function("b2LengthSquared", &b2LengthSquared);
     function("b2DistanceSquared", &b2DistanceSquared);
     function("b2MakeRot", &b2MakeRot);
+    function("b2MakeRotFromUnitVector", &b2MakeRotFromUnitVector);
+    function("b2ComputeRotationBetweenUnitVectors", &b2ComputeRotationBetweenUnitVectors);
+    function("b2InvertRot", &b2InvertRot);
+    function("b2IsNormalizedRot", &b2IsNormalizedRot);
     function("b2IsNormalized", &b2IsNormalized);
     function("b2NLerp", &b2NLerp);
     function("b2ComputeAngularVelocity", &b2ComputeAngularVelocity);
@@ -2027,8 +2487,32 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2InvTransformPoint", &b2InvTransformPoint);
     function("b2MulTransforms", &b2MulTransforms);
     function("b2InvMulTransforms", &b2InvMulTransforms);
+    // World position and transform helpers.
+    function("b2ToPos", &b2ToPos);
+    function("b2ToVec2", &b2ToVec2);
+    function("b2SubPos", &b2SubPos);
+    function("b2OffsetPos", &b2OffsetPos);
+    function("b2LerpPos", &b2LerpPos);
+    function("b2TransformWorldPoint", &b2TransformWorldPoint);
+    function("b2InvTransformWorldPoint", &b2InvTransformWorldPoint);
+    function("b2InvMulWorldTransforms", &b2InvMulWorldTransforms);
+    function("b2MulWorldTransforms", &b2MulWorldTransforms);
+    function("b2ToRelativeTransform", &b2ToRelativeTransform);
+    function("b2MakeWorldTransform", &b2MakeWorldTransform);
+    function("b2RoundDownFloat", &b2RoundDownFloat);
+    function("b2RoundUpFloat", &b2RoundUpFloat);
     function("b2MulMV", &b2MulMV);
     function("b2MaxFloat", &b2MaxFloat);
+    function("b2SpringDamper", &b2SpringDamper);
+    function("b2MakeAABB", +[](const emscripten::val& pointsArray, float radius) -> b2AABB {
+        int count = pointsArray["length"].as<int>();
+        std::vector<b2Vec2> points(count);
+        for (int i = 0; i < count; i++) {
+            points[i].x = pointsArray[i]["x"].as<float>();
+            points[i].y = pointsArray[i]["y"].as<float>();
+        }
+        return b2MakeAABB(points.data(), count, radius);
+    });
     function("b2GetInverse22", &b2GetInverse22);
     function("b2Solve22", &b2Solve22);
     function("b2IsValidPlane", &b2IsValidPlane);
@@ -2036,6 +2520,8 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2AABB_Center", &b2AABB_Center);
     function("b2AABB_Extents", &b2AABB_Extents);
     function("b2AABB_Union", &b2AABB_Union);
+    function("b2AABB_Overlaps", &b2AABB_Overlaps);
+    function("b2PlaneSeparation", &b2PlaneSeparation);
     function("b2Hash", +[](uint32_t hash, const emscripten::val& array) -> uint32_t {
         if (!array.instanceof(emscripten::val::global("Uint8Array"))) {
             throw std::runtime_error("Expected a Uint8Array.");
@@ -2055,6 +2541,9 @@ EMSCRIPTEN_BINDINGS(box2d) {
     // ------------------------------------------------------------------------
     // Random
     // ------------------------------------------------------------------------
+    // Reset the sample random number generator, so a scene can be rebuilt identically.
+    function("SetRandomSeed", +[](uint32_t seed) { g_seed = seed; });
+    function("GetRandomSeed", +[]() { return g_seed; });
     function("RandomInt", &RandomInt);
     function("RandomIntRange", &RandomIntRange);
     function("RandomFloat", &RandomFloat);

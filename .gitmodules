@@ -1,10 +1,10 @@
 [submodule "box2d"]
 	path = box2d
-	url = https://github.com/erincatto/box2d.git
-	branch = main
+	url = https://github.com/Birch-san/box2d.git
+	branch = codex/box2d-v3.2-wasm-fixes
 [submodule "box2cpp"]
 	path = box2cpp
-	url = https://github.com/HolyBlackCat/box2cpp.git
+	url = https://github.com/Birch-san/box2cpp.git
 	branch = master
 [submodule "enkiTS"]
 	path = enkiTS

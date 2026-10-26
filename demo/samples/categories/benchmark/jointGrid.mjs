@@ -11,8 +11,16 @@ export default class JointGrid extends Sample{
 		settings.enableSleep = false;
 
 		CreateJointGrid( this.box2d, this.m_worldId );
+	}
 
-		this.Spawn();
+	static GetCapacity(box2d){
+		const capacity = new box2d.b2Capacity();
+		capacity.staticShapeCount = 7;
+		capacity.dynamicShapeCount = 11000;
+		capacity.staticBodyCount = 7;
+		capacity.dynamicBodyCount = 11000;
+		capacity.arenaByteCount = 120 * 1024;
+		return capacity;
 	}
 }
 
@@ -33,6 +41,7 @@ function CreateJointGrid(box2d, worldId )
 
 	b2World_EnableSleeping( worldId, false );
 
+	// upstream uses 100 in release builds
 	let N = 70;
 
 	const bodies = new Array(N * N).fill(null);
@@ -48,6 +57,8 @@ function CreateJointGrid(box2d, worldId )
 	circle.radius = 0.4;
 
 	const jd = b2DefaultRevoluteJointDef();
+	jd.base.drawScale = 0.4;
+
 	const bodyDef = b2DefaultBodyDef();
 
 	for ( let k = 0; k < N; k++ )
