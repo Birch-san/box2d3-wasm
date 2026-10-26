@@ -138,7 +138,7 @@ EMSCRIPTEN_BINDINGS(box2dcpp) {
 
 #if defined( BOX2D_DOUBLE_PRECISION )
     // Large world types, positions are doubles. In single precision these are aliases of b2Vec2,
-    // b2Transform and b2CastOutput, and entry.mjs exposes those under these names as well.
+    // b2Transform and b2CastOutput; the single precision entries expose these aliases to JS.
     class_<b2Pos>("b2Pos")
         .constructor()
         .constructor(+[](double x, double y) -> b2Pos { return b2Pos{x, y}; })
