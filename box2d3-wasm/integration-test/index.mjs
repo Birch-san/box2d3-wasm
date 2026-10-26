@@ -7,6 +7,11 @@ import Box2DFactory from '../build/dist/es/entry.mjs'
 
 const box2d = await Box2DFactory();
 
+// Contact generations use all 32 bits when crossing the JS/wasm boundary.
+const contactId = { index1: 1, world0: 0, padding: 0, generation: 0x10000 };
+assert(box2d.B2_ID_EQUALS(contactId, { ...contactId }));
+assert(!box2d.B2_ID_EQUALS(contactId, { ...contactId, generation: 0 }));
+
 const B2_SECRET_COOKIE = 1152023;
 const timeStep = 1.0 / 60.0;
 const subStepCount = 4;

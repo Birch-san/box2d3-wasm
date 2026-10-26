@@ -2,6 +2,11 @@
 // (i.e. 'box2d3-wasm') and import the entrypoint directly.
 import type { MainModule, ModuleOptions } from './deluxe/Box2D.deluxe';
 export type * from './deluxe/Box2D.deluxe';
+export type {
+  b2Vec2 as b2Pos,
+  b2Transform as b2WorldTransform,
+  b2CastOutput as b2WorldCastOutput,
+} from './deluxe/Box2D.deluxe';
 
 /**
  * In single precision Box2D's large world types are aliases of the regular ones, so they are exposed

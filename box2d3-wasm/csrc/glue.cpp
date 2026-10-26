@@ -2413,7 +2413,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("B2_ID_EQUALS", +[](const emscripten::val& id1, const emscripten::val& id2) -> bool {
         return  id1["index1"].as<int32_t>() == id2["index1"].as<int32_t>() &&
                 id1["world0"].as<uint16_t>() == id2["world0"].as<uint16_t>() &&
-                id1["generation"].as<uint16_t>() == id2["generation"].as<uint16_t>();
+                id1["generation"].as<uint32_t>() == id2["generation"].as<uint32_t>();
     });
 
     constant("B2_PI", B2_PI);
