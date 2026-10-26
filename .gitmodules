@@ -5,7 +5,7 @@
 [submodule "box2cpp"]
 	path = box2cpp
 	url = https://github.com/Birch-san/box2cpp.git
-	branch = codex/box2d-v3.2
+	branch = master
 [submodule "enkiTS"]
 	path = enkiTS
 	url = https://github.com/dougbinks/enkiTS.git
