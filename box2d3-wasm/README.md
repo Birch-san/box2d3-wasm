@@ -82,12 +82,10 @@ The debug draw command buffer emits positions relative to an origin you set with
 
 Install [Node.js and npm][].
 
-emscripten seems to go bang if you PATH a local typescript, so I had to make it global.
-
-Install typescript and yarn.
+Install TypeScript 5.9.3 and yarn. Emscripten 4.0.18 generates declarations using `tsc --outFile`, which TypeScript 6 removed.
 
 ```bash
-npm i -g typescript
+npm i -g typescript@5.9.3
 npm i -g yarn
 ```
 
