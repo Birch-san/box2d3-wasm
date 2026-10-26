@@ -83,70 +83,22 @@ jobs:
           else
             echo "target_type=Release" >> $GITHUB_OUTPUT
           fi
-      - name: "deluxe: build makefile"
+      - name: build wasm variants
         working-directory: box2d3-wasm
-        run: shell/0_build_makefile.sh
         env:
-          FLAVOUR: deluxe
           TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
-      - name: "deluxe: emmake"
-        working-directory: box2d3-wasm
-        run: emmake make -j8 -C cmake-build-deluxe
-      - name: "deluxe: build wasm"
-        working-directory: box2d3-wasm
-        run: shell/1_build_wasm.sh
-        env:
-          FLAVOUR: deluxe
-          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
-      - name: "compat: build makefile"
-        working-directory: box2d3-wasm
-        run: shell/0_build_makefile.sh
-        env:
-          FLAVOUR: compat
-          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
-      - name: "compat: emmake"
-        working-directory: box2d3-wasm
-        run: emmake make -j8 -C cmake-build-compat
-      - name: "compat: build wasm"
-        working-directory: box2d3-wasm
-        run: shell/1_build_wasm.sh
-        env:
-          FLAVOUR: compat
-          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
-      - name: "deluxe double precision: build makefile"
-        working-directory: box2d3-wasm
-        run: shell/0_build_makefile.sh
-        env:
-          FLAVOUR: deluxe
-          PRECISION: double
-          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
-      - name: "deluxe double precision: emmake"
-        working-directory: box2d3-wasm
-        run: emmake make -j8 -C cmake-build-deluxe-double
-      - name: "deluxe double precision: build wasm"
-        working-directory: box2d3-wasm
-        run: shell/1_build_wasm.sh
-        env:
-          FLAVOUR: deluxe
-          PRECISION: double
-          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
-      - name: "compat double precision: build makefile"
-        working-directory: box2d3-wasm
-        run: shell/0_build_makefile.sh
-        env:
-          FLAVOUR: compat
-          PRECISION: double
-          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
-      - name: "compat double precision: emmake"
-        working-directory: box2d3-wasm
-        run: emmake make -j8 -C cmake-build-compat-double
-      - name: "compat double precision: build wasm"
-        working-directory: box2d3-wasm
-        run: shell/1_build_wasm.sh
-        env:
-          FLAVOUR: compat
-          PRECISION: double
-          TARGET_TYPE: ${{ steps.build-type.outputs.target_type }}
+        run: |
+          for PRECISION in single double; do
+            for FLAVOUR in deluxe compat; do
+              export PRECISION FLAVOUR
+              BUILD_NAME="$FLAVOUR"
+              if [ "$PRECISION" = double ]; then BUILD_NAME="$FLAVOUR-double"; fi
+              echo "Building $BUILD_NAME"
+              shell/0_build_makefile.sh
+              emmake make -j8 -C "cmake-build-$BUILD_NAME"
+              shell/1_build_wasm.sh
+            done
+          done
       - name: integration tests
         working-directory: box2d3-wasm
         run: |

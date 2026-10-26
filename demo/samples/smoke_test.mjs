@@ -9,7 +9,7 @@
 import { spawnSync } from 'child_process';
 import * as moduleApi from 'module';
 import { cpus } from 'os';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -96,7 +96,7 @@ globalThis.window = Object.setPrototypeOf({
 globalThis.document = stub;
 globalThis.requestAnimationFrame = () => 0;
 
-const { default: SampleClass } = await import(new URL(single, pathToFileURL(fileURLToPath(new URL('./', import.meta.url)))).href);
+const { default: SampleClass } = await import(new URL(single, import.meta.url).href);
 // samples declare `static precision = 'double'` to run on the large world build
 const entry = SampleClass.precision === 'double' ? 'entry-double.mjs' : 'entry.mjs';
 const { default: Box2DFactory } = await import(`../../box2d3-wasm/build/dist/es/${entry}`);
@@ -115,7 +115,6 @@ debugDraw.SetFlags({ drawShapes: true, drawJoints: true, drawJointExtras: true, 
 const sample = new SampleClass(box2d, camera, debugDraw);
 const drawString = (x, y) => y + 16;
 
-let maxCommands = 0;
 for (let i = 0; i < steps; ++i) {
 	if (i === Math.floor(steps / 3)) {
 		const p = new box2d.b2Pos(camera.center.x, camera.center.y);
@@ -132,7 +131,6 @@ for (let i = 0; i < steps; ++i) {
 	}
 	sample.Step();
 	sample.UpdateUI(drawString, 0);
-	maxCommands = Math.max(maxCommands, debugDraw.debugDrawCommandBuffer.GetCommandsSize());
 }
 
 const counters = box2d.b2World_GetCounters(sample.m_worldId);

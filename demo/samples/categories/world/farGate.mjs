@@ -33,7 +33,6 @@ export default class FarGate extends Sample{
 			b2OffsetPos,
 			b2DefaultBodyDef,
 			b2DefaultShapeDef,
-			b2DefaultSurfaceMaterial,
 			b2DefaultChainDef,
 			b2CreateChain,
 			b2CreateBody,
@@ -100,22 +99,10 @@ export default class FarGate extends Sample{
 
 			const points = ParsePath( path, { x: -120.0, y: -200.0 }, 0.2, false, 64 );
 
-			// SetMaterials starts from a zeroed material rather than b2DefaultSurfaceMaterial(), so
-			// pass the default friction along with the color
-			const defaultMaterial = b2DefaultSurfaceMaterial();
-			const material = {
-				friction: defaultMaterial.friction,
-				restitution: defaultMaterial.restitution,
-				rollingResistance: defaultMaterial.rollingResistance,
-				tangentSpeed: defaultMaterial.tangentSpeed,
-				customColor: b2HexColor.b2_colorDarkSeaGreen,
-			};
-			defaultMaterial.delete();
-
 			const chainDef = b2DefaultChainDef();
 			chainDef.SetPoints( points );
 			chainDef.isLoop = true;
-			chainDef.SetMaterials( [ material ] );
+			chainDef.SetMaterials( [ { customColor: b2HexColor.b2_colorDarkSeaGreen } ] );
 
 			b2CreateChain( groundId, chainDef );
 

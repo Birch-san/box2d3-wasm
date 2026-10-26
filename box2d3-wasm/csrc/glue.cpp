@@ -2487,7 +2487,7 @@ EMSCRIPTEN_BINDINGS(box2d) {
     function("b2InvTransformPoint", &b2InvTransformPoint);
     function("b2MulTransforms", &b2MulTransforms);
     function("b2InvMulTransforms", &b2InvMulTransforms);
-    // Large world helpers. In this single precision build b2Pos is a b2Vec2 and b2WorldTransform is a b2Transform.
+    // World position and transform helpers.
     function("b2ToPos", &b2ToPos);
     function("b2ToVec2", &b2ToVec2);
     function("b2SubPos", &b2SubPos);

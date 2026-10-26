@@ -178,7 +178,6 @@ set -x
 cp "$ES_FILE" "$ES_PRECURSOR"
 cp "$ES_TSD" "$ES_TSD_PRECURSOR"
 
-# TODO: make awk error if any of the text replacements fail to match anything, to protect us when emscripten updates.
 case "$FLAVOUR" in
   compat)
     # all of our text replacements are just for disabling/tuning deluxe functionality. compat flavour doesn't need any text replacements.
