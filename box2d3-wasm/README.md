@@ -82,10 +82,10 @@ The debug draw command buffer emits positions relative to an origin you set with
 
 Install [Node.js and npm][].
 
-Install TypeScript 5.9.3 and yarn. Emscripten 4.0.18 generates declarations using `tsc --outFile`, which TypeScript 6 removed.
+The CI toolchain uses Emscripten 6.0.13 and TypeScript 7.0.2. Install TypeScript and yarn:
 
 ```bash
-npm i -g typescript@5.9.3
+npm i -g typescript@7.0.2
 npm i -g yarn
 ```
 

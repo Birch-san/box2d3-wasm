@@ -32,7 +32,7 @@ on:
           - patch
 
 env:
-  EM_VERSION: 4.0.18
+  EM_VERSION: 6.0.13
   EM_CACHE_FOLDER: 'emsdk-cache'
 
 jobs:
@@ -69,8 +69,7 @@ jobs:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
       - name: install global deps
-        # Emscripten 4.0.18 uses --outFile, which TypeScript 6 removed.
-        run: npm i -g typescript@5.9.3 yarn
+        run: npm i -g typescript@7.0.2 yarn
       - name: install local deps
         run: npm ci
         working-directory: box2d3-wasm
